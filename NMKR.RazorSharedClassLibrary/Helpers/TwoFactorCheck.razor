@@ -1,0 +1,130 @@
+﻿@inject ISnackbar Snackbar
+
+
+@code {
+    [Parameter] public string Message { get; set; }
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private async Task<bool> SendCodeMessageBird(string mobilenumber)
+    {
+        Random rnd = new();
+        string code = (rnd.Next(1000, 9999)).ToString();
+        string messagex = Message + code;
+        long Msisdn = Convert.ToInt64(mobilenumber);
+
+        Client client = Client.CreateDefault(GeneralConfigurationClass.MessageBirdAccessKey, null);
+        try
+        {
+            client.SendMessage(GeneralConfigurationClass.ProjectNameShort, messagex, new[] { Msisdn });
+
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<SendSMSModalWindow>("Verify by mobile text message", maxWidth);
+            var result = await dialog.Result;
+            if (result.Canceled)
+                return false;
+
+            if (result.Data.ToString() == code)
+            {
+                return true;
+            }
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Your entered a wrong code.", Severity.Error);
+            return false;
+
+        }
+        catch (Exception)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            return false;
+        }
+
+    }
+    private async Task<bool> CheckAuthenticator(string email)
+    {
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<GoogleAuthenticatorModalWindow>("Authenticator", maxWidth);
+        var result = await dialog.Result;
+        if (result.Canceled)
+            return false;
+
+
+        TwoFactorAuthenticator tfa = new();
+        var code = tfa.GetCurrentPIN(GeneralConfigurationClass.AuthenticatorSecret + email);
+
+        if (result.Data.ToString() == code)
+        {
+            return true;
+        }
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Your entered a wrong code.", Severity.Error);
+        return false;
+    }
+
+    public async Task<bool> CheckTwoFactor(int customerid, TwoFactorCases twofactorcase)
+    {
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var customer = await (from a in db.Customers
+                              where a.Id == customerid
+                              select a).FirstOrDefaultAsync();
+
+        if (customer == null)
+            return false;
+        if (customer.State != "active")
+            return false;
+        if (customer.Twofactor == "none")
+            return true;
+
+        if (customer.Two2falogin == false && twofactorcase == TwoFactorCases.Login)
+            return true;
+        if (customer.Two2facreatewallet == false && twofactorcase == TwoFactorCases.CreateWallet)
+            return true;
+        if (customer.Two2faexportkeys == false && twofactorcase == TwoFactorCases.ExportKeys)
+                return true;
+        if (customer.Two2fapaymentsmanagedwallets == false && twofactorcase == TwoFactorCases.PaymentsManagedWallets)
+            return true;
+        if (customer.Two2facreateapikey == false && twofactorcase == TwoFactorCases.CreateEditApikey)
+            return true;
+        if (customer.Two2fadeleteprojects == false && twofactorcase == TwoFactorCases.DeleteProject)
+            return true;
+
+
+
+        if (customer.Twofactor == "google")
+        {
+            return await CheckAuthenticator(customer.Email);
+        }
+        if (customer.Twofactor == "sms")
+        {
+            return await SendCodeMessageBird(customer.Mobilenumber);
+        }
+        return false;
+    }
+    public async Task<bool> CheckTwoFactorAdmin(int adminid)
+    {
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var admin = await (from a in db.Adminlogins
+            where a.Id == adminid
+            select a).FirstOrDefaultAsync();
+
+        if (admin == null)
+            return false;
+        if (admin.State != "active")
+            return false;
+        if (admin.Twofactor == "none")
+            return true;
+
+        if (admin.Twofactor == "google")
+        {
+            return await CheckAuthenticator(admin.Email);
+        }
+        if (admin.Twofactor == "sms")
+        {
+            return await SendCodeMessageBird(admin.Mobilenumber);
+        }
+        return false;
+    }
+}

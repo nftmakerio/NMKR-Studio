@@ -1,0 +1,13 @@
+﻿@if (!string.IsNullOrEmpty(IpfsHash))
+{
+    <span style="white-space: nowrap;">
+    <MudText Typo="Typo.body2">IPFS:</MudText>
+    <MudLink Typo="Typo.body2" Href="@(GeneralConfigurationClass.IPFSGateway + IpfsHash)" Target="_blank">@GlobalFunctions.GetStartAndEnd(IpfsHash, 6)</MudLink>
+    <CopyToClipboard content="@IpfsHash" name="IPFS Hash"></CopyToClipboard>
+    </span>
+}
+
+@code {
+    [Parameter]
+    public string IpfsHash { get; set; }
+}

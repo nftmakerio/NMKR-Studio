@@ -1,0 +1,38 @@
+﻿    <!-- Content -->
+    
+    @*
+    <div class="chip" style="font-size: 12px; padding: 0 12px; margin: 4px; background-color: @_color.BackgroundColor; color: @_color.ForegroundColor">
+            <div class="chip__content">
+                @Text
+                @ChildContent
+            </div>
+        </div>
+    *@
+
+<MudChip T="string" Color="@Color" Style="pointer-events: none;font-family: 'Runda';/*font-size: 0.875rem*/;font-weight: 500;line-height: 1.45;letter-spacing: 0em;text-transform: none;" Variant="@Variant" Size="@Size" Label="@Label">
+        @Text
+        @ChildContent
+    </MudChip>
+
+
+    @code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+   [Parameter]
+   public string Text { get; set; }
+
+        [Parameter]
+        public bool Label { get; set; } = false;
+    [Parameter]
+    public string Style { get; set; }
+
+        [Parameter]
+        public Size Size { get; set; } = Size.Small;
+
+        [Parameter]
+        public Variant Variant { get; set; } = Variant.Filled;
+
+        [Parameter]
+        public Color Color { get; set; } = Color.Default;
+
+    }

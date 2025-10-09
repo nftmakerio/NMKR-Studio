@@ -1,0 +1,38 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%"><MudColorPicker ShowAlpha="false" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog"
+                            Label="@(Setting.Humanreadablesettingsname + (Setting.Mandantory?"":"(optional)"))" @bind-Text="ColorValue" 
+                                        Placeholder="Select Color" ShowToolbar="true" Editable="true"  />
+        </td>
+        <td>
+            <div class="ml-10">
+                <MudText Typo="Typo.body1">@Setting.Description</MudText>
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+    [Parameter] 
+    public string ColorValue
+    {
+        get => _colorValue;
+        set
+        {
+            if (value != _colorValue)
+            {
+                _colorValue = value;
+                ColorValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> ColorValueChanged { get; set; }
+
+
+    private string _colorValue="#000000";
+  
+}

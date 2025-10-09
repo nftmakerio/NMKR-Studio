@@ -1,0 +1,13 @@
+﻿@inject AppSettings settings
+
+<MudHidden Breakpoint="Breakpoint.SmAndDown">
+    <MudToolBar Gutters="false">
+        <MudIconButton Icon="@Icons.Material.Outlined.Menu" Color="Color.Inherit" OnClick="@((e) => settings.DrawerToggle())" Class="ml-3" />
+        <MudBreadcrumbs Items="Items" Style="padding:0px;"></MudBreadcrumbs>
+    </MudToolBar>
+</MudHidden>
+
+@code {
+  [Parameter]
+    public List<BreadcrumbItem> Items { get; set; }
+}

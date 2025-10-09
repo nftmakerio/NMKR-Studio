@@ -1,0 +1,76 @@
+﻿@page "/kyciamx"
+@inject AppSettings settings
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer Style="height: 800px">
+    <iframe style="border:none;" width="100%" height="100%" allow="camera" src="@iframeUrl" allowfullscreen></iframe>
+</MudContainer>
+@code {
+    private string iframeUrl { get; set; }
+    private readonly List<BreadcrumbItem> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Verify Account"], href: "/kyciamx", disabled: true));
+
+
+        // Check, if Kyc is enabled
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var websitesettings = await (from a in db.Websitesettings
+                                     where a.Key == "showkyc"
+                                     select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (websitesettings == null)
+        {
+            NavigationManager.NavigateTo("/", false);
+            return;
+        }
+
+      /*  if (websitesettings.Boolvalue == false)
+        {
+            NavigationManager.NavigateTo("/", false);
+            return;
+        }
+        */
+
+        var customer = await (from a in db.Customers
+                              where a.Id == settings.UserId
+                              select a).FirstOrDefaultAsync();
+
+        if (customer == null)
+        {
+            NavigationManager.NavigateTo("/login", true);
+            return;
+        }
+
+        if (customer.Kycstatus == "GREEN")
+        {
+            NavigationManager.NavigateTo("/", false);
+            return;
+        }
+
+        if (customer.Showkycstate == false)
+        {
+            NavigationManager.NavigateTo("/", false);
+            return;
+        }
+        var uid=GlobalFunctions.GetGuid();
+
+        customer.Kycaccesstoken = uid;
+        await db.SaveChangesAsync();
+
+
+    
+        // Fill IFrame
+        string path = $"https://kyc.iamx.id/onboarding/nmkr?userId={uid}&callbackUrl={GlobalFunctions.UrlEncode("https://studio-api.nmkr.io/v2/SetIamxStatusResult")}";
+
+        iframeUrl = path;
+        StateHasChanged();
+
+    }
+
+}

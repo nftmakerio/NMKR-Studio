@@ -1,0 +1,404 @@
+﻿@using BlazorDownloadFile
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.Cardano
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Indeterminate="true" />
+</MudOverlay>
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudGrid>
+                <MudItem xs="12" md="12">
+                    <BlockchainSelector @bind-Value="discount.Blockchain" project="@project"></BlockchainSelector>
+                </MudItem>
+                <MudItem xs="12" md="12">
+                    <MudSelect T="string" Label="Condition" @bind-Value="discount.Condition">
+                        <MudSelectItem Value="@(nameof(PricelistDiscountTypes.walletcontainsminofpolicyid))">@GlobalFunctions.GetEnumDescription(PricelistDiscountTypes.walletcontainsminofpolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(PricelistDiscountTypes.whitlistedaddresses))">@GlobalFunctions.GetEnumDescription(PricelistDiscountTypes.whitlistedaddresses)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(PricelistDiscountTypes.stakeonpool))">@GlobalFunctions.GetEnumDescription(PricelistDiscountTypes.stakeonpool)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(PricelistDiscountTypes.couponcode))">@GlobalFunctions.GetEnumDescription(PricelistDiscountTypes.couponcode)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                @if (discount.Condition == nameof(PricelistDiscountTypes.walletcontainsminofpolicyid))
+                {
+                    @for (int i = 0; i < discount.AddPolicyid.Count; i++)
+                    {
+                        var showPlus = false;
+                        var i1 = i;
+                        var b = 10;
+                        if (i == discount.AddPolicyid.Count - 1 && discount.AddPolicyid.Count < 5)
+                        {
+                            showPlus = true;
+                            b = 9;
+                        }
+
+                        @if (i1 > 0)
+                        {
+                            b = b - 2;
+                            <MudItem xs="2">
+                                <MudSelect Dense="true" T="string" Label="Operator" Variant="Variant.Outlined" @bind-Value="discount.Operator" OpenIcon="String.Empty">
+                                    <MudSelectItem Value="@("OR")"/>
+                                    <MudSelectItem Value="@("AND")"/>
+                                </MudSelect>
+                            </MudItem>
+                        }
+
+                        <MudItem xs="2">
+                            <MudNumericField Variant="Variant.Outlined" Label="Min. NFT" @bind-Value="discount.AddPolicyid[i1].Minvalue" Min="0" Max="10000000" Disabled="@(discount.Condition != nameof(PricelistDiscountTypes.walletcontainsminofpolicyid))"/>
+                        </MudItem>
+
+                        <MudItem xs="@b" md="@b">
+                            <MudTextField Variant="Variant.Outlined" Label="Policy ID/Collection" @bind-Value="discount.AddPolicyid[i1].PolicyId" Lines="1" Immediate="true" Clearable="true"/>
+                        </MudItem>
+                        if (showPlus)
+                        {
+                            <MudItem xs="1" md="1">
+                                <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small" @onclick="AddPolicyId"></MudIconButton>
+                            </MudItem>
+                        }
+                    }
+                }
+                @if (discount.Condition == nameof(PricelistDiscountTypes.whitlistedaddresses))
+                {
+                    <MudItem xs="12" md="12">
+                        <MudText Typo="Typo.body2">@GlobalFunctions.CountLines(discount.WhitelistedAddresses) entries</MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <InputFile id="fileInput112" OnChange="StartUpload" hidden accept=".txt, .whitelistedaddresses"/>
+
+                        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" HtmlTag="label" Color="Color.Surface" Variant="Variant.Filled" Disabled="isSubmitting" for="fileInput112" StartIcon="@Icons.Material.Filled.CloudUpload">Upload Addresses</MudButton>
+                    </MudItem>
+
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="DownloadAddresses" Disabled="isSubmitting">Download Addresses</MudButton>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="ClearAddresses" Disabled="isSubmitting">Clear Addresses</MudButton>
+                    </MudItem>
+                }
+                @if (discount.Condition == nameof(PricelistDiscountTypes.stakeonpool))
+                {
+                    @for (int i = 0; i < discount.AddPolicyid.Count; i++)
+                    {
+                        var showPlus = false;
+                        var i1 = i;
+                        var b = 12;
+                        if (i == discount.AddPolicyid.Count - 1 && discount.AddPolicyid.Count < 5)
+                        {
+                            showPlus = true;
+                            b = 11;
+                        }
+
+                        <MudItem xs="@b" md="@b">
+                            <MudTextField Variant="Variant.Outlined" Label=@((i1 == 0) ? "BECH32 Stake Pool ID" : "or BECH32 Stake Pool ID") @bind-Value="discount.AddPolicyid[i1].PolicyId" Lines="1" Immediate="true" Clearable="true"/>
+                        </MudItem>
+                        if (showPlus)
+                        {
+                            <MudItem xs="1" md="1">
+                                <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small" @onclick="AddPolicyId"></MudIconButton>
+                            </MudItem>
+                        }
+                    }
+                }
+                @if (discount.Condition == nameof(PricelistDiscountTypes.couponcode))
+                {
+                    <MudItem xs="12" md="12">
+                        <MudTextField Variant="Variant.Outlined" Label="Coupon Code" @bind-Value="discount.Couponcode" Lines="1" Immediate="true" Clearable="true"/>
+                    </MudItem>
+                }
+
+                <MudItem xs="2" md="2">
+                    <MudNumericField T="float" @bind-Value="discount.SendbackDiscount" Immediate="true" Label="Discount in %" Min="0" Max="95"/>
+                </MudItem>
+                <MudItem xs="10" md="10">
+                    <MudTextField Variant="Variant.Outlined" Label="Description (optional)" @bind-Value="discount.Description" Lines="1" Immediate="true" Class="mb-1"/>
+                </MudItem>
+                <MudItem xs="6" md="6">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="discount.Activated" Color="Color.Primary">Discount activated</MudSwitch>
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="SaveDiscount" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public AddPriceDiscountClass discount { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    private bool isSubmitting;
+    private bool OverlayIsVisible { get; set; }
+
+    bool success;
+    string[] errors = { };
+    MudForm form;
+
+    void Cancel() => MudDialog.Cancel();
+
+
+    private async Task AddPolicyId()
+    {
+        if (discount.AddPolicyid.Count < 5)
+        {
+            discount.AddPolicyid.Add(new AddPriceDiscountPolicies() { Minvalue = 1, PolicyId = "" });
+        }
+
+    }
+
+    private async void StartUpload(InputFileChangeEventArgs e)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        try
+        {
+            var entries = e.GetMultipleFiles(1);
+
+            var path = GeneralConfigurationClass.TempFilePath;
+
+            Directory.CreateDirectory(path);
+
+            string addresses = await UploadAddresses(entries.FirstOrDefault());
+            if (!string.IsNullOrEmpty(addresses))
+            {
+                discount.WhitelistedAddresses = addresses;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error while uploading " + ex.Message, Severity.Error);
+        }
+        OverlayIsVisible = false;
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task<string> UploadAddresses(IBrowserFile a)
+    {
+        try
+        {
+            Stream stream = a.OpenReadStream(51200000);
+            string path1 = GeneralConfigurationClass.TempFilePath + a.Name;
+            FileStream fs = File.Create(path1);
+            await stream.CopyToAsync(fs);
+            stream.Close();
+            fs.Close();
+
+            return await File.ReadAllTextAsync(path1);
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error while uploading " + a.Name + "(" + ex.Message + ")", Severity.Error);
+            return "";
+        }
+
+    }
+
+    private async Task DownloadAddresses()
+    {
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname) + ".whitelistedaddresses";
+        byte[] AsBytes = Encoding.UTF8.GetBytes(discount.WhitelistedAddresses);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+        await BlazorDownloadFileService.DownloadFile(filteredfilename, AsBase64String, "application/octet-stream");
+    }
+
+    private async Task ClearAddresses()
+    {
+        discount.WhitelistedAddresses = "";
+    }
+
+    private async Task SaveDiscount()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(discount.Condition))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have to select a condition", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (discount.Condition != nameof(PricelistDiscountTypes.whitlistedaddresses) && discount.Condition!=nameof(PricelistDiscountTypes.couponcode))
+        {
+            string stakepolicy = discount.Condition == nameof(PricelistDiscountTypes.stakeonpool) ? "Stake" : "Policy";
+
+            IBlockchainFunctions blockchainFunctions = null;
+            switch (discount.Blockchain.ToEnum<Blockchain>())
+            {
+                case Blockchain.Cardano:
+                    blockchainFunctions = new CardanoBlockchainFunctions();
+                    break;
+                case Blockchain.Solana:
+                    blockchainFunctions = new SolanaBlockchainFunctions();
+                    break;
+                case Blockchain.Aptos:
+                    blockchainFunctions = new AptosBlockchainFunctions();
+                    break;
+            }
+            var i1 = 0;
+            foreach (var policyid in discount.AddPolicyid)
+            {
+                policyid.PolicyId = policyid.PolicyId.Trim();
+                i1++;
+                if (string.IsNullOrEmpty(policyid.PolicyId) && i1 == 1)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("You have to specify a " + stakepolicy + " ID", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+
+                var checkPolicy = blockchainFunctions.CheckPolicyId(policyid.PolicyId);
+                if (!string.IsNullOrEmpty(checkPolicy))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add(stakepolicy+" ID " + i1 + " is not valid."+checkPolicy, Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+
+            }
+        }
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (discount.Id == null)
+        {
+            Pricelistdiscount pl = new()
+                {
+                    NftprojectId = discount.NftProjectId,
+                    Condition = discount.Condition,
+                    Description = discount.Description,
+                    Minvalue = discount.AddPolicyid.First().Minvalue,
+                    Policyid = discount.AddPolicyid.Any() ? discount.AddPolicyid.First().PolicyId.Trim() : "",
+                    State = discount.Activated ? "active" : "notactive",
+                    Policyprojectname = discount.Projectname,
+                    Whitlistaddresses = discount.WhitelistedAddresses,
+                    Sendbackdiscount = discount.SendbackDiscount,
+                    Operator = discount.Operator,
+                    Referercode = discount.Referercode,
+                    Couponcode=discount.Couponcode,
+                    Blockchain = discount.Blockchain
+                };
+
+            int i2 = 0;
+            for (int i = 1; i < discount.AddPolicyid.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(discount.AddPolicyid[i].PolicyId.Trim()))
+                {
+                    i2++;
+
+                    switch (i2)
+                    {
+                        case 1:
+                            pl.Policyid2 = discount.AddPolicyid[i].PolicyId.Trim();
+                            pl.Minvalue2 = discount.AddPolicyid[i].Minvalue;
+                            break;
+                        case 2:
+                            pl.Policyid3 = discount.AddPolicyid[i].PolicyId.Trim();
+                            pl.Minvalue3 = discount.AddPolicyid[i].Minvalue;
+                            break;
+                        case 3:
+                            pl.Policyid4 = discount.AddPolicyid[i].PolicyId.Trim();
+                            pl.Minvalue4 = discount.AddPolicyid[i].Minvalue;
+                            break;
+                        case 4:
+                            pl.Policyid5 = discount.AddPolicyid[i].PolicyId.Trim();
+                            pl.Minvalue5 = discount.AddPolicyid[i].Minvalue;
+                            break;
+
+                    }
+                }
+            }
+
+
+            await db.Pricelistdiscounts.AddAsync(pl);
+        }
+        else
+        {
+            var pl = await (from a in db.Pricelistdiscounts
+                            where a.Id == discount.Id && a.NftprojectId == discount.NftProjectId
+                            select a).FirstOrDefaultAsync();
+            if (pl != null)
+            {
+                pl.Description = discount.Description;
+                pl.Condition = discount.Condition;
+                pl.Minvalue = discount.AddPolicyid.First().Minvalue;
+                pl.Policyid = discount.AddPolicyid.Any() ? discount.AddPolicyid.First().PolicyId.Trim() : "";
+                pl.State = discount.Activated ? "active" : "notactive";
+                pl.Policyprojectname = discount.Projectname;
+                pl.Policyid2 = "";
+                pl.Policyid3 = "";
+                pl.Policyid4 = "";
+                pl.Policyid5 = "";
+                pl.Sendbackdiscount = discount.SendbackDiscount;
+                pl.Whitlistaddresses = discount.WhitelistedAddresses;
+                pl.Operator=discount.Operator;
+                pl.Referercode = discount.Referercode;
+                pl.Couponcode = discount.Couponcode;
+                pl.Blockchain = discount.Blockchain;
+
+                int i2 = 0;
+                for (int i = 1; i < discount.AddPolicyid.Count; i++)
+                {
+                    if (!string.IsNullOrEmpty(discount.AddPolicyid[i].PolicyId.Trim()))
+                    {
+                        i2++;
+
+                        switch (i2)
+                        {
+                            case 1:
+                                pl.Policyid2 = discount.AddPolicyid[i].PolicyId.Trim();
+                                pl.Minvalue2 = discount.AddPolicyid[i].Minvalue;
+                                break;
+                            case 2:
+                                pl.Policyid3 = discount.AddPolicyid[i].PolicyId.Trim();
+                                pl.Minvalue3 = discount.AddPolicyid[i].Minvalue;
+                                break;
+                            case 3:
+                                pl.Policyid4 = discount.AddPolicyid[i].PolicyId.Trim();
+                                pl.Minvalue4 = discount.AddPolicyid[i].Minvalue;
+                                break;
+                            case 4:
+                                pl.Policyid5 = discount.AddPolicyid[i].PolicyId.Trim();
+                                pl.Minvalue5 = discount.AddPolicyid[i].Minvalue;
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+        await db.SaveChangesAsync();
+
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+}

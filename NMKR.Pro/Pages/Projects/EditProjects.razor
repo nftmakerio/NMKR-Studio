@@ -1,0 +1,409 @@
+﻿@page "/editproject/{projectid:int}"
+@using NMKR.Pro.Pages.Projects.Notifications
+@using NMKR.Shared.Functions.Extensions
+@using NMKR.Shared.Functions.Metadata
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+    <MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Indeterminate="true" />
+    </MudOverlay>
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Edit Project Settings</MudText>
+
+    <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+    </MudOverlay>
+<MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+    <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="Tab">
+        <MudTabPanel Text="Information">
+
+            <DataAnnotationsValidator />
+
+            <MudGrid Class="mb-3">
+                <MudItem xs="6" md="8" lg="10">
+                    <MudTextField Variant="Variant.Outlined" Label="Project Name" Immediate="true" HelperText="@GlobalFunctions.CharHelper("Min. 1 characters, max. 255 characters", model?.Projectname ?? "")"
+                                  @bind-Value="model.Projectname" For="@(() => model.Projectname)"/>
+                </MudItem>
+                <MudItem xs="6" md="4" lg="2">
+                    <UploadImageHash @bind-ImageHash="@model.ProjectLogo" PreviewMaxWidth="300" FileSize="new System.Drawing.Size(300, 100)"/>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Project URL" HelperText="The URL of the project (optional)"
+                                  @bind-Value="model.Projecturl" For="@(() => model.Projecturl)" Immediate="true"/>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Description" HelperText="@GlobalFunctions.CharHelper("max 100 characters (optional)", model?.Description ?? "")"
+                                  @bind-Value="model.Description" For="@(() => model.Description)" Immediate="true"/>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField Variant="Variant.Outlined" Label="TokenName Prefix" HelperText="@GlobalFunctions.CharHelper("Max. 15 characters (optional)", model?.TokennamePrefix ?? "")"
+                                  @bind-Value="model.TokennamePrefix" For="@(() => model.TokennamePrefix)" Immediate="true"/>
+                    <small>
+                        Please use the prefix only if the name of the token is not already given during upload.<br/>
+                        Upload file name "401.png" using prefix "Cool" will result in nft name "Cool401"
+                    </small>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField Variant="Variant.Outlined" Label="Twitter handle" HelperText="(optional)"
+                                  @bind-Value="model.Twitterhandle" For="@(() => model.Twitterhandle)"/>
+                </MudItem>
+
+                <MudItem xs="12" sm="2">
+                    <MudSelect T="int" Label="Address reservation time (how long will a nft reserved for a specific address)" @bind-Value="model.ExpireTime">
+                        <MudSelectItem Value="10">10 Minutes</MudSelectItem>
+                        <MudSelectItem Value="20">20 Minutes</MudSelectItem>
+                        <MudSelectItem Value="30">30 Minutes</MudSelectItem>
+                        <MudSelectItem Value="40">40 Minutes</MudSelectItem>
+                        <MudSelectItem Value="50">50 Minutes</MudSelectItem>
+                        <MudSelectItem Value="60">60 Minutes</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @if (project != null && project.Enabledcoins.Contains(Coin.ADA.ToString()))
+                {
+                    <MudItem xs="12" sm="2">
+                        <SelectWallet @bind-Value="model.WalletId" Coin="Coin.ADA" Blockchain="Blockchain.Cardano" IsAdmin="false" CustomerId="@project.CustomerId"></SelectWallet>
+                    </MudItem>
+                }
+
+                @if (project != null && project.Enabledcoins.Contains(Coin.SOL.ToString()))
+                {
+                    <MudItem xs="12" sm="2">
+                        <SelectWallet @bind-Value="model.SolanaWalletId" Coin="Coin.SOL" Blockchain="Blockchain.Solana" IsAdmin="false" CustomerId="@project.CustomerId"></SelectWallet>
+                    </MudItem>
+                }
+                @if (project != null && project.Enabledcoins.Contains(Coin.APT.ToString()))
+                {
+                    <MudItem xs="12" sm="2">
+                        <SelectWallet @bind-Value="model.AptosWalletId" Coin="Coin.APT" Blockchain="Blockchain.Aptos" IsAdmin="false" CustomerId="@project.CustomerId"></SelectWallet>
+                    </MudItem>
+                }
+                @if (project != null && project.Enabledcoins.Contains(Coin.BTC.ToString()))
+                {
+                    <MudItem xs="12" sm="2">
+                        <SelectWallet @bind-Value="model.BitcoinWalletId" Coin="Coin.APT" Blockchain="Blockchain.Bitcoin" IsAdmin="false" CustomerId="@project.CustomerId"></SelectWallet>
+                    </MudItem>
+                }
+                <MudItem xs="2">
+                    <MudSelect T="string" Label="Sendback to customer" @bind-Value="model.MinUtxo">
+                        <MudSelectItem Value="@(nameof(MinUtxoTypes.twoadaeverynft))">2 ADA every NFT</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(MinUtxoTypes.twoadaall5nft))">2 ADA every 5 NFT</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(MinUtxoTypes.minutxo))">MinUtxo</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="2">
+                    <MudNumericField Label="Block a certain number of NFTs for sale" T="long?"
+                                     @bind-Value="model.NftsBlocked" For="@(() => model.NftsBlocked)"/>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@model.UseFrankenProtection" Label="Enable Franken Protection">
+                        <TooltipHelper Description="What is a Franken Address (mangled address)?"/>
+                    </MudSwitch>
+                    @*         <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@model.EnableCrossSalesOnPaymentgateway" Label="Allow cross sales on Paymentgateway (NMKR Token)" />*@
+                </MudItem>
+                <MudItem xs="3">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@model.DisableRandomSales" Label="DISABLE random sales"/>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@model.DisableSpecificSales" Label="DISABLE specific sales"/>
+                </MudItem>
+
+            </MudGrid>
+        </MudTabPanel>
+        
+       
+        <MudTabPanel Text="Metadata Template">
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+            <EditMetadataTemplate @bind-Value="metadata" PolicyId="@project.Policyid" Model1="@GetModel1()"></EditMetadataTemplate>
+            
+          
+        </MudTabPanel>
+            
+        <MudTabPanel Text="Notifications">
+            <ManageNotifications Notifications="_notifications" Project="project" ></ManageNotifications>
+        </MudTabPanel>     
+
+    </MudTabs>
+
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+                <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary">Save changes</MudButton>
+    </MudContainer>
+</EditForm>
+</MudCard>
+</MudContainer>
+
+
+
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+
+    private EditProjectClass model = new();
+    private CreateNewProject3Class metadata = new();
+    private List<Customerwallet> wallets = new();
+    private List<EditNotificationsClass> _notifications { get; set; }
+
+    private bool isSubmitting;
+    private bool isVisible;
+    private MudTabs Tab { get; set; }
+    private bool OverlayIsVisible { get; set; }
+    
+
+    
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+        new("Edit Project", href: "/createnewproject"),
+    };
+
+    private Nftproject project { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        wallets = await (from a in db.Customerwallets
+                   where a.CustomerId == settings.UserId && a.State == "active"
+                   select a).AsNoTracking().ToListAsync();
+
+        project= await (from a in db.Nftprojects
+            where a.Id == projectid && a.CustomerId == settings.UserId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        // internal wallets
+        if (wallets == null ||!wallets.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must setup a wallet first", Severity.Error);
+            NavigationManager.NavigateTo("/wallets");
+        }
+    }
+    private CreateNewProjectClass GetModel1()
+    {
+        var c = new CreateNewProjectClass()
+            {
+                Projectname = model.Projectname,
+                Description = model.Description,
+                MaxNftSupply = model.MaxNftSupply,
+                CardanoWalletId = model.WalletId,
+                SolanaWalletId = model.SolanaWalletId,
+                AptosWalletId = model.AptosWalletId,
+                BitcoinWalletId = model.BitcoinWalletId,
+                Projecturl = model.Projecturl,
+                Twitterhandle = model.Twitterhandle,
+                StorageProvider = model.StorageProvider,
+            };
+        c.SetBlockchains(project.Enabledcoins);
+
+        return c;
+    }
+    private async Task LoadNotifications(EasynftprojectsContext db)
+    {
+        _notifications = await (from a in db.Notifications
+            where a.NftprojectId == projectid
+                                select new EditNotificationsClass() { Address = a.Address, Id = a.Id, State = a.State == "active", Notificationtype = a.Notificationtype.ToEnum<PaymentTransactionNotificationTypes>(), Secret = a.Secret }).ToListAsync();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        model = await (from a in db.Nftprojects
+            where a.Id == projectid && a.CustomerId == settings.UserId
+            select new EditProjectClass
+            {
+                MetaDatax = a.Metadata,
+                Description = a.Description,
+                MaxNftSupply = a.Maxsupply,
+                Projectname = a.Projectname,
+                ExpireTime = a.Enablefiat ? Math.Max(a.Expiretime, 30) : a.Expiretime,
+                Projecturl = a.Projecturl,
+                ProjectLogo = a.Projectlogo,
+                MinUtxo = a.Minutxo,
+                WalletId = a.CustomerwalletId ?? 0,
+                SolanaWalletId = a.SolanacustomerwalletId ?? 0,
+                AptosWalletId = a.AptoscustomerwalletId ?? 0,
+                BitcoinWalletId = a.BitcoincustomerwalletId ?? 0,
+                EnableCrossSalesOnPaymentgateway = a.Enablecrosssaleonpaywindow ?? false,
+                EnableFiatPaymentOnPaymentgateway = a.Enablefiat,
+            //    FiatWalletUSDC = a.UsdcwalletId ?? 0,
+                DisableRandomSales = a.Disablerandomsales,
+                DisableSpecificSales = a.Disablespecificsales,
+                NftsBlocked = a.Nftsblocked,
+                PolicyExpires = a.Policyexpire != null,
+                PolicyExpiration = a.Policyexpire,
+                TokennamePrefix = a.Tokennameprefix,
+                Twitterhandle = a.Twitterhandle,
+                Cip68=a.Cip68,
+                UseFrankenProtection = a.Usefrankenprotection,
+                PrivateVKey=Encryption.DecryptString(a.Policyvkey, a.Password),
+                Enabledcoins=a.Enabledcoins
+            }).FirstOrDefaultAsync();
+
+        if (model == null)
+        {
+            LogClass.LogMessage(db,"WARNING: User tried to get Access to a foreign account: " + settings.UserId + " - Project id:"+projectid);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact support", Severity.Error);
+            isSubmitting = false;
+            model = new();
+            NavigationManager.NavigateTo("/projects");
+        }
+
+        metadata.CipStandard = model.Cip68?1:0;
+        metadata.MetaData = model.MetaDatax;
+
+
+        await LoadNotifications(db);
+    }
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(metadata.MetaData))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Metadata must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        if (!string.IsNullOrEmpty(model.TokennamePrefix) && !GlobalFunctions.isAlphaNumeric(model.TokennamePrefix))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Tokennameprefix contains invalid characters", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+   
+        string twh = model.Twitterhandle;
+        if (!GlobalFunctions.CheckTwitterHandle(ref twh))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Twitterhandle is not correct (must be more than 4 characters long and can be up to 15 characters or less)", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        model.Twitterhandle = twh;
+
+
+        var chk1 = new CheckMetadataForCip25Fields();
+        var checkmetadata = chk1.CheckMetadata(metadata.MetaData, project.Policyid, "", true, false);
+        if (!checkmetadata.IsValid)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(checkmetadata.ErrorMessage, Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        metadata.MetaData = checkmetadata.FormatedMetadata;
+
+        await SaveProject();
+
+        isSubmitting = false;
+    }
+
+
+    private async Task SaveProject()
+    {
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var p= await (from a in db.Nftprojects
+                      where a.Id == projectid && a.CustomerId == settings.UserId
+                      select a).FirstOrDefaultAsync();
+
+        if (p == null)
+        {
+            LogClass.LogMessage(db,"WARNING: User tried to get Access to a foreign account: " + settings.UserId + " - Project id:"+projectid);
+            OverlayIsVisible = false;
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact support", Severity.Error);
+            return;
+        }
+
+        p.Description = model.Description;
+        p.Projectname = model.Projectname;
+        p.Projecturl = model.Projecturl;
+        //   p.Maxsupply = model.MaxNftSupply;
+        p.CustomerwalletId = model.WalletId == 0 ? null : model.WalletId;
+        p.SolanacustomerwalletId = model.SolanaWalletId == 0 ? null : model.SolanaWalletId;
+        p.AptoscustomerwalletId = model.AptosWalletId == 0 ? null : model.AptosWalletId;
+        p.BitcoincustomerwalletId = model.BitcoinWalletId == 0 ? null : model.BitcoinWalletId;
+
+        p.Tokennameprefix = model.TokennamePrefix ??= "";
+        p.Metadata = JsonFormatter.FormatJson(metadata.MetaData);
+        p.Expiretime = model.ExpireTime;
+        p.Projectlogo = model.ProjectLogo;
+        p.Enablecrosssaleonpaywindow = model.EnableCrossSalesOnPaymentgateway;
+        p.Minutxo = model.MinUtxo;
+        p.Enablefiat = model.EnableFiatPaymentOnPaymentgateway;
+      //  p.UsdcwalletId = model.FiatWalletUSDC == 0 ? null : model.FiatWalletUSDC;
+        p.Disablerandomsales = model.DisableRandomSales;
+        p.Nftsblocked = model.NftsBlocked;
+        p.Disablespecificsales = model.DisableSpecificSales;
+        p.Twitterhandle = model.Twitterhandle;
+        p.Usefrankenprotection = model.UseFrankenProtection;
+
+        await db.SaveChangesAsync();
+        await SaveNotifications(db);
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Changes successfully saved", Severity.Success);
+
+        OverlayIsVisible = true;
+        StateHasChanged();
+        NavigationManager.NavigateTo("/projects");
+    }
+
+    private async Task SaveNotifications(EasynftprojectsContext db)
+    {
+        foreach (var noti in _notifications)
+        {
+            if (noti.Id == null)
+            {
+                await db.Notifications.AddAsync(new() {Address = noti.Address, NftprojectId = projectid, Notificationtype = noti.Notificationtype.ToString(), State = (noti.State ? "active" : "notactive"), Secret = noti.Secret});
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                var nx = await (from a in db.Notifications
+                    where a.Id == noti.Id
+                    select a).FirstOrDefaultAsync();
+                if (nx != null && nx.NftprojectId == projectid)
+                {
+                    if (noti.Deleted)
+                    {
+                        db.Remove(nx);
+                        await db.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        nx.Address = noti.Address;
+                        nx.Notificationtype = noti.Notificationtype.ToString();
+                        nx.Secret = noti.Secret;
+                        nx.State = noti.State ? "active" : "notactive";
+                        await db.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+    }
+
+
+
+   
+
+
+}

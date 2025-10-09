@@ -1,0 +1,52 @@
+﻿@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Functions.Solana
+@using NMKR.Shared.Classes.CustomerData
+<br/>
+<small>
+    @ada
+</small>
+<br />
+<small>
+    @sol
+</small>
+<br/>
+<small>
+    @apt
+</small>
+@code {
+    [Parameter]
+    public CustomersList customer { get; set; }
+
+    private string ada = "??? ADA";
+    private string sol = "??? SOL";
+    private string apt = "??? APT";
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ada=await GetLovelace(customer.Adaaddress);
+        sol=await GetLamports(customer.Solanapublickey);
+        apt = await GetOcta(customer.Aptosaddress);
+    }
+    private async Task<string> GetLovelace(string adaaddress)
+    {
+        BuildTransactionClass bt = new();
+        var utxo = (await ConsoleCommand.GetNewUtxoAsync(adaaddress,Dataproviders.Blockfrost));
+
+        return GlobalFunctions.FormatCurrency(utxo.LovelaceSummary,2) + " ADA";
+    }
+    private async Task<string> GetLamports(string solanapublickey)
+    {
+        var utxo = await SolanaFunctions.GetWalletBalanceAsync(solanapublickey);
+
+        return GlobalFunctions.FormatCurrency((long)utxo,2, Coin.SOL) + " SOL";
+    }
+    private async Task<string> GetOcta(string aptosaddress)
+    {
+        IBlockchainFunctions aptosBlockchainFunctions = new AptosBlockchainFunctions();
+        var amount = await aptosBlockchainFunctions.GetWalletBalanceAsync(aptosaddress);
+
+        return GlobalFunctions.FormatCurrency((long)amount,2, Coin.APT) + " APT";
+    }
+}

@@ -1,0 +1,86 @@
+﻿@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Test Discount Condition
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Enter the Address or handle" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Address or handle is required" />
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Enter a custom property (optional)" Immediate="true" @bind-Value="CustomProperty" Lines="1" Required="false"  />
+    </DialogContent>
+    <DialogActions>
+        <MudText Typo="Typo.h6" Class="mr-4" Color="Color.Dark">Result:</MudText>
+        <MudText Typo="Typo.h6" Class="mr-4" Color="_resultColor">@_result</MudText>
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="TestDiscountCondition" Disabled="isSubmitting">
+                @if (isSubmitting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Typo="Typo.inherit" Class="ms-2">Processing</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.inherit" Class="ms-2">Test Discount Conditions</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int Projectid { get; set; }
+
+    private string Address { get; set; }
+    private string CustomProperty { get; set; }
+    private bool isSubmitting;
+    private Color _resultColor = Color.Success;
+    private string _result = "";
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task TestDiscountCondition()
+    {
+
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        if (string.IsNullOrEmpty(Address))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter an address or an handle", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var b = ConsoleCommand.CheckIfAddressIsValid(db, Address, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true);
+        if (!b)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Address is not a valid address or handle", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        var discount = await PriceListDiscountClass.GetPricelistDiscount(db, _redis, Projectid,
+            outaddress, null, CustomProperty, 0, blockchain);
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add($"Discount for this Address: {discount?.Sendbackdiscount??0} %", Severity.Success);
+        _result = $"Discount for this Address: {discount?.Sendbackdiscount??0} %";
+        _resultColor = Color.Success;
+
+        isSubmitting = false;
+    }
+
+}

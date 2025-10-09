@@ -1,0 +1,113 @@
+﻿
+# Whether the testnet should be used instead of the mainnet
+UseTestnet: true
+EnvironmentName: Preprod
+Masterpassword: 
+#Mysql
+ConnectionString: 
+
+# DbSync Postgreqsl
+ConnectionStringDbSync: 
+
+
+
+# Temp Directory 
+TempFilePath: c:\tmp\
+
+Redis:
+        Server: 
+        Password: 
+        Username: 
+#Koios
+Koios: 
+
+# Cardano Era
+Era: Babbage
+TestnetMagicId: 1
+
+#Solana
+SolanaApiUrl: 
+
+#Aptos
+AptosApiUrl: 
+AptosNodeApiKey: 
+
+
+#Blockfrost
+BlockfrostUrl: 
+BlockfrostApikey: 
+
+
+#IPFS
+IPFSGateway: 
+#IPFSApi: 
+IPFSApi:
+
+#Email
+AWSEmailServer: 
+AWSEmailPassword: 
+AWSEmailUsername:
+
+
+# Google
+RecaptchaWebsite: 
+AuthenticatorSecret: 
+
+#Yota
+YotaSdkId: 
+#Messagebird
+MessageBirdAccessKey: 
+
+#Rebex
+RebexLicencekey: 
+
+#NMKR
+ApiUrl: 
+ApiTokenPassword: 
+
+CardanoCliApiUrl: 
+
+StudioUrlMainnet: https://studio.nmkr.io
+StudioUrlTestnet: https://studio.preprod.nmkr.io
+
+
+CslBuildCbor: 
+
+Paywindowlink: https://pay.preprod.nmkr.io/?
+
+SFTP_Server:
+
+# RabbitMQ
+RabbitMqConnectionString: 
+RabbitMqUsername: 
+RabbitMqPassword: 
+
+
+#Mailerlite
+MailerliteUrl: 
+MailerliteKey: 
+MailerliteGroupId: 
+
+#Store
+StoreApiUrl: 
+
+
+Maestro:
+        ApiUrl: https://preprod.gomaestro-api.org/v1
+        ApiKey: 
+        
+MaestroBitcoin:
+        ApiUrl: https://xbt-testnet.gomaestro-api.org/v0
+        ApiKey: 
+
+
+Iagon:
+        ApiUrl: https://gw.iagon.com/api/v2
+        ApiKey: 
+
+
+Helios:
+        ApiUrl: https://devnet.helius-rpc.com
+        ApiKey: 
+
+

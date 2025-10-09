@@ -1,0 +1,902 @@
+﻿@using NMKR.Shared.Classes.Iagon
+@using NMKR.Shared.Functions.Iagon
+@using NMKR.Shared.Functions.Metadata
+@using Metadata = NMKR.Shared.Model.Metadata
+@inject ISnackbar Snackbar
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManager
+@inject IConnectionMultiplexer _redis;
+
+@if (nft != null)
+{
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Edit Token</MudText>
+    <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+        <EditForm Model="@model" OnSubmit="OnValidSubmit">
+            <DataAnnotationsValidator/>
+            <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="Tab">
+                <MudTabPanel Text="Description">
+
+                    <MudGrid Class="mb-3">
+                        @if (nft != null && nft.Nftproject != null && !string.IsNullOrEmpty(nft.Nftproject.Tokennameprefix))
+                        {
+                            <MudItem xs="4">
+                                <MudTextField Variant="Variant.Outlined" Label="Tokenname Prefix (Readonly) - defined in Project" ReadOnly="true" Text="@nft.Nftproject.Tokennameprefix" T="string"/>
+                            </MudItem>
+
+                            <MudItem xs="8">
+                                <MudTextField Variant="Variant.Outlined" Label="Tokenname" HelperText="@GlobalFunctions.CharHelper("min. 1 characters, max. 32 characters - incl. Prefix", nft.Nftproject.Tokennameprefix + model?.Tokenname ?? "")"
+                                              @bind-Value="model.Tokenname" For="@(() => model.Tokenname)" Immediate="true"/>
+                            </MudItem>
+                        }
+                        else
+                        {
+                            <MudItem xs="12">
+                                <MudTextField Variant="Variant.Outlined" Label="Tokenname" HelperText="@GlobalFunctions.CharHelper("min. 1 characters, max. 32 characters", model?.Tokenname ?? "")"
+                                              @bind-Value="model.Tokenname" For="@(() => model.Tokenname)" Immediate="true"/>
+                            </MudItem>
+                        }
+
+
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Displayname (optional)" HelperText="@GlobalFunctions.CharHelper("max. 255 characters", model?.Displayname ?? "")"
+                                          @bind-Value="model.Displayname" For="@(() => model.Displayname)" Immediate="true"/>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Label="Description/Detaildata (optional)" HelperText="@GlobalFunctions.CharHelper("max. 255 characters", model?.Description ?? "")"
+                                          @bind-Value="model.Description" For="@(() => model.Description)" Immediate="true"/>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudRadioGroup @bind-Value="@model.SelectedPrice" T="int">
+                                <MudRadio Color="Color.Dark" Value="0">Price from API/Pricelist (default)</MudRadio>
+                                <MudRadio Color="Color.Dark" Value="1">Static price (only available on specific sales - no random sales)</MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+                        @if (model.SelectedPrice == 1)
+                        {
+                            <MudItem xs="2">
+                                @if (nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+                            {
+                                <MudNumericField Min="6.50f" Step="0.01f" Max="100000000" T="float?" @bind-Value="model.Price" HelperText="Price Cardano" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="@Coin.ADA.ToString()" HideSpinButtons="true"/>
+                            }
+                            </MudItem>
+                            <MudItem xs="2">
+                                @if (nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.SOL.ToString()) == true)
+                                {
+                                    <MudNumericField Min="0.001f" Step="0.001f" Max="1000000" T="float?" @bind-Value="model.PriceSolana" HelperText="Price Solana" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="@Coin.SOL.ToString()" HideSpinButtons="true" />
+                                }
+                            </MudItem>
+                            <MudItem xs="2">
+                                @if (nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.APT.ToString()) == true)
+                                {
+                                    <MudNumericField Min="0.001f" Step="0.001f" Max="1000000" T="float?" @bind-Value="model.PriceAptos" HelperText="Price Aptos" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="@Coin.APT.ToString()" HideSpinButtons="true" />
+                                }
+                            </MudItem>
+                            <MudItem xs="6">
+                            </MudItem>
+                        }
+                        @if (isAdmin)
+                        {
+                            @if (nft != null && nft.Nftproject != null && nft.Nftproject.Maxsupply > 1)
+                            {
+                                <MudItem xs="4">
+                                    <MudNumericField Min="0" Step="1" Max="long.MaxValue" T="long" @bind-Value="model.Sold" HelperText="Sold" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="Sold" HideSpinButtons="true"/>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudNumericField Min="0" Step="1" Max="long.MaxValue" T="long" @bind-Value="model.Reserved" HelperText="Reserved" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="Reserved" HideSpinButtons="true"/>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudNumericField Min="0" Step="1" Max="long.MaxValue" T="long" @bind-Value="model.Error" HelperText="Error" Variant="Variant.Text" Adornment="Adornment.End" AdornmentText="Error" HideSpinButtons="true"/>
+                                </MudItem>
+                            }
+
+                            <MudItem xs="3">
+                                <MudSelect T="string" Label="State" @bind-Value="model.State">
+                                    <MudSelectItem Value="@("free")"/>
+                                    <MudSelectItem Value="@("sold")"/>
+                                    <MudSelectItem Value="@("deleted")"/>
+                                    <MudSelectItem Value="@("signed")"/>
+                                    <MudSelectItem Value="@("reserved")"/>
+                                    <MudSelectItem Value="@("error")"/>
+                                    <MudSelectItem Value="@("burned")"/>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="3">
+                                <MudNumericField Min="1" Step="1" Max="long.MaxValue" T="long" @bind-Value="model.Multiplier" HelperText="Multiplier" Variant="Variant.Text" HideSpinButtons="true"/>
+                            </MudItem>
+                            <MudItem xs="3">
+                                <MudNumericField Min="0" Step="1" Max="100" T="int?" @bind-Value="model.Testmarker" HelperText="Marker" Variant="Variant.Text" HideSpinButtons="true"/>
+                            </MudItem>
+                            <MudItem xs="3">
+                                <MudTextField Variant="Variant.Outlined" Label="Upload source" @bind-Value="model.Uploadsource" For="@(() => model.Uploadsource)" Immediate="true"/>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Files">
+
+                    <MudRadioGroup @bind-Value="@SelectedUploadOption" T="int">
+                        <MudRadio Color="Color.Dark" Value="0">Upload and PIN Files directly</MudRadio>
+                    </MudRadioGroup>
+
+                    @if (SelectedUploadOption == 0)
+                    {
+                        <MudGrid>
+                            <MudItem xs="6" sm="7" md="8" lg="9" xl="10">
+                                <MudPaper Class="mt-5 mb-5 pa-8 ma-2" Outlined="true" Height="180px" MaxHeight="180px" MinHeight="180px">
+                                    <MudOverlay Visible="overlayIsVisible" DarkBackground="true" Absolute="true">
+                                        <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+                                    </MudOverlay>
+
+                                    <MudText Typo="Typo.h4">Main File</MudText>
+
+
+                                    @if (model.ipfshashes.Any())
+                                    {
+                                        <MudText Typo="Typo.subtitle1">IPFS: @model.ipfshashes[0].ipfshash</MudText>
+                                        @if (nft.Nftproject.Storage == "iagon")
+                                        {
+                                            <br />
+                                            <MudText Typo="Typo.subtitle1">IAGON: @model.ipfshashes[0].iagon?.Data?.Id</MudText>
+                                        }
+                                        <MudSelect T="string" Label="Mimetype" @bind-Value="model.ipfshashes[0].mimetype">
+                                            @foreach (var m in mimetypes.Where(x => x.Allowedasmain))
+                                            {
+                                                <MudSelectItem Value="@m.Mimetype1"/>
+                                            }
+                                        </MudSelect>
+                                    }
+
+                                </MudPaper>
+
+                            </MudItem>
+                            <MudItem xs="6" sm="5" md="4" lg="3" xl="2">
+                                <MudPaper Class="mt-5 mb-5 pa-8 ma-2" Outlined="true" Height="180px" MaxHeight="180px" MinHeight="180px">
+                                    @if (model.ipfshashes.Any() && !string.IsNullOrEmpty(model.ipfshashes[0].ipfshash))
+                                    {
+                                        @if (model.ipfshashes[0].mimetype.StartsWith("image/"))
+                                        {
+                                            <img src="@(GeneralConfigurationClass.IPFSGateway + model.ipfshashes.First().ipfshash)" style='height: 100%; width: 100%; object-fit: contain'/>
+                                        }
+                                        else
+                                        {
+                                            <ShowMimetypePlaceholder Mimetype="@model.ipfshashes[0].mimetype"></ShowMimetypePlaceholder>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <InputFile id="fileInput112" OnChange="StartUpload" hidden accept="@mainfileextensions"/>
+                                        <MudButton DropShadow="false" HtmlTag="label" Class="rounded-pill px-6 py-3"
+                                                   Size="Size.Small"
+                                                   Variant="Variant.Filled"
+                                                   Color="Color.Tertiary"
+                                                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                                                   for="fileInput112">
+                                            Upload & Pin
+                                        </MudButton>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+
+
+
+                        @for (int i = 1; i < model.ipfshashes.Count; i++)
+                        {
+                            var current = i;
+                            if (model.ipfshashes[current].deleted)
+                            {
+                                continue;
+                            }
+                            <MudGrid>
+                                <MudItem xs="6" sm="7" md="8" lg="9" xl="10">
+                                    <MudPaper Class="mt-5 mb-5 pa-8 ma-2" Outlined="true" Height="360px" MaxHeight="360px" MinHeight="360px">
+                                        <MudOverlay Visible="overlayIsVisible" DarkBackground="true" Absolute="true">
+                                            <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+                                        </MudOverlay>
+                                        <MudGrid>
+                                            <MudItem xs="11">
+                                                <MudText Typo="Typo.h4">Subfile @current</MudText>
+                                            </MudItem>
+                                            <MudItem xs="1">
+                                                @if (!string.IsNullOrEmpty(model.ipfshashes[current].ipfshash))
+                                                {
+                                                    <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Delete" aria-label="delete" OnClick="() => DeleteSubfile(current)"></MudIconButton>
+                                                }
+                                            </MudItem>
+                                        </MudGrid>
+
+                                        <MudText Typo="Typo.subtitle1">IPFS: @model.ipfshashes[current].ipfshash</MudText>
+                                        @if (nft.Nftproject.Storage == "iagon")
+                                        {
+                                            <br />
+                                            <MudText Typo="Typo.subtitle1">IAGON: @model.ipfshashes[current].iagon?.Data?.Id</MudText>
+                                        }
+                                        <MudTextField Variant="Variant.Outlined" Label="Name" HelperText="min. 1 characters, max. 30 characters" @bind-Value="model.ipfshashes[current].name" For="@(() => model.ipfshashes[current].name)"/>
+
+                                        <MudSelect T="string" Label="Mimetype" @bind-Value="model.ipfshashes[current].mimetype">
+                                            @foreach (var m in mimetypes)
+                                            {
+                                                <MudSelectItem Value="@m.Mimetype1"/>
+                                            }
+                                        </MudSelect>
+                                        <MudTextField Variant="Variant.Outlined" Label="Description (optional)" HelperText="max. 255 characters" @bind-Value="model.ipfshashes[current].detaildata" For="@(() => model.ipfshashes[current].detaildata)"/>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="5" md="4" lg="3" xl="2">
+                                    <MudPaper Class="mt-5 mb-5 pa-8 ma-2" Outlined="true" Height="340px" MaxHeight="340px" MinHeight="340px">
+                                        @if (!string.IsNullOrEmpty(model.ipfshashes[current].ipfshash))
+                                        {
+                                            @if (model.ipfshashes[current].mimetype.StartsWith("image/"))
+                                            {
+                                                <img src="@(GeneralConfigurationClass.IPFSGateway + model.ipfshashes[current].ipfshash)" style='height: 100%; width: 100%; object-fit: contain'/>
+                                            }
+
+                                            else
+                                            {
+                                                <ShowMimetypePlaceholder Mimetype="@model.ipfshashes[current].mimetype"></ShowMimetypePlaceholder>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <InputFile id="@("fi_" + current)" OnChange="StartUpload" hidden accept="@subfilesextensions"/>
+                                            <MudButton DropShadow="false" HtmlTag="label" Class="rounded-pill px-6 py-3"
+                                                       Size="Size.Small"
+                                                       Variant="Variant.Filled"
+                                                       Color="Color.Tertiary"
+                                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                                       for="@("fi_" + current)">
+                                                Upload & Pin
+                                            </MudButton>
+                                        }
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+
+                        }
+                        <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Outlined.Add" Variant="Variant.Outlined" Size="Size.Medium" Class="ma-2" OnClick="AddSubfileSection" Disabled="model.ipfshashes.Any(x => string.IsNullOrEmpty(x.ipfshash))"/>
+                        <MudText>Add Subfiles</MudText>
+
+                    }
+
+                </MudTabPanel>
+                @if (hasplaceholder)
+                {
+                    <MudTabPanel Text="Placeholder Data">
+                        <MudGrid>
+                            @for (int i = 0; i < model.ipfshashes.Count; i++)
+                            {
+                                var current = i;
+                                <MudItem xs="12">
+                                    <MudPaper Class="mt-5 mb-5 pa-8 ma-2" Outlined="true">
+                                        <MudGrid>
+
+                                            <MudItem xs="12">
+                                                @if (current == 0)
+                                                {
+                                                    <MudText Typo="Typo.h5">Main NFT</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.h5">Subfile @current</MudText>
+                                                }
+                                            </MudItem>
+                                            @for (int i1 = 0; i1 < model.ipfshashes[current].placeholder.Count(); i1++)
+                                            {
+                                                var current1 = i1;
+                                                <MudItem xs="12">
+                                                    <MudTextField Variant="Variant.Outlined" Label="@model.ipfshashes[current].placeholder[current1].Name"
+                                                                  HelperText="max. 255 characters"
+                                                                  InputType="InputType.Text"
+                                                                  @bind-Value="model.ipfshashes[current].placeholder[current1].Value"
+                                                                  For="@(() => model.ipfshashes[current].placeholder[current1].Value)"/>
+                                                </MudItem>
+                                            }
+                                        </MudGrid>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+
+                    </MudTabPanel>
+                }
+                @if (nft.Nftproject.Cip68)
+                {
+                    <MudTabPanel Text="Metadata override CIP68">
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudText>You can override the metadata from the project template. If you submit metadata here, this metadata will be used. If this field is empty, the template from the project will be used and you can submit additional placeholder values.</MudText>
+                                <MudText>It is not possible to use placeholder variables in the metadata override.</MudText>
+                                <MudText>If you have any questions about metadata, feel free to contact us.</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField Variant="Variant.Outlined" Lines="20" Label="@("Metadata Template - CIP68")" @bind-Value="model.MetadataOverrideCip68" Immediate="true" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+                <MudTabPanel Text="Metadata override CIP25">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText>You can override the metadata from the project template. If you submit metadata here, this metadata will be used. If this field is empty, the template from the project will be used and you can submit additional placeholder values.</MudText>
+                            <MudText>It is not possible to use placeholder variables in the metadata override.</MudText>
+                            <MudText>If you have any questions about metadata, feel free to contact us.</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Lines="20" Label="@("Metadata Template - CIP25")" @bind-Value="model.MetadataOverride" Immediate="true"/>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+                <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="@Backlink">Cancel</MudButton>
+                <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary">Save Changes</MudButton>
+            </MudContainer>
+        </EditForm>
+    </MudCard>
+}
+
+@code {
+
+    [Parameter]
+    public int nftid { get; set; }
+    [Parameter]
+    public int customerid { get; set; }
+
+    [Parameter]
+    public bool isAdmin { get; set; } = false;
+    [Parameter]
+    public string Backlink { get; set; } 
+    [Parameter]
+    public string SavedLink { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private Nft? nft;
+
+    private readonly EditNftClass model = new();
+    private MudTabs Tab { get; set; }
+    private bool isSubmitting;
+    private bool overlayIsVisible;
+    private int SelectedUploadOption;
+
+    private List<Mimetype> mimetypes = new();
+    private string subfilesextensions { get; set; }
+    private string mainfileextensions { get; set; }
+    private bool hasplaceholder { get; set; }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (nft != null)
+            return;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        nft = await (from a in db.Nfts
+            .Include(a=>a.Nftproject).AsSplitQuery()
+            .Include(a=>a.InverseMainnft)
+            .ThenInclude(a=>a.Metadata).AsSplitQuery()
+            .Include(a=>a.Metadata).AsSplitQuery()
+                     where a.Id == nftid && a.Nftproject.CustomerId == customerid
+                     select a).FirstOrDefaultAsync();
+
+
+        if (nft == null)
+        {
+            return;
+        }
+
+
+        mimetypes = await (from a in db.Mimetypes
+                           select a).ToListAsync();
+        foreach (var m in mimetypes)
+        {
+            if (m.Allowedasmain)
+            {
+                if (!string.IsNullOrEmpty(mainfileextensions))
+                    mainfileextensions += ", ";
+                mainfileextensions += m.Fileextensions;
+            }
+            if (!string.IsNullOrEmpty(subfilesextensions))
+                subfilesextensions += ", ";
+            subfilesextensions += m.Fileextensions;
+        }
+
+        model.Description = nft.Detaildata;
+        model.Displayname = nft.Displayname;
+        model.State = nft.State;
+        model.Sold = nft.Soldcount;
+        model.Reserved = nft.Reservedcount;
+        model.Error = nft.Errorcount;
+        model.Multiplier = nft.Multiplier;
+        model.Testmarker = nft.Testmarker;
+        model.Uploadsource = nft.Uploadsource;
+        model.Tokenname = nft.Name;
+
+
+        if (nft.Price == null)
+        {
+            model.Price = 0;
+            model.SelectedPrice = 0;
+            model.PriceSolana = 0;
+            model.PriceAptos = 0;
+        }
+        else
+        {
+            if (nft.Price != null) model.Price = ((float)nft.Price / 1000000);
+            if (nft.Pricesolana != null) model.PriceSolana = ((float)nft.Pricesolana / 1000000000);
+            if (nft.Priceaptos != null) model.PriceAptos = ((float)nft.Priceaptos / 100000000);
+            model.SelectedPrice = 1;
+        }
+        model.ipfshashes.Clear();
+        model.ipfshashes.Add(new() {detaildata = nft.Detaildata, ipfshash = nft.Ipfshash, Id = nftid, mimetype = nft.Mimetype, placeholder = await GetPlaceholderData(nft.Metadata, nft.Nftproject), iagon = GetIagon(nft)});
+        model.MetadataOverride =  nft.Metadataoverride;
+        model.MetadataOverrideCip68=nft.Metadataoverridecip68;
+
+        foreach (var nft1 in nft.InverseMainnft)
+        {
+            model.ipfshashes.Add(new() {name=nft1.Name, detaildata = nft1.Detaildata, ipfshash = nft1.Ipfshash, Id = nft1.Id, mimetype = nft1.Mimetype, placeholder = await GetPlaceholderData(nft1.Metadata, nft.Nftproject), iagon = GetIagon(nft1)});
+        }
+    }
+
+    private IagonUploadResultClass GetIagon(Nft nft)
+    {
+        if (nft.Nftproject.Storage != "iagon" || string.IsNullOrEmpty(nft.Iagonid))
+            return new IagonUploadResultClass() {Success = false, Data = new Data() {Id = ""}};
+
+        return new IagonUploadResultClass() {Success = true, Data = new Data() {Id = nft.Iagonid}};
+    }
+
+    private async Task< List<MetadataPlaceholderClass>> GetPlaceholderData(ICollection<Metadata> nftMetadata, Nftproject nftproject)
+    {
+        List<MetadataPlaceholderClass> result = await FindPlaceholder(nftproject);
+
+        foreach (var metadatum in result)
+        {
+            var f = nftMetadata.FirstOrDefault(x => x.Placeholdername == metadatum.Name);
+            if (f != null)
+                metadatum.Value = f.Placeholdervalue;
+        }
+        return result;
+    }
+
+    private async Task DeleteSubfile(int subfileno)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Are you sure you want to delete this subfile?",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            model.ipfshashes[subfileno].deleted = true;
+            StateHasChanged();
+        }
+        isSubmitting = false;
+    }
+    private async Task OnValidSubmit(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var n = await (from a in db.Nfts
+                       where a.Name == model.Tokenname && a.NftprojectId == nft.NftprojectId && a.Id!=nftid && a.MainnftId == null && a.State!="deleted"
+                       select a).FirstOrDefaultAsync();
+
+        if (n != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Name of NFT already used. Please choose another Name.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (!model.ipfshashes.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error while saving - please reload and try again", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(model.Tokenname))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT Name must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.Tokenname.Length < 1)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT Name is too short", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.Tokenname.Length > 30)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT Name is too long", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (!string.IsNullOrEmpty(model.Description) && model.Description.Length > 255)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Description is too long", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (!string.IsNullOrEmpty(model.Displayname) && model.Displayname.Length > 255)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Displayname is too long", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.SelectedPrice == 1 && model.Price < 6.5f && nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Submitted price for cardano is too low. Min. 6.5 ADA", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.SelectedPrice == 1 && model.Price > 1000000f && nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Submitted price for cardano is too high. Max. 1000000 ADA", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.SelectedPrice == 1 && model.Price < 0.01f && nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.SOL.ToString()) == true)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Submitted price for solana is too low. Min. 0.01 SOL", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (model.SelectedPrice == 1 && model.Price > 1000000f && nft != null && nft.Nftproject != null && nft.Nftproject.Enabledcoins.Contains(Coin.SOL.ToString()) == true)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Submitted price for solana is too high. Max. 1000000 SOL", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        for (int i = 1; i < model.ipfshashes.Count; i++)
+        {
+            if (model.ipfshashes[i].deleted)
+                continue;
+
+            if (!string.IsNullOrEmpty(model.ipfshashes[i].detaildata) && model.ipfshashes[i].detaildata.Length > 255)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Description on Subfile " + i + " is too long", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(model.ipfshashes[i].name) && model.ipfshashes[i].name.Length > 30)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Name on Subfile " + i + " is too long", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+
+            if (!string.IsNullOrEmpty(model.MetadataOverride))
+            {
+                if (!GlobalFunctions.IsValidJson(model.MetadataOverride, out var formatedmetadata))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Metadata CIP25 is not a valid JSON Object", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+                model.MetadataOverride = formatedmetadata;
+
+                if (!nft.Nftproject.Cip68)
+                {
+                    var chk1 = new CheckMetadataForCip25Fields();
+                    var checkmetadata = chk1.CheckMetadata(model.MetadataOverride, nft.Nftproject.Policyid, "", true, false);
+                    if (!checkmetadata.IsValid)
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add(checkmetadata.ErrorMessage, Severity.Error);
+                        isSubmitting = false;
+                        return;
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(model.MetadataOverrideCip68))
+            {
+                if (!GlobalFunctions.IsValidJson(model.MetadataOverrideCip68, out var formatedmetadata))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Metadata CIP68 is not a valid JSON Object", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+            if (!string.IsNullOrEmpty(model.MetadataOverrideCip68) && !string.IsNullOrEmpty(model.MetadataOverride))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("You can only use one metadata override", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+        }
+
+        var nftx = await (from a in db.Nfts
+            where a.Id == nftid && a.Nftproject.CustomerId == customerid
+            select a).FirstOrDefaultAsync();
+
+
+
+        // Save NFT Data
+        nftx.Name = model.Tokenname;
+        nftx.Detaildata = model.Description;
+        nftx.Mimetype = model.ipfshashes[0].mimetype;
+        nftx.Metadataoverride =model.MetadataOverride;
+        nftx.Metadataoverridecip68 = model.MetadataOverrideCip68;
+        nftx.Displayname = model.Displayname;
+        nftx.State = model.State;
+        nftx.Soldcount = model.Sold;
+        nftx.Errorcount = model.Error;
+        nftx.Reservedcount = model.Reserved;
+        nftx.Multiplier = model.Multiplier;
+        nftx.Testmarker = model.Testmarker;
+        nftx.Uploadsource=model.Uploadsource;
+        nftx.Iagonid = model.ipfshashes[0].iagon?.Data?.Id;
+        nftx.Iagonuploadresult = model.ipfshashes[0].iagon != null ? JsonConvert.SerializeObject(model.ipfshashes[0].iagon) : null;
+
+        if (model.SelectedPrice == 0)
+        {
+            nftx.Price = null;
+            nftx.Pricesolana = null;
+            nftx.Priceaptos = null;
+        }
+        else if (model.Price != null)
+        {
+            nftx.Price = (long) (model.Price * 1000000);
+            nftx.Pricesolana = model.PriceSolana != null ? (long) (model.PriceSolana * 1000000000) : null;
+            nftx.Priceaptos = model.PriceAptos != null ? (long)(model.PriceAptos * 100000000) : null;
+        }
+
+        await db.SaveChangesAsync();
+
+
+        // Save Metadata of first nft
+        await db.Database.ExecuteSqlRawAsync("delete from metadata where nft_id=" + nft.Id);
+        foreach (var p in model.ipfshashes[0].placeholder)
+        {
+            await db.Metadata.AddAsync(new() { NftId = nft.Id, Placeholdername = p.Name, Placeholdervalue = p.Value });
+        }
+        await db.SaveChangesAsync();
+
+
+        // Save Subfiles && Metadata
+        for (int i = 1; i < model.ipfshashes.Count; i++)
+        {
+            var i1 = i;
+            var u = await (from a in db.Nfts
+                           where a.Id == model.ipfshashes[i1].Id && a.MainnftId == nft.Id
+                           select a).FirstOrDefaultAsync();
+
+            if (u == null)
+            {
+                if (!model.ipfshashes[i1].deleted)
+                {
+                    Nft n1 = new()
+                    {
+                        Filename = "",
+                        Name = string.IsNullOrEmpty(model.ipfshashes[i1].name) ? model.Tokenname : model.ipfshashes[i1].name,
+                        Detaildata = model.ipfshashes[i].detaildata,
+                        Ipfshash = model.ipfshashes[i].ipfshash,
+                        NftprojectId = nft.NftprojectId,
+                        State = "free",
+                        Minted = false,
+                        Soldcount = 0,
+                        Checkpolicyid = false,
+                        Mimetype = model.ipfshashes[i].mimetype,
+                        MainnftId = nft.Id,
+                        Assetid = GlobalFunctions.GetAssetId(nft.Nftproject.Policyid, nft.Nftproject.Tokennameprefix, string.IsNullOrEmpty(model.ipfshashes[i1].name) ? model.Tokenname : model.ipfshashes[i1].name),
+                        Uid = Guid.NewGuid().ToString(),
+                        Multiplier = nft.Nftproject.Multiplier,
+                        Iagonid = model.ipfshashes[i].iagon?.Data?.Id,
+                        Filesize = model.ipfshashes[i].filesize,
+                            Iagonuploadresult = model.ipfshashes[i].iagon != null ? JsonConvert.SerializeObject(model.ipfshashes[i].iagon) : null,
+                    };
+                    await db.Nfts.AddAsync(n1);
+                    await db.SaveChangesAsync();
+
+                    foreach (var p in model.ipfshashes[i].placeholder)
+                    {
+                        await db.Metadata.AddAsync(new() {NftId = n1.Id, Placeholdername = p.Name, Placeholdervalue = p.Value});
+                    }
+                    await db.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                if (!model.ipfshashes[i1].deleted)
+                {
+                    u.Detaildata = model.ipfshashes[i].detaildata;
+                    u.Mimetype = model.ipfshashes[i].mimetype;
+                    u.Name = model.ipfshashes[i].name;
+                    u.Ipfshash = model.ipfshashes[i].ipfshash;
+                    u.Iagonid = model.ipfshashes[i].iagon?.Data?.Id;
+                    u.Iagonuploadresult = model.ipfshashes[i].iagon != null ? JsonConvert.SerializeObject(model.ipfshashes[i].iagon) : null;
+                    u.Assetid = GlobalFunctions.GetAssetId(nft.Nftproject.Policyid, nft.Nftproject.Tokennameprefix, model.ipfshashes[i].name);
+
+                    await db.SaveChangesAsync();
+
+                    await db.Database.ExecuteSqlRawAsync("delete from metadata where nft_id=" + u.Id);
+
+                    foreach (var p in model.ipfshashes[i].placeholder)
+                    {
+                        await db.Metadata.AddAsync(new() {NftId = u.Id, Placeholdername = p.Name, Placeholdervalue = p.Value});
+                    }
+                }
+                else
+                {
+                    db.Nfts.Remove(u);
+                }
+                await db.SaveChangesAsync();
+            }
+        }
+
+
+        StateHasChanged();
+
+        isSubmitting = false;
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Successfully saved", Severity.Success);
+        NavigationManager.NavigateTo(SavedLink);
+    }
+
+
+
+    private async Task AddSubfileSection()
+    {
+        model.ipfshashes.Add(new() { ipfshash = "", mimetype = "", result = false, placeholder = await FindPlaceholder(nft.Nftproject) });
+    }
+
+    private async void StartUpload(InputFileChangeEventArgs e)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        overlayIsVisible = true;
+
+        var entries = e.GetMultipleFiles(1);
+
+        var path = GeneralConfigurationClass.TempFilePath;
+
+        Directory.CreateDirectory(path);
+
+        uploadclass b = await UploadFilesToIpfsServer(entries.FirstOrDefault());
+        if (b.result)
+        {
+            if (string.IsNullOrEmpty(b.ipfshash))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Could not upload the file to the IPFS Network. Please contact the support.", Severity.Error);
+                return;
+            }
+
+            foreach (var ipfs in model.ipfshashes)
+            {
+                if (string.IsNullOrEmpty(ipfs.ipfshash))
+                {
+                    ipfs.filename = b.filename;
+                    ipfs.ipfshash = b.ipfshash;
+                    ipfs.mimetype = CheckMimetype(entries.FirstOrDefault().Name);
+                    ipfs.iagon = b.iagon;
+                    break;
+                }
+            }
+        }
+
+        overlayIsVisible = false;
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private string CheckMimetype(string name)
+    {
+        string ext = Path.GetExtension(name).ToLower();
+
+        foreach (var m in mimetypes)
+        {
+            if (m.Fileextensions.Contains(ext))
+            {
+                return m.Mimetype1;
+            }
+        }
+        return "";
+    }
+
+    private async Task<uploadclass> UploadFilesToIpfsServer(IBrowserFile a)
+    {
+
+        if (a == null)
+            return new() { ipfshash = "", result = false };
+
+        try
+        {
+            Stream stream = a.OpenReadStream(51200000);
+
+            string path1 = GeneralConfigurationClass.TempFilePath + a.Name;
+
+            FileStream fs = File.Create(path1);
+            await stream.CopyToAsync(fs);
+            stream.Close();
+            fs.Close();
+
+
+            var u = await IpfsFunctions.AddFileAsync(path1);
+            if (string.IsNullOrEmpty(u))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error while uploading File. Please contact the support.", Severity.Error);
+                return new() { ipfshash = "", result = false };
+            }
+            Ipfsadd ia = Ipfsadd.FromJson(u);
+
+            IagonUploadResultClass iagon = null;
+            if (nft.Nftproject.Storage == "iagon")
+            {
+                iagon = await IagonFunctions.AddFileAsync(path1, nft.Nftproject.Uid, nft.Name);
+                if (iagon == null || iagon.Success == false)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"Error while uploading File to Iagon. Please contact the support. {iagon?.Message}", Severity.Error);
+                    return new() { ipfshash = "", filesize = 0, result = false };
+                }
+            }
+            File.Delete(path1);
+
+
+            return new() { ipfshash = ia.Hash, result = true, placeholder = await FindPlaceholder(nft.Nftproject), iagon= iagon };
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error while uploading " + a.Name + "(" + ex.Message + ")", Severity.Error);
+            return new() { ipfshash = "", result = false };
+        }
+
+    }
+
+
+    private async Task<List<MetadataPlaceholderClass>> FindPlaceholder(Nftproject project)
+    {
+        List<MetadataPlaceholderClass> placeholder = new();
+        string s = project.Metadata;
+
+        s = GlobalFunctions.RemoveStaticPlaceholder(s);
+
+        // Add Placeholder
+        do
+        {
+            string st = s.Between("<", ">");
+            if (string.IsNullOrEmpty(st))
+                break;
+            placeholder.Add(new() { Name = st, Value = "" });
+            s = s.Replace("<" + st + ">", "");
+            hasplaceholder = true;
+        } while (true);
+        return placeholder;
+
+    }
+
+}

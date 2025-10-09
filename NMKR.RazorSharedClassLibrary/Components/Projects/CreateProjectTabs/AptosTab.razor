@@ -1,0 +1,41 @@
+﻿<EditForm Model="@Value" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <MudGrid Class="mb-10 pa-5 mr-3 ml-1 mt-5" Style="border-radius: 0rem; border-width: 1px; border-color: #d2d2d2;">
+        <MudItem xs="12">
+        <MudText Typo="Typo.h5" Color="Color.Dark">Aptos</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <SelectWallet @bind-Value="Value.AptosWalletId" Coin="Coin.APT" Blockchain="Blockchain.Aptos" IsAdmin="@IsAdmin" CustomerId="@CustomerId"></SelectWallet>
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Label="Aptos Collection Name" HelperText="@GlobalFunctions.CharHelper("max. 64 characters", Value?.AptosCollectionName ?? "")"
+                          @bind-Value="Value.AptosCollectionName" For="@(() => Value.AptosCollectionName)" Immediate="true" />
+        </MudItem>
+            <MudItem xs="12">
+                <UploadProjectImage @bind-Image="@Value.AptosCollectionImage" DescriptionText="Preview Image of the Aptos Collection" FileSize="@(new System.Drawing.Size(0, 0))" PreviewMaxWidth="300" />
+            </MudItem>
+    </MudGrid>
+
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="OnPreviousClick" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+    </MudContainer>
+
+</EditForm>
+@code {
+    [Parameter]
+    public CreateNewProjectBlockchainsClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateNewProjectBlockchainsClass> ValueChanged { get; set; }
+
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool iagonenabled { get; set; }
+    [Parameter] public List<Activeblockchain> activeblockchains { get; set; }
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnPreviousClick { get; set; }
+
+    [Parameter] public bool isSubmitting { get; set; }
+    [Parameter] public CreateNewProjectClass model { get; set; }
+}

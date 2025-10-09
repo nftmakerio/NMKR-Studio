@@ -1,0 +1,31 @@
+﻿
+<MudDialog Gutters="false">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-3" />Bug report
+            <hr />
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-height: 300px; overflow-y: scroll">
+            <MudText Style="white-space: pre-wrap;">@Log</MudText>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <CopyToClipboardButton Name="Log" Content="@Log"></CopyToClipboardButton>
+
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Ok">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string Log { get; set; }
+
+    private void Ok()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

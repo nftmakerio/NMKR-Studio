@@ -1,0 +1,145 @@
+﻿@using NMKR.Shared.Functions.Api
+@using NMKR.Shared.Functions.Extensions
+@inject ClipboardService ClipboardService
+@inject ISnackbar Snackbar
+@inject  IConnectionMultiplexer redis
+<MudGrid Class="mb-10">
+    <MudItem xs="6">
+        <BlockchainSelector @bind-Value="BlockchainString" Variant="Variant.Text" project="@project" />
+    </MudItem>
+    <MudItem xs="6">
+        <GetPriceListSelect @bind-Value="PricelistSelect" ProjectId="@project.Id" Blockchain="@(BlockchainString.ToEnum<Blockchain>())"/>
+    </MudItem>
+</MudGrid>
+<MudText Typo="Typo.h6" Class="mb-2 mt-10">To obtain a single payment address (one address per user, one time use), please execute the following Api call</MudText>
+<MudTextField Variant="Variant.Outlined" Lines="4" Label="Get Payment Address" @bind-Value="RetrieveAddressCurl" ReadOnly="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="()=>CopyToClipboard(RetrieveAddressCurl)" AdornmentAriaLabel="Copy To Clipboard" />
+  <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="rounded-xl px-6 py-3 mb-5 mt-5" OnClick="RetrievePaymentAddress">
+      Try it out
+  </MudButton>
+  
+@if (!string.IsNullOrEmpty(RetrieveAddressCurlResult))
+{
+    <MudTextField Variant="Variant.Outlined" Lines="8" Label="Api Call Result" @bind-Value="RetrieveAddressCurlResult" ReadOnly="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="()=>CopyToClipboard(RetrieveAddressCurlResult)" AdornmentAriaLabel="Copy To Clipboard" />
+}
+
+
+<MudText Typo="Typo.h6" Class="mb-2 mt-10">To get the status of this payment address, please execute the following Api Call:</MudText>
+<MudTextField Variant="Variant.Outlined" Lines="4" Label="Check Payment Address" @bind-Value="CheckAddressCurl" ReadOnly="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="()=>CopyToClipboard(CheckAddressCurl)" AdornmentAriaLabel="Copy To Clipboard" />
+<MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="rounded-xl px-6 py-3 mb-5 mt-5" OnClick="CheckPaymentAddress" Disabled="@string.IsNullOrEmpty(addressToCheck)">
+    Try it out
+</MudButton>
+@if (!string.IsNullOrEmpty(CheckAddressCurlResult))
+{
+    <MudTextField Variant="Variant.Outlined" Lines="8" Label="Api Call Result" @bind-Value="CheckAddressCurlResult" ReadOnly="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="()=>CopyToClipboard(CheckAddressCurlResult)" AdornmentAriaLabel="Copy To Clipboard" />
+}
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; } = false;
+
+    private string RetrieveAddressCurl { get; set; }
+    private string CheckAddressCurl { get; set; }
+    private string RetrieveAddressCurlResult { get; set; }
+    private string CheckAddressCurlResult { get; set; }
+    private string addressToCheck { get; set; }
+    private Pricelist _pricelistSelect;
+
+    private string BlockchainString { get; set; } = Blockchain.Cardano.ToString();
+
+    private Pricelist PricelistSelect
+    {
+        get { return _pricelistSelect; }
+        set
+        {
+            _pricelistSelect = value;
+            SetCurls();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+     
+
+        if (project.Enabledcoins.Contains(Coin.ADA.ToString()) == false && project.Enabledcoins.Contains(Coin.SOL.ToString()))
+        {
+            BlockchainString = Blockchain.Solana.ToString();
+        }
+        if (project.Enabledcoins.Contains(Coin.ADA.ToString()) == false && project.Enabledcoins.Contains(Coin.APT.ToString()))
+        {
+            BlockchainString = Blockchain.Aptos.ToString();
+        }
+        if (project.Enabledcoins.Contains(Coin.ADA.ToString()) == false && project.Enabledcoins.Contains(Coin.BTC.ToString()))
+        {
+            BlockchainString = Blockchain.Bitcoin.ToString();
+        }
+
+        SetCurls();
+    }
+
+    private void SetCurls()
+    {
+        RetrieveAddressCurl = $"curl --request GET \\\n  --url {GeneralConfigurationClass.ApiUrl}/v2/GetPaymentAddressForRandomNftSale/{project.Uid}/{PricelistSelect?.Countnftortoken??1}/127.0.0.1?blockchain={BlockchainString} \\\n  --header 'authorization: <YOUR APIKEY>'";
+        CheckAddressCurl = $"curl --request GET \\\n  --url {GeneralConfigurationClass.ApiUrl}/v2/CheckAddress/{project.Uid}/{(string.IsNullOrEmpty(addressToCheck)?"<ADDRESS>":addressToCheck)} \\\n  --header 'authorization: <YOUR APIKEY>'";
+    }
+
+    private async Task RetrievePaymentAddress()
+    {
+        RetrieveAddressCurlResult = await ApiFunctions.GetPaymentAddressAsync(project.Uid, PricelistSelect.Countnftortoken.ToString(), BlockchainString.ToEnum<Blockchain>());
+        try
+        {
+            // Apply JSON Formatting
+            var obj = JsonConvert.DeserializeObject(RetrieveAddressCurlResult);
+            RetrieveAddressCurlResult = JsonConvert.SerializeObject(obj, Formatting.Indented);
+
+            var result = JsonConvert.DeserializeObject<GetPaymentAddressResultClass>(RetrieveAddressCurlResult);
+            if (!string.IsNullOrEmpty(result?.PaymentAddress))
+            {
+                addressToCheck = result.PaymentAddress;
+                SetCurls();
+            }
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Api returned an error code", Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async Task CheckPaymentAddress()
+    {
+        CheckAddressCurlResult = await ApiFunctions.CheckPaymentAddressAsync(project.Uid,  string.IsNullOrEmpty(addressToCheck)?"<ADDRESS>":addressToCheck);
+        try
+        {
+    // Apply JSON Formatting
+            var obj = JsonConvert.DeserializeObject(CheckAddressCurlResult);
+            CheckAddressCurlResult = JsonConvert.SerializeObject(obj, Formatting.Indented);
+        }
+        catch 
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Api returned an error", Severity.Error);
+        }
+    }
+
+    private async Task CopyToClipboard(string st)
+    {
+        try
+        {
+            await ClipboardService.WriteTextAsync(st);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add( "Copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+        }
+    }
+
+}

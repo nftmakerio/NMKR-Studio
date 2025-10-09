@@ -1,0 +1,15 @@
+﻿@page "/wallets"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+<WalletList IsAdmin="false" CustomerId="@((int)settings.UserId)" />
+
+@code 
+{
+
+private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Wallets", href: "/wallets", disabled: true),
+    };
+}

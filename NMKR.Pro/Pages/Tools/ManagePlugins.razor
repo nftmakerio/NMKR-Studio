@@ -1,0 +1,73 @@
+﻿@page "/plugins"
+
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IConnectionMultiplexer _redis;
+
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Indeterminate="true" />
+    </MudOverlay>
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Apps</MudText>
+    <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+
+    <MudTable MultiSelection="false" Hover="false" Bordered="true" Striped="false" Elevation="0" RowsPerPage="10" 
+              HorizontalScrollbar="true" T="Plugin" Items="plugins" >
+
+        <RowTemplate>
+            <MudTd Style="Width:110px" >
+                @if (!string.IsNullOrEmpty(context.Image))
+                {
+                    <MudImage Src = "@context.Image"Width = "100" />
+                }
+            </MudTd>
+            <MudTd>
+                <MudText Typo="Typo.body1" Color="Color.Dark">@context.Header</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Dark">@context.Subtitle</MudText>
+                @((MarkupString)context.Description)
+
+            </MudTd>
+            <MudTd>
+                <MudButton DropShadow="false" HtmlTag="label"
+                           Class="mt-5 mb-5 rounded-xl px-6 py-3"
+                           Variant="Variant.Filled"
+                           Color="Color.Dark"
+                               Href="@context.Buttonlink">
+                    @context.Buttontext
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+
+
+        <PagerContent>
+                <MudTablePager HideRowsPerPage="false" />
+        </PagerContent>
+    </MudTable></MudCard>
+</MudContainer>
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Plugins", href: "/plugins",disabled:true),
+    };
+    private bool OverlayIsVisible { get; set; }
+    private List<Plugin> plugins = new List<Plugin>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await LoadPlugins(db);
+    }
+
+    private async Task LoadPlugins(EasynftprojectsContext db)
+    {
+       plugins = await db.Plugins.Where(x=>x.State=="active").AsNoTracking().ToListAsync();
+    }
+
+}

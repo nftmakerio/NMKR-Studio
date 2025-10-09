@@ -1,0 +1,333 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using BlazorDownloadFile
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IConnectionMultiplexer _redis;
+@inject IStringLocalizer _loc
+
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" ZIndex="9999">
+    <MudGrid>
+        <MudItem xs="12" Style="width:400px">
+            <MudText Typo="Typo.h3" Class="d-flex align-center justify-center mud-width-full">@progressstring</MudText>
+            <MudProgressLinear Color="Color.Tertiary" Size="Size.Large" Value="@progressValue" Max="@maxProgress" />
+        </MudItem>
+        <MudItem xs="12" Style="width:400px">
+            <MudText Typo="Typo.body1" Class="d-flex align-center justify-center mud-width-full">@currentAssetname</MudText>
+        </MudItem>
+    </MudGrid>
+        
+        
+</MudOverlay>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["Policy snapshot"]</MudText>
+    <MudPaper Elevation="0" Class="pa-5 border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+    <MudGrid>
+        <MudItem xs="12">
+            <BlockchainSelector isAdmin="false" @bind-Value="@blockchainselector"/>
+        </MudItem>
+        @if (blockchainselector == Blockchain.Cardano.ToString())
+        {
+            <MudItem xs="6">
+                <MudTextField Variant="Variant.Outlined" @bind-Value="searchPolicyidString" Placeholder="@_loc["Enter policyid"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5" Clearable="true"></MudTextField>
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@cumulate" Label="@_loc["Cumulate stake addresses"]" Color="Color.Primary"/>
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@withMintingInformation" Label="@_loc["With Minting Information"]" Color="Color.Primary"/>
+            </MudItem>
+        }
+        @if (blockchainselector == Blockchain.Solana.ToString())
+        {
+            <MudItem xs="6">
+                <MudTextField Variant="Variant.Outlined" @bind-Value="searchPolicyidString" Placeholder="@_loc["Enter collection id"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5" Clearable="true"></MudTextField>
+            </MudItem>
+        }
+        <MudItem xs="6">
+            <MudButton DropShadow="false" HtmlTag="label2" Class="mb-5 mt-5 rounded-pill px-6 py-3"
+                       Variant="Variant.Filled"
+                       Color="Color.Tertiary" OnClick="Search">
+                @_loc["Search"]
+            </MudButton>
+        </MudItem>
+        @if (assetaddresses != null && assetaddresses.Any())
+        {
+            <MudItem xs="12" sm="12" md="12">
+                <MudCard Elevation="25" Style="height: 100%;">
+
+                    <MudCardContent Class="px-0">
+
+                        <MudTable Items="@assetaddresses" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="NmkrAssetPolicySnapshot" OnRowClick="@(args => OnRowClicked(args))">
+                            <HeaderContent>
+                                <MudTh>@_loc["Wallet Address"]</MudTh>
+                                <MudTh>@_loc["Stake Address"]</MudTh>
+                                <MudTh>@_loc["Quantity"]</MudTh>
+                                @if (cumulate)
+                                {
+                                    <MudTh>@_loc["# Addr."]</MudTh>
+                                }
+
+                            </HeaderContent>
+
+                            <RowTemplate>
+                                    <MudTd><ShowAddress Address="@context.Address" Blockchain="Blockchain.Cardano"></ShowAddress></MudTd>
+                                    <MudTd><ShowAddress Address="@context.StakeAddress" Blockchain="Blockchain.Cardano"></ShowAddress></MudTd>
+                                <MudTd>@GlobalFunctions.FormatMultiplier(context.TotalQuantity, 1)</MudTd>
+
+                                @if (cumulate)
+                                {
+                                    <MudTd>@(context.AssetsOnStakeAddress?.Length ?? 0)</MudTd>
+                                }
+                            </RowTemplate>
+
+
+                            <ChildRowContent>
+                                @if (context.AssetsOnStakeAddress != null && context.AssetsOnStakeAddress.Any() && context.StakeAddress == DetailsId)
+                                {
+                                    <MudTr>
+                                        <td colspan="4">
+                                            <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                                            <MudCard Elevation="0">
+                                                <MudCardHeader>
+                                                    <CardHeaderContent>
+                                                        <MudText Typo="Typo.body1">@_loc["Additional Assets on StakeAddress"] <strong>@context.StakeAddress</strong></MudText>
+                                                    </CardHeaderContent>
+                                                </MudCardHeader>
+                                                <MudCardContent Class="pa-0">
+                                                    <MudTable Items="@context.AssetsOnStakeAddress" Context="adrContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                                        <HeaderContent>
+                                                            <MudTh>@_loc["Asset Name"]</MudTh>
+                                                            <MudTh>@_loc["Fingerprint"]</MudTh>
+                                                            <MudTh>@_loc["Quantity"]</MudTh>
+                                                            <MudTh>@_loc["Total supply"]</MudTh>
+                                                            <MudTh>@_loc["Wallet Address"]</MudTh>
+                                                            <MudTh>@_loc["Minting TX-Hash"]</MudTh>
+                                                            @if (blockchainselector== Blockchain.Cardano.ToString())
+                                                            {
+                                                                <MudTh>@_loc["Minting Date"]</MudTh>
+                                                               
+                                                            }
+                                                            @if (blockchainselector== Blockchain.Solana.ToString())
+                                                            {
+                                                                <MudTh>@_loc["Associated Token Address"]</MudTh>
+                                                               
+                                                            }
+                                                            @if (withMintingInformation)
+                                                            {
+                                                                <MudTh>@_loc["Minting Receiver Address"]</MudTh>
+                                                            }
+                                                        </HeaderContent>
+                                                        <RowTemplate>
+                                                            <MudTd>@adrContext.AssetName</MudTd>
+                                                            <MudTd><ShowFingerprint Fingerprint="@adrContext.Fingerprint"></ShowFingerprint> </MudTd>
+                                                            <MudTd>@GlobalFunctions.FormatMultiplier(@adrContext.Quantity, adrContext.Multiplier)</MudTd>
+                                                            <MudTd>@GlobalFunctions.FormatMultiplier(adrContext.TotalSupply, adrContext.Multiplier)</MudTd>
+                                                                <MudTd><ShowAddress Address="@adrContext.Address" Blockchain="Blockchain.Cardano"></ShowAddress></MudTd>
+                                                            <MudTd>
+                                                                <ShowTransactionHash TxId="@adrContext.MintingTxHash" Blockchain="@(Blockchain.Cardano)"></ShowTransactionHash>
+                                                            </MudTd>
+                                                            @if (blockchainselector== Blockchain.Cardano.ToString())
+                                                            {
+                                                                <MudTd>@DateTimeOffset.FromUnixTimeSeconds(adrContext.CreationTime ?? 0).DateTime</MudTd>
+                                                            }
+                                                            @if (blockchainselector== Blockchain.Solana.ToString())
+                                                            {
+                                                                <MudTh>@adrContext.Address</MudTh>
+                                                            }
+                                                           
+                                                            @if (withMintingInformation)
+                                                            {
+                                                                    <MudTd><ShowAddress Address="@adrContext.MintingTransactionInformation?.Address" Blockchain="Blockchain.Cardano"></ShowAddress></MudTd>
+                                                            }
+                                                        </RowTemplate>
+                                                    </MudTable>
+                                                </MudCardContent>
+                                            </MudCard>
+                                            <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                                        </td>
+                                    </MudTr>
+                                }
+                            </ChildRowContent>
+
+
+                            <PagerContent>
+                                <MudTablePager HideRowsPerPage="true"/>
+                            </PagerContent>
+                        </MudTable>
+
+
+
+
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+
+    </MudGrid>
+    @if (assetaddresses != null && assetaddresses.Any())
+    {
+        <MudButton DropShadow="false" HtmlTag="label2" Class="mb-5 mt-5 rounded-pill px-6 py-3"
+                   Variant="Variant.Filled"
+                   Color="Color.Tertiary" OnClick="ExportAddresses">
+            @_loc[" Export addresses"]
+        </MudButton>
+    }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool isSubmitting { get; set; }
+    private bool OverlayIsVisible { get; set; }
+    [StringLength(56, MinimumLength = 56)]
+    private string searchPolicyidString { get; set; }
+
+    private string progressstring { get; set; }
+    private string currentAssetname { get; set; }
+    private long progressValue { get; set; }
+    private long maxProgress { get; set; }
+    private string blockchainselector { get; set; }
+
+    private bool _cumulate = true;
+
+    private bool cumulate
+    {
+        get { return _cumulate; }
+        set
+        {
+            _cumulate = value;
+            assetaddresses = new NmkrAssetPolicySnapshot[] { };
+        }
+    }
+    
+    private bool _withMintingInformation = false;
+
+    private bool withMintingInformation
+    {
+        get { return _withMintingInformation; }
+        set
+        {
+            _withMintingInformation = value;
+            assetaddresses = new NmkrAssetPolicySnapshot[] { };
+        }
+    }
+
+    private NmkrAssetPolicySnapshot[]? assetaddresses { get; set; } = new NmkrAssetPolicySnapshot[] { };
+    private string DetailsId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        progressstring = @_loc["...Please wait..."];
+    }
+    private void OnRowClicked(TableRowClickEventArgs<NmkrAssetPolicySnapshot> trans)
+    {
+        if (trans.Item==null)
+            return;
+
+        DetailsId = (DetailsId == trans.Item.StakeAddress ? null : trans.Item.StakeAddress) ?? string.Empty;
+        StateHasChanged();
+    }
+
+
+    public async Task ExportAddresses()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = "tokens_" + searchPolicyidString;
+        string filename = path + filteredfilename + ".zip";
+        string csvfilename = path + filteredfilename + ".csv";
+        Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+        await using (var writer = new StreamWriter(csvfilename))
+        await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            await csv.WriteRecordsAsync(assetaddresses);
+        }
+
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        OverlayIsVisible = false;
+        isSubmitting = false;
+    
+    }
+
+    public async Task Search()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(searchPolicyidString))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Enter policy id"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (searchPolicyidString.Length != 56 && blockchainselector==Blockchain.Cardano.ToString())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Enter valid policy id"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        var snap = new GetPolicySnapshotClass();
+        snap.HandleAssetEvent+= (sender, args) =>
+        {
+            progressstring = args.TotalAssets > 0 ? $"{args.Description} {args.CurrentAsset} of {args.TotalAssets}" : args.Description;
+            currentAssetname = @_loc["Assetname: "] + args.AssetName;
+            progressValue = args.CurrentAsset;
+            maxProgress = args.TotalAssets;
+
+            StateHasChanged();
+        };
+
+        assetaddresses = await snap.GetAllAddressesForSpecificPolicyIdAsync(_redis, searchPolicyidString, cumulate, withMintingInformation, blockchainselector.ToEnum<Blockchain>());
+        if (assetaddresses == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Internal error while creating policy snapshot. Too many tokens oder addresses"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        OverlayIsVisible = false;
+        StateHasChanged();
+
+        if (!assetaddresses.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["No tokens with this policyid"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        progressstring = @_loc["...Please wait..."];
+        isSubmitting = false;
+    }
+
+}

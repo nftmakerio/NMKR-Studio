@@ -1,0 +1,72 @@
+﻿@page "/managedwallets/"
+@using NMKR.Shared.Classes.CustodialWallets
+@inject AppSettings settings
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["Managed Wallets"]</MudText>
+    <ShowCustodialWallets customerid="@((int)settings.UserId)" @ref="showCustodialWallets" />
+    <MudButton DropShadow="false"
+               Class="mt-5 mb-5 rounded-xl px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               StartIcon="@Icons.Material.Filled.AttachMoney"
+               OnClick="AddWallet">
+    @_loc["Add new managed Wallet"]
+    </MudButton>
+</MudContainer>
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool isSubmitting;
+
+    private ShowCustodialWallets showCustodialWallets { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new();
+
+    protected override void OnInitialized()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Managed Wallets"], href: "/managedwallets"));
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+    }
+    private async Task ReloadData()
+    {
+        @if (showCustodialWallets != null)
+        {
+            await showCustodialWallets.ReloadData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddWallet()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+     
+        var parameters = new DialogParameters { { nameof(CreateCustodialWalletDialogbox.customerid), (int)settings.UserId } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<CreateCustodialWalletDialogbox>(@_loc["Add Managed Wallet"], parameters, maxWidth);
+        var result = await dialog.Result;
+       
+
+        if (!result.Canceled && result.Data!=null)
+        {
+            var parameters2 = new DialogParameters { { nameof(ShowSeedPhraseDialogbox.walletresultclass), (result.Data as CreateWalletResultClass) } };
+            await DialogService.ShowAsync<ShowSeedPhraseDialogbox>(@_loc["Wallet Informations"], parameters2, maxWidth);
+
+            await ReloadData();
+        }
+        isSubmitting = false;
+    }
+}

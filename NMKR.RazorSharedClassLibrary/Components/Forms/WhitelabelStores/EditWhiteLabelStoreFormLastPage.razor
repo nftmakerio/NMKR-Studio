@@ -1,0 +1,546 @@
+﻿@using NMKR.Shared.Functions.NmkrStoreApi
+@using NMKR.Shared.Classes.NmkrStore
+@inject ISnackbar Snackbar
+
+
+<table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+    <tr>
+        <td><MudText Typo="Typo.h4" Color="Color.Dark" Class="mb-4">Collections</MudText></td>
+        <td align="right">
+
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="NextButtonPressed" Color="Color.Tertiary" Disabled="@(!success1 || isSubmitting)">
+                @if (isSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Processing</MudText>
+                }
+                else
+                {
+                    <MudText>PUBLISH</MudText>
+                }
+            </MudButton>
+        </td>
+    </tr>
+</table>
+
+<MudDivider Class="mb-10" />
+
+
+<table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+    <tr>
+        <td width="60%">
+            <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Add Collection</MudText>
+            <MudText Typo="Typo.body1">You can add unlimited collections to your store. You can decide which of the added collections will be shown on your frontpage.</MudText>
+            <MudAutocomplete T="string" Label="PolicyID or Project name" @bind-Value="NewCollection" SearchFunc="@Search1" Variant="Variant.Outlined" CoerceValue="true"/>
+        </td>
+        <td>
+            <div align="right" class="ml-10">
+                <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" OnClick="AddNewCollection" Color="Color.Secondary" Disabled="isSubmitting2 || isSubmitting">
+                    @if (isSubmitting2)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Processing</MudText>
+                    }
+                    else
+                    {
+                        <MudText>ADD COLLECTION</MudText>
+                    }
+                </MudButton>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<MudDivider Class="mt-10 mb-10" />
+
+@if (ShowAllCardanoNfts != null)
+{
+    <WhiteLabelSettingTemplateBoolean Setting="@ShowAllCardanoNfts" @bind-BooleanStringValue="ShowAllCardanoNftsValue">
+    </WhiteLabelSettingTemplateBoolean>
+}
+
+<MudDivider Class="mt-10 mb-10" />
+
+<MudTable Items="@collection" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" Filter="new Func<Whitelabelstorecollection,bool>(FilterFunc)">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Collections</MudText>
+        <MudSpacer />
+        <MudTextField DebounceInterval="300" Clearable="true" Variant="Variant.Outlined" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5" Immediate="true"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>State</MudTh>
+        <MudTh Style="Width: 200px;">Actions</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>
+            <MudText Typo="Typo.h5">@context.Collectionname</MudText>
+            <MudText Typo="Typo.body1">@context.Collectiondescription</MudText>
+            <MudText Typo="Typo.body2">Policy-ID: @context.Policyid</MudText>
+        </MudTd>
+            <MudTd DataLabel="State">
+            @switch (context.State)
+            {
+                case "active":
+                    <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                    break;
+                case "notactive":
+                    <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                    break;
+            }
+            @if (context.Isdropinprogess == true)
+            {
+                <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Drop in progress</NMKRChip>
+            }
+        </MudTd>
+        <MudTd Style="text-align: right">
+            <MudNavMenu Class="mud-width-full">
+                <MudNavLink @onclick="() => RemoveFromFrontpage(context.Id)" Icon="@(context.Showonfrontpage == true ? Icons.Material.Outlined.HideImage : Icons.Material.Outlined.Image)">@(context.Showonfrontpage == true ? "Remove from frontpage" : "Show on frontpage") </MudNavLink>
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">Edit collection settings</MudNavLink>
+                <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete">Delete</MudNavLink>
+            </MudNavMenu>
+        </MudTd>
+
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager HideRowsPerPage="true" />
+    </PagerContent>
+</MudTable>
+
+
+
+@code {
+    [Parameter]
+    public int? WhiteLabelStoreId { get; set; }
+    [Parameter]
+    public int PageId { get; set; } = 1;
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public CreateNewWhitelabelClass Model { get; set; } 
+    [Parameter]
+    public EventCallback<int> OnNextButtonClicked { get; set; }
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private bool isSubmitting { get; set; }
+    private bool isSubmitting2 { get; set; }
+
+    private bool success1 = false;
+    private List<Whitelabelstorecollection> collection =new List<Whitelabelstorecollection>();
+    private string NewCollection { get; set; }
+
+
+    private Storesetting? ShowAllCardanoNfts;
+    private string? ShowAllCardanoNftsValue;
+    private string searchString = "";
+
+    private bool FilterFunc(Whitelabelstorecollection element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Policyid==searchString)
+            return true;
+        if (element.Collectionname.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Collectiondescription.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+       
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await ReloadData(db);
+      
+    }
+
+    private async Task ReloadCollections(EasynftprojectsContext db)
+    {
+        collection = await (from a in db.Whitelabelstorecollections
+                            where a.NftprojectId == WhiteLabelStoreId
+                            select a).AsNoTracking().ToListAsync();
+
+        success1 = collection.Any();
+    }
+
+    private async Task ReloadData(EasynftprojectsContext db)
+    {
+        await ReloadCollections(db);
+      
+        ShowAllCardanoNfts = await (from a in db.Storesettings
+                                    where a.Settingsname == "is_working_with_all_nfts"
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (ShowAllCardanoNfts == null)
+            return;
+
+        ShowAllCardanoNftsValue = await (from a in db.Whitelabelstoresettings
+                                         where a.NftprojectId == WhiteLabelStoreId && a.StoresettingsId == ShowAllCardanoNfts.Id
+            select a.Value).FirstOrDefaultAsync();
+        if (string.IsNullOrEmpty(ShowAllCardanoNftsValue))
+            ShowAllCardanoNftsValue = "false";
+
+    }
+
+    private async Task AddNewCollection()
+    {
+        if (string.IsNullOrEmpty(NewCollection))
+            return;
+        isSubmitting2 = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var project=await (from a in db.Nftprojects
+            where a.CustomerId==CustomerId && (a.Projectname + " (" + a.Policyid+")")==NewCollection
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        var projectwhitelabel=await (from a in db.Nftprojects
+        where a.Id==WhiteLabelStoreId
+        select a).AsNoTracking().FirstOrDefaultAsync();
+        if (projectwhitelabel==null || WhiteLabelStoreId==null)
+        {
+            Snackbar.Add("Internal error - Whitelabel Project not found", Severity.Error);
+            isSubmitting2 = false;
+            return;
+        }
+
+        var storesettingsid = await (from a in db.Storesettings
+            where a.Settingsname == "home_page_collection_policies"
+            select a.Id).FirstAsync();
+
+        if (project != null)
+        {
+            if (await CheckForAlreadyExistingPolicyid(db, project.Policyid))
+            {
+                isSubmitting2 = false;
+                return;
+            }
+
+            Whitelabelstorecollection wsc = new Whitelabelstorecollection()
+            {
+                State = "active",
+                Policyid = project.Policyid,
+                NftprojectId = (int) WhiteLabelStoreId,
+                Collectionname = project.Projectname,
+                StoresettingsId = storesettingsid,
+                Showonfrontpage = false,
+                Dropprojectuid = project.Uid,
+            };
+            var wsc1 = await GetCollectionData(wsc,false);
+            if (wsc1 != null)
+            {
+                await db.Whitelabelstorecollections.AddAsync(wsc1);
+                await db.SaveChangesAsync();
+                await SendDataToStoreApi(db, wsc1, projectwhitelabel,project);
+            }
+        }
+        else
+        {
+            if (NewCollection.Length!=56)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Project not found or policy id not correct", Severity.Error);
+                isSubmitting2 = false;
+                return;
+            }
+            if (await CheckForAlreadyExistingPolicyid(db, NewCollection))
+                return;
+
+            var proj1 = await (from a in db.Nftprojects
+                where a.Policyid == NewCollection && a.State=="active"
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            Whitelabelstorecollection wsc = new Whitelabelstorecollection()
+            {
+                State = "active",
+                Policyid = NewCollection,
+                NftprojectId = (int) WhiteLabelStoreId,
+                StoresettingsId = storesettingsid,
+                Showonfrontpage = false,
+                Collectionname = proj1?.Projectname,
+                Dropprojectuid = project?.Uid,
+            };
+            var wsc1 = await GetCollectionData(wsc,false);
+            if (wsc1 != null)
+            {
+                await db.Whitelabelstorecollections.AddAsync(wsc1);
+                await db.SaveChangesAsync();
+                await SendDataToStoreApi(db, wsc1, projectwhitelabel, project);
+            }
+        }
+        await ReloadCollections(db);
+        isSubmitting2 = false;
+        StateHasChanged();
+    }
+
+    private async Task<bool> CheckForAlreadyExistingPolicyid(EasynftprojectsContext db, string newCollection)
+    {
+        var check=await (from a in db.Whitelabelstorecollections
+            where a.Policyid==newCollection && a.NftprojectId==(int)WhiteLabelStoreId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+        if (check != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Policy id already exists", Severity.Error);
+        }
+        return  check!=null;
+    }
+
+    private async Task SendDataToStoreApi(EasynftprojectsContext db, Whitelabelstorecollection wsc1, Nftproject shopProject, Nftproject? policyidProject)
+    {
+        bool res = false;
+        var collectiondata = await NmkrStoreApiFunctions.GetVerifiedCollectionAsync(wsc1.Policyid);
+        if (collectiondata == null)
+        {
+            var collection = new NmkrStoreApiGetVerifiedCollectionClass()
+            {
+                Name = wsc1.Collectionname,
+                Description = wsc1.Collectiondescription,
+                Discord = wsc1.Discordlink,
+                Twitter = wsc1.Twritterlink,
+                Instagram = wsc1.Instagramlink,
+                CreatorName = wsc1.Nameofcreator,
+                IsDropInProgress = wsc1.Isdropinprogess,
+                PreviewImage = wsc1.Previewimage,
+                IsActive = true,
+                IsVerified = false,
+                ProjectUid = policyidProject?.Uid,
+                ProjectId = wsc1.NftprojectId,
+                PolicyIdList = new[] {wsc1.Policyid},
+                Id = null,
+                Website = "https://" + shopProject.Projecturl + ".nmkr.store"
+            };
+            res=await NmkrStoreApiFunctions.RegisterVerifiedCollectionAsync(collection);
+            var collectiondata1 = await NmkrStoreApiFunctions.GetVerifiedCollectionAsync(wsc1.Policyid);
+            if (collectiondata1 != null)
+            {
+                wsc1.Uid = collectiondata1.Id.ToString();
+                db.Whitelabelstorecollections.Update(wsc1);
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            collectiondata.Name = wsc1.Collectionname;
+            collectiondata.Description = wsc1.Collectiondescription;
+            collectiondata.Discord = wsc1.Discordlink;
+            collectiondata.Twitter = wsc1.Twritterlink;
+            collectiondata.PreviewImage = wsc1.Previewimage;
+            collectiondata.Instagram = wsc1.Instagramlink;
+            collectiondata.CreatorName = wsc1.Nameofcreator;
+            collectiondata.IsDropInProgress = wsc1.Isdropinprogess;
+            collectiondata.IsActive = true;
+            collectiondata.IsVerified = false;
+            collectiondata.ProjectUid = policyidProject?.Uid;
+            collectiondata.ProjectId = wsc1.NftprojectId;
+            collectiondata.PolicyIdList = new[] {wsc1.Policyid};
+            collectiondata.Website = "https://" + shopProject.Projecturl + ".nmkr.store";
+            res=await NmkrStoreApiFunctions.UpdateVerifiedCollectionAsync(collectiondata);
+        }
+        if (!res)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Could not update the verified collection settings", Severity.Error);   
+        }
+    }
+
+    private async Task<Whitelabelstorecollection?> GetCollectionData(Whitelabelstorecollection wsc, bool showalways)
+    {
+        var collectiondata = await NmkrStoreApiFunctions.GetVerifiedCollectionAsync(wsc.Policyid);
+        if (collectiondata != null)
+        {
+            wsc.Collectionname = collectiondata.Name;
+            wsc.Discordlink = collectiondata.Discord;
+            wsc.Twritterlink = collectiondata.Twitter;
+            wsc.Previewimage = collectiondata.PreviewImage;
+            wsc.Instagramlink=collectiondata.Instagram;
+            wsc.Nameofcreator=collectiondata.CreatorName;
+            wsc.Collectiondescription=collectiondata.Description;
+            wsc.Isdropinprogess=collectiondata.IsDropInProgress;
+            wsc.Dropprojectuid=collectiondata.ProjectUid;
+            wsc.Showonfrontpage = false;
+        }
+        if (showalways || collectiondata == null)
+        {
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+            var parameters = new DialogParameters { { nameof(CompleteCollectionModalWindow.collection), wsc }, { nameof(CompleteCollectionModalWindow.ShowDropSwitch), !string.IsNullOrEmpty(wsc.Dropprojectuid) }, };
+            var dialog = await DialogService.ShowAsync<CompleteCollectionModalWindow>("Complete collection",parameters, maxWidth);
+            var result = await dialog.Result;
+            if (result.Canceled)
+                return null;
+        }
+        return wsc;
+    }
+
+    private async Task NextButtonPressed()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (collection.Count == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You need to add at least one collection", Severity.Error);
+            return;
+        }
+        var project = await (from a in db.Nftprojects
+            where a.Id == WhiteLabelStoreId
+            select a).FirstOrDefaultAsync();
+        if (project != null)
+        {
+            project.State = "active";
+            await db.SaveChangesAsync();
+        }
+
+       
+        if (ShowAllCardanoNfts != null)
+        {
+            var whitelabelstoresettings = await (from a in db.Whitelabelstoresettings
+                                                 where a.StoresettingsId == ShowAllCardanoNfts.Id && a.NftprojectId == WhiteLabelStoreId
+                select a).FirstOrDefaultAsync();
+            if (whitelabelstoresettings != null)
+            {
+                whitelabelstoresettings.Value = ShowAllCardanoNftsValue;
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                var wls = new Whitelabelstoresetting()
+                {
+                        StoresettingsId = ShowAllCardanoNfts.Id,
+                    NftprojectId = (int) WhiteLabelStoreId,
+                        Value = ShowAllCardanoNftsValue,
+                };
+                await db.Whitelabelstoresettings.AddAsync(wls);
+                await db.SaveChangesAsync();
+            }
+        }
+
+        await OnNextButtonClicked.InvokeAsync((int)WhiteLabelStoreId);
+    }
+
+    private async Task RemoveFromFrontpage(int id)
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var coll = await (from a in db.Whitelabelstorecollections
+            where a.Id == id
+            select a).FirstOrDefaultAsync();
+        if (coll != null)
+        {
+            coll.Showonfrontpage = !(coll.Showonfrontpage ?? true);
+            await db.SaveChangesAsync();
+            await ReloadCollections(db);
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Deleting can not be undone!",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+            var coll = await (from a in db.Whitelabelstorecollections
+                where a.Id == id
+                select a).FirstOrDefaultAsync();
+
+            if (coll == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+                return;
+            }
+            await DeleteDataFromStoreApi(db, coll);
+            db.Whitelabelstorecollections.Remove(coll);
+            await db.SaveChangesAsync();
+            await ReloadCollections(db);
+            
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteDataFromStoreApi(EasynftprojectsContext db, Whitelabelstorecollection collection)
+    {
+        string uid=collection.Uid;
+        if (string.IsNullOrEmpty(uid))
+        {
+            var collectiondata = await NmkrStoreApiFunctions.GetVerifiedCollectionAsync(collection.Policyid);
+            uid = collectiondata.Id.ToString();
+        }
+
+        if (!string.IsNullOrEmpty(uid))
+            await NmkrStoreApiFunctions.RemoveVerifiedCollectionAsync(uid);
+            
+
+
+    }
+
+    private async Task Edit(int id)
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+       
+        var wsc = await (from a in db.Whitelabelstorecollections
+            where a.Id == id
+            select a).FirstOrDefaultAsync();
+
+        if (wsc == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            return;
+        }
+
+        var wsc1 = await GetCollectionData(wsc,true);
+        if (wsc1 != null)
+        {
+            var projectwhitelabel=await (from a in db.Nftprojects
+                                           where a.Id == (int)WhiteLabelStoreId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            Nftproject? project= null;
+            if (!string.IsNullOrEmpty(wsc1.Dropprojectuid))
+            {
+                project = await (from a in db.Nftprojects
+                    where a.Uid == wsc1.Dropprojectuid
+                    select a).AsNoTracking().FirstOrDefaultAsync();
+            }
+
+            wsc.Isdropinprogess=wsc1.Isdropinprogess;
+            wsc.Twritterlink=wsc1.Twritterlink;
+            wsc.Previewimage = wsc1.Previewimage;
+            wsc.Instagramlink=wsc1.Instagramlink;
+            wsc.Nameofcreator=wsc1.Nameofcreator;
+            wsc.Collectiondescription=wsc1.Collectiondescription;
+            wsc.Discordlink=wsc1.Discordlink;
+            wsc.Collectionname=wsc1.Collectionname;
+            
+
+            await db.SaveChangesAsync();
+            await SendDataToStoreApi(db, wsc1, projectwhitelabel, project);
+            await ReloadCollections(db);
+        }
+    }
+    private async Task<IEnumerable<string>> Search1(string value, CancellationToken cancellationToken)
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var projects = await (from a in db.Nftprojects
+            where a.CustomerId == CustomerId && a.Projecttype != "marketplace-whitelabel"
+            select a).AsNoTracking().ToListAsync();
+
+        List<string> projects1 = new();
+        foreach (var s in projects.Select(nftproject => nftproject.Projectname + " (" + nftproject.Policyid + ")").Where(s => !projects1.Contains(s)))
+        {
+            projects1.Add(s);
+        }
+
+
+    // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return projects1;
+        return projects1.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+}

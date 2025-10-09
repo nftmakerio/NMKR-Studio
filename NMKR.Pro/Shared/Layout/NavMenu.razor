@@ -1,0 +1,47 @@
+﻿@*<MudDivider Class="mb-4" />*@
+@*<NmkrHelpTextbox></NmkrHelpTextbox>*@
+<MudNavMenu>
+
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Dashboard">Dashboard</MudNavLink>
+
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Create</MudText>
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="/projects" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Image">NFT Minting</MudNavLink>
+    
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Tools</MudText>
+   @*  <MudNavLink Href="/managewhitelabelstores" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Store">Custom NFT Stores</MudNavLink> *@
+    <MudNavLink Href="/auctions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.AccountBalanceWallet">Auctions</MudNavLink>
+    <MudNavLink Href="/royaltysplitaddresses" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Copyright">Split Addresses</MudNavLink>
+    <MudNavLink Href="/directsales" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Sell">Secondary Sales</MudNavLink>
+    <MudNavLink Href="/policysnapshot" Icon="@Icons.Material.Outlined.FindInPage">Policy Snapshot</MudNavLink>
+    <MudNavLink Href="/automations" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.AutoMode">Automations</MudNavLink>
+    <MudNavLink Href="/managedwallets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Wallet">Managed Wallets</MudNavLink>
+
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="/plugins" Icon="@Icons.Material.Outlined.Diamond">Plugins</MudNavLink>
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Services</MudText>
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="https://nmkr.io/services" Match="NavLinkMatch.Prefix" Target="_blank"  Icon="@Icons.Material.Outlined.MiscellaneousServices">Services and Promotion</MudNavLink>
+
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Statistics</MudText>
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="/transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.BarChart">Transactions</MudNavLink>
+
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Settings</MudText>
+    <MudNavLink Href="/account" Icon="@Icons.Material.Outlined.ManageAccounts">Account</MudNavLink>
+    <MudNavLink Href="/wallets" Icon="@Icons.Material.Outlined.Wallet">Wallets</MudNavLink>
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="/apikeys" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Lock">API Keys</MudNavLink>
+
+    @if (GlobalFunctions.IsMainnet())
+    {
+        <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Integration</MudText>
+        <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="https://studio.preprod.nmkr.io" Target="_blank" Icon="@Icons.Material.Outlined.IntegrationInstructions">Testnet (Preprod)</MudNavLink>
+    }    
+
+
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Documentation</MudText>
+        <MudNavLink Href="@(GeneralConfigurationClass.ApiUrl+"/swagger/index.html")" Target="_blank" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Outlined.Api">API Documentation</MudNavLink>
+   
+    <MudNavLink Class="border-b" Style="border-color:#E0E0E0" Href="https://docs.nmkr.io/" Target="_blank" Icon="@Icons.Material.Outlined.BookOnline">Docs</MudNavLink>
+
+
+    <MudText Typo="Typo.subtitle1" Color="Color.Inherit" Class="ml-4 my-3 mud-text-secondary">Support</MudText>
+    <MudNavLink Href="https://www.nmkr.io/support" Target="_blank" Icon="@Icons.Material.Outlined.Support">Contact support</MudNavLink>
+    <MudNavLink Href="https://status.nmkr.io" Target="_blank" Icon="@Icons.Material.Filled.Storage">Server Status</MudNavLink>
+</MudNavMenu>

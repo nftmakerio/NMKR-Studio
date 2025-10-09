@@ -1,0 +1,36 @@
+﻿ @if (helperText is {Text: { } })
+ {
+    <MudTooltip Color="Color.Dark">
+         <ChildContent>
+             <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Help"/>
+         </ChildContent>
+         <TooltipContent>
+             <MudText Typo="Typo.h6">@helperText.Subtitle</MudText>
+             <MudText Typo="Typo.body2">
+                 @if (helperText is {Text: { } })
+                 {
+                     @((MarkupString) helperText.Text)
+                 }
+             </MudText>
+         </TooltipContent>
+     </MudTooltip>
+ } else if (helperText is {Link: {}})
+ {
+     <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Help" Href="@helperText.Link" Target="_blank"/>
+ }
+@code {
+    [Parameter]
+    public string Description { get; set; }
+    private Tooltiphelpertext? helperText { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(Description))
+            return;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        helperText = await (from a in db.Tooltiphelpertexts
+            where a.Description==Description
+            select a).FirstOrDefaultAsync();
+    }
+}

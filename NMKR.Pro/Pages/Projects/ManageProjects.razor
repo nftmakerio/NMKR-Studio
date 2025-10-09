@@ -1,0 +1,522 @@
+﻿@page "/projects"
+@page "/projects/{projectuid}"
+@using MudBlazor.Extensions
+@using System.Threading
+
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">NFT Projects</MudText>
+
+    <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+        <MudTable Hover="true" Bordered="true" Striped="false" Elevation="0"
+                  HorizontalScrollbar="true" T="Nftproject"
+                  ServerData="LoadTodos" @ref="table">
+
+            <ToolBarContent>
+                <MudSelect T="string" @bind-Value="SelectedOption" Class="mt-5 mr-5" Immediate="true">
+                    <MudSelectItem Value="@("all")">All</MudSelectItem>
+                    <MudSelectItem Value="@("active")">Active</MudSelectItem>
+                    <MudSelectItem Value="@("notactive")">Suspended</MudSelectItem>
+                    <MudSelectItem Value="@("finished")">Finished </MudSelectItem>
+                </MudSelect>
+
+                <MudTextField DebounceInterval="500" Variant="Variant.Outlined" @bind-Value="searchString" Placeholder="Search" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5 ml-5" Immediate="true"></MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>ID/Name</MudTh>
+                <MudTh>State</MudTh>
+                <MudTh>Information</MudTh>
+                <MudTh>Project type</MudTh>
+                <MudTh>Counts</MudTh>
+                <MudTh Style="width: 250px;">Actions</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd DataLabel="ProjectName">
+                    <MudText Typo="Typo.subtitle1">
+                        @context.Id
+                    </MudText>
+                    @context.Projectname
+                    <br />
+                    <small>@context.Description</small>
+                    <br />
+                    @if (context.Created != null)
+                    {
+                        <small>Created: @context.Created.ToIsoDateString() - @context.Created.Value.ToShortTimeString()</small>
+                        <br />
+                    }
+                    <small>UID: @context.Uid</small>
+                    <br /><br />
+                    <ShowPolicyId PolicyId="@context.Policyid"></ShowPolicyId>
+                    <br /><br />
+                    <GetProjectPriceTier Project="@context"></GetProjectPriceTier>
+                   
+                    @if (context.Settings.Mintandsendcoupons != 1)
+                    {
+                        <br />
+                        <small>Mint & Send: @context.Settings.Mintandsendcoupons Coupons per Mint</small>
+                    }
+                </MudTd>
+                <MudTd DataLabel="State">
+                    @if (context.CustomerwalletId == null && GeneralConfigurationClass.EnableInternalWallets == false && context.Enabledcoins.Contains(Coin.ADA.ToString()))
+                    {
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Action required</NMKRChip>
+                        <br />
+                        <small>Set up a cardano payout wallet</small>
+                    }
+                    else
+                    {
+                        @switch (context.State)
+                        {
+                            case "active":
+                                <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                                break;
+                            case "notactive":
+                                <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Suspended</NMKRChip>
+                                break;
+                            case "finished":
+                                <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Finished</NMKRChip>
+                                break;
+                            case "deleted":
+                                <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Deleted</NMKRChip>
+                                break;
+                        }
+                    }
+                    @if (context.Hasroyality)
+                    {
+                        <br />
+                        <a href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/token/" + context.Policyid)" target="_blank">
+                            <NMKRChip Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Royalties</NMKRChip>
+                        </a>
+                    }
+                    @if (context.Hasidentity)
+                    {
+                        <br />
+                        <a href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/token/" + context.Policyid)" target="_blank">
+                            <NMKRChip Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Identity confirmed</NMKRChip>
+                        </a>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Information">
+                    <MudText Typo="Typo.body1">
+                        Policy expires:  @(context.Policyexpire == null ? "never" : context.Policyexpire.Value.ToShortDateString())
+                    </MudText>
+                   
+                    @if (context.Policyexpire != null && context.Lockslot != null)
+                    {
+                        <br/>
+                        <MudText Typo="Typo.body2">
+                            Slot: @context.Lockslot
+                        </MudText>
+                    }
+                    @if (context.Policyexpire != null && context.Policyexpire < DateTime.Now)
+                    {
+                        <br/>
+
+                        <br/>
+                        <MudText Color="Color.Error" Typo="Typo.body2">Policy is now locked</MudText>
+                    }
+                    else
+                    {
+                        @if (context.Policyexpire != null && context.Policyexpire < DateTime.Now.AddDays(7))
+                        {
+                            TimeSpan t = (DateTime) context.Policyexpire - DateTime.Now;
+                            <br/>
+
+                            <br/>
+                            <MudText Color="Color.Warning" Typo="Typo.body2">Policy will lock in @GlobalFunctions.ToPrettyFormat(t)</MudText>
+                        }
+                    }
+
+                    @if (!string.IsNullOrEmpty(context.Tokennameprefix))
+                    {
+                        <br/>
+                        <br/>
+                        <MudText Typo="Typo.body1">
+                            Tokenname Prefix: @context.Tokennameprefix
+                        </MudText>
+                    }
+                    <ShowProjectSummary Project="@context"></ShowProjectSummary>
+
+                </MudTd>
+                <MudTd>
+
+                   <ShowBlockchainsInList EnabledCoins="@context.Enabledcoins"></ShowBlockchainsInList>
+                    <br />
+
+
+
+
+                    @if (context.Maxsupply == 1)
+                    {
+                        <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">NFT Project</NMKRChip>
+                    }
+                    else
+                    {
+                        <NMKRChip Color="Color.Surface" Size="Size.Small" Variant="Variant.Filled">Fungible Token</NMKRChip>
+                    }
+                    @if (context.Cip68)
+                    {
+                        <NMKRChip Color="@Color.Tertiary" Size="@Size.Small" Variant="@Variant.Outlined">CIP68</NMKRChip>
+                    }
+                    <br />
+                    @switch (context.Storage)
+                    {
+                        case "ipfs":
+                            <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Storage: IPFS</NMKRChip>
+                            break;
+                        case "iagon":
+                            <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Storage: IAGON</NMKRChip>
+                            break;
+                    }
+                </MudTd>
+
+
+                <MudTd DataLabel="Count NFT">
+                    Total: @context.Total1
+                    @if (context.Nftsblocked != null && context.Nftsblocked != 0)
+                    {
+                        <br />
+                        <span>Blocked: @((long)context.Nftsblocked)</span>
+                    }
+
+                    @if (context.Maxsupply > 1)
+                    {
+                        @(" NFT")
+                        <br />
+                        <small>Max token supply: @(GlobalFunctions.FormatMultiplier(context.Totaltokens1, context.Multiplier)) Tokens</small>
+                        @if (context.Multiplier > 1)
+                        {
+                            <br />
+                            <small>Multiplier: @context.Multiplier</small>
+                        }
+                    }
+                    <br />
+                    <small>Sold: @(GlobalFunctions.FormatMultiplier(context.Tokenssold1, context.Multiplier))</small>
+                    <br />
+                    <small>Reserved: @(GlobalFunctions.FormatMultiplier(context.Tokensreserved1, context.Multiplier))</small>
+                    <br />
+                    @if (context.Maxsupply > 1)
+                    {
+                        <small> Free: @(GlobalFunctions.FormatMultiplier(context.Totaltokens1 - context.Tokenssold1 - context.Tokensreserved1, context.Multiplier))</small>
+                    }
+                    else
+                    {
+                        <small>
+                            Free: @context.Free1
+                        </small>
+                        <br />
+                        <small>
+                            Blocked: @context.Blocked1
+                        </small>
+                        <br />
+                        <small>Error: @context.Error1</small>
+                    }
+
+                </MudTd>
+
+                <MudTd Style="text-align: right">
+                    <MudNavMenu Class="mud-width-full">
+                        <MudNavLink Href="@("managenft/" + context.Id)" Icon="@Icons.Material.Outlined.Settings">Manage Tokens</MudNavLink>
+                        <MudDivider Class="my-2" />
+                        <MudNavGroup Title="Project Info" Icon="@NMKRIcons.Info">
+                            <MudNavLink Href="@("txs/" + context.Id)">Transactions & Refunds</MudNavLink>
+                            <ShowPolicyMenuButton NftProject="@context" IsAdmin="false"></ShowPolicyMenuButton>
+                            <ShowSolanaAuthorityMenuButton NftProject="@context" IsAdmin="false"></ShowSolanaAuthorityMenuButton>
+                            <MudNavLink Href="@("showmintandsendjobs/" + context.CustomerId + "/" + context.Id)">Mint & Send Queue</MudNavLink>
+                        </MudNavGroup>
+                        <MudNavGroup Title="Manage Project" Icon="@Icons.Material.Outlined.Settings">
+                            @if (context.Projecttype != "marketplace-whitelabel")
+                            {
+                                    <CreateCollectionTokensMenuButton Project="@context" IsAdmin="false"></CreateCollectionTokensMenuButton>
+                                    <CreateSolanaCollectionMenuButton Project="@context" IsAdmin="false"></CreateSolanaCollectionMenuButton>
+                                <MudNavLink Href="@("pricelist/" + context.Id + "/" + context.Uid)">Set NFT Prices</MudNavLink>
+                            }
+                            <MudNavLink Href="@("pricelistdiscounts/" + context.Id + "/" + context.Uid)">Pricelist Discounts</MudNavLink>
+                            <MudNavLink Href="@("saleconditions/" + context.Id + "/" + context.Uid)"> Sale conditions</MudNavLink>
+                            <MudNavLink Href="@("additionalpayoutwallets/" + context.Id + "/" + context.Uid)">Add. Payoutwallets</MudNavLink>
+                            <MudNavLink @onclick="(() => Airdrop(context.Id))" Disabled="context.Policyexpire != null && context.Policyexpire < DateTime.Now">Airdrop</MudNavLink>
+                            <CreateBurningEndpointMenuButton NftProjectid="@context.Id"></CreateBurningEndpointMenuButton>
+                        </MudNavGroup>
+                        @if (context.Projecttype != "marketplace-whitelabel")
+                        {
+                            <MudNavGroup Title="Export" Icon="@NMKRIcons.Export">
+                                <ExportCsvMenuButton NftProjectid="@context.Id" IsAdmin="false"></ExportCsvMenuButton>
+                                <ExportMetadataMenuButton NftProjectid="@context.Id" IsAdmin="false"></ExportMetadataMenuButton>
+                                <ExportPlaceholderCsvMenuButton NftProjectid="@context.Id" IsAdmin="false"></ExportPlaceholderCsvMenuButton>
+                            </MudNavGroup>
+                        }
+                        <MudNavLink Href="@("editproject/" + context.Id)" Icon="@NMKRIcons.Edit">Edit Project</MudNavLink>
+                        <MudNavLink @onclick="() => DeleteProject(context.Id)" Icon="@NMKRIcons.Delete">Delete Project</MudNavLink>
+                    </MudNavMenu>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager HideRowsPerPage="true" />
+            </PagerContent>
+        </MudTable>
+    </MudCard>
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Href="/createnewproject" Class="mt-5 mb-5 rounded-xl px-6 py-3">Create new project</MudButton>
+
+</MudContainer>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+
+
+@code {
+    [Parameter]
+    public string? projectuid { get; set; }
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private bool isSubmitting;
+    private MudTable<Nftproject> table;
+    private long defaultprice = -1;
+    private string progress { get; set; }
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+
+    };
+
+    protected override void OnParametersSet()
+    {
+        _items.Clear();
+        _items.Add(new("Dashboard", href: "/"));
+
+        if (string.IsNullOrEmpty(projectuid))
+        {
+            _items.Add(new("NFT Projects", href: "/projects/", disabled: true));
+        }
+        else
+        {
+            using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var project = (from a in db.Nftprojects
+                           where a.Uid == projectuid
+                           select a).AsNoTracking().FirstOrDefault();
+
+            _items.Add(new("NFT Projects", href: "/projects/", disabled: false));
+            _items.Add(new($"Project ({project.Projectname})", href: $"/projects/{projectuid}", disabled: true));
+        }
+        if (table != null)
+            table.ReloadServerData();
+    }
+
+    private bool _usePreserved = true;
+    private string _selectedOption = "All";
+    public string SelectedOption
+    {
+        get { return _selectedOption; }
+        set
+        {
+            _selectedOption = value;
+            settings.ProjectsTable.PageNumber = 0;
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+    private string _searchstring = "";
+    private string searchString
+    {
+        get { return _searchstring; }
+        set
+        {
+            _searchstring = value.Trim();
+            settings.ProjectsTable.PageNumber = 0;
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+
+
+
+
+    private async Task Airdrop(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var nftproject = await (from ax in db.Nftprojects
+            .Include(a => a.Settings)
+                                where ax.Id == id
+                                select ax).FirstOrDefaultAsync();
+
+        if (nftproject == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(ShowAirdropModalWindow.project), nftproject }
+        };
+        var dialog = await DialogService.ShowAsync<ShowAirdropModalWindow>("Create Airdrop", parameters, maxWidth);
+        await dialog.Result;
+        isSubmitting = false;
+    }
+
+
+
+
+    private async Task DeleteProject(int id)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Deleting can not be undone!",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            bool ok = await _twoFactorCheck.CheckTwoFactor(settings.UserId??0, TwoFactorCases.DeleteProject);
+            if (!ok)
+            {
+                isSubmitting = false;
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Two factor authentication failed. Please try again.", Severity.Error);
+                return;
+            }
+
+
+
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var nftproject = await (from a in db.Nftprojects
+                                    where a.Id == id
+                                    select a).FirstOrDefaultAsync();
+
+            if (nftproject == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+                return;
+            }
+            nftproject.State = "deleted";
+            nftproject.Activatepayinaddress = false;
+            await db.SaveChangesAsync();
+            await OnInitializedAsync();
+          //  table.CurrentPage = 1;
+          //  _usePreserved = false;
+            await table.ReloadServerData();
+        }
+
+        StateHasChanged();
+    }
+
+
+
+
+    public async Task<TableData<Nftproject>> LoadTodos(TableState state, CancellationToken cancellationToken)
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        int count = 0;
+
+        // If you ask, why 2 stored procedure - this is, because linq with contains is extremly slow - and the second: Pomelo does not support OUT Parameters. Otherwise we could send both results in one call - so we have to wait until they fix this
+
+
+        if (_usePreserved)
+        {
+            _searchstring = settings.ProjectsTable.Search;
+            _selectedOption = settings.ProjectsTable.Parameter1;
+            state.Page = settings.ProjectsTable.PageNumber;
+            state.PageSize = settings.ProjectsTable.EntriesPerPage;
+            state.SortLabel = settings.ProjectsTable.SortOrder;
+            state.SortDirection = settings.ProjectsTable.Direction;
+        }
+
+        var _s = _searchstring;
+        if (!string.IsNullOrEmpty(projectuid))
+            _s = projectuid;
+        projectuid = "";
+        _s = _s.Trim();
+        if (!string.IsNullOrEmpty(_s) && _s.Length == 32)
+        {
+            if (Guid.TryParse(_s, out var g1))
+            {
+                _s = g1.ToString();
+                StateHasChanged();
+            }
+        }
+
+
+        string sort = (state.SortLabel ?? "id") + (state.SortDirection == SortDirection.Ascending ? "" : " DESC");
+
+
+        var projects = await (from a in db.Nftprojects
+            .Include(a => a.Settings)
+            .Include(a=>a.Customer)
+            .Include(a=>a.Pricelists).AsSplitQuery()
+                              where (_selectedOption == "all" || a.State == _selectedOption) && (a.CustomerId == settings.UserId) && a.State != "deleted" && a.Projecttype != "marketplace-whitelabel" &&
+                                    (a.Id.ToString() == _s || a.Projectname.Contains(_s) || a.Description.Contains(_s) || a.Uid == _s || a.Policyid == _s)
+                              select a).ToListAsync(cancellationToken: cancellationToken);
+
+
+        count = projects.Count;
+        switch (sort)
+        {
+            case "id":
+                projects = projects.OrderBy(a => a.Id).ToList();
+                break;
+            case "id DESC":
+                projects = projects.OrderByDescending(a => a.Id).ToList();
+                break;
+        }
+        projects = projects.Skip(state.PageSize * state.Page).Take(state.PageSize).ToList();
+
+
+        if (_usePreserved)
+        {
+            table.CurrentPage = state.Page;
+            settings.ProjectsTable.SetState(state, searchString, _selectedOption, settings.UserId);
+        }
+        _usePreserved = false;
+
+
+        return new() { Items = projects, TotalItems = count };
+    }
+
+
+    public long? GetPrice(EasynftprojectsContext db, Nft? nftx)
+    {
+        if (nftx == null)
+            return null;
+
+        if (nftx.Price != null)
+            return (long)nftx.Price;
+
+        if (defaultprice == -1)
+        {
+            var pl = (from a in db.Pricelists
+                      where a.NftprojectId == nftx.NftprojectId && a.Countnftortoken == 1 &&
+                            (a.Validfrom == null || a.Validfrom > DateTime.Now) &&
+                            (a.Validto == null || a.Validto < DateTime.Now)
+                      select a).FirstOrDefault();
+            if (pl != null)
+            {
+                defaultprice = pl.Priceinlovelace;
+                return pl.Priceinlovelace;
+            }
+        }
+        else
+        {
+            return defaultprice;
+
+        }
+        return null;
+    }
+
+}

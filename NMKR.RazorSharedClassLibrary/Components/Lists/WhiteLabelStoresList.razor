@@ -1,0 +1,195 @@
+﻿@using BlazorDownloadFile
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Custom Stores (BETA)</MudText>
+<MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+<MudTable Hover="true" Bordered="true" Striped="false" Elevation="0"
+          HorizontalScrollbar="true" T="Nftproject"
+          ServerData="LoadTodos" @ref="table">
+
+    <ToolBarContent>
+        <MudSelect T="string" @bind-Value="SelectedOption" Class="mt-5 mr-5" Immediate="true">
+            <MudSelectItem Value="@("active")">Active</MudSelectItem>
+            <MudSelectItem Value="@("notactive")">Not active</MudSelectItem>
+        </MudSelect>
+
+        <MudTextField DebounceInterval="300" Variant="Variant.Outlined" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5 ml-5" Immediate="true"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>ID/Name</MudTh>
+        @if (CustomerId == null)
+        {
+            <MudTh>Customer</MudTh>
+        }
+            <MudTh>State</MudTh>
+        <MudTh Style="width: 250px;">Actions</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd DataLabel="ProjectName">
+            <MudText Typo="Typo.subtitle1">
+                @context.Projectname
+            </MudText>
+            <br />
+            <small>@context.Description</small>
+            <br />
+            <a href="@("https://"+context.Projecturl+".nmkr.store")" _target="_blank">
+                @("https://"+context.Projecturl+".nmkr.store")
+            </a>
+            <br />
+            <small>UID: @context.Uid</small>
+        </MudTd>
+        @if (CustomerId == null)
+        {
+            <MudTd>
+                <MudText Typo="Typo.subtitle1">
+                    <a href="/customers/@context.CustomerId">@context.CustomerId</a>
+                </MudText>
+                @context.Customer.Firstname @context.Customer.Lastname<br />
+                @context.Customer.Company<br />
+                @context.Customer.Email
+            </MudTd>
+        }
+            <MudTd DataLabel="State">
+                @if (context.CustomerwalletId == null && GeneralConfigurationClass.EnableInternalWallets == false)
+            {
+                <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Action required</NMKRChip>
+                <br />
+                <small>Set up a payout wallet</small>
+            }
+            else
+            {
+                @switch (context.State)
+                {
+                    case "active":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                        break;
+                    case "notactive":
+                        <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                        break;
+                }
+            }
+
+        </MudTd>
+
+
+
+        <MudTd Style="text-align: right">
+            <MudNavMenu Class="mud-width-full">
+                <MudNavLink Href="@("editwhitelabelstore/" + context.Id)" Icon="@NMKRIcons.Edit">Edit Store</MudNavLink>
+                <MudNavLink Href="@("editwhitelabelstore/" + context.Id+"/6")" Icon="@Icons.Material.Outlined.Collections">Manage collections</MudNavLink>
+                <MudNavLink @onclick="() => DeleteProject(context.Id)" Icon="@NMKRIcons.Delete">Delete Store</MudNavLink>
+            </MudNavMenu>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager HideRowsPerPage="true" />
+    </PagerContent>
+</MudTable>
+</MudCard>
+
+
+
+@code {
+    [Parameter]
+    public int? CustomerId { get; set; }
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private MudTable<Nftproject> table;
+
+
+    private string _selectedOption = "Active";
+    public string SelectedOption
+    {
+        get { return _selectedOption; }
+        set
+        {
+            _selectedOption = value;
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+    private string _searchstring = "";
+    private string searchString
+    {
+        get { return _searchstring; }
+        set
+        {
+            _searchstring = value.Trim();
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Deleting can not be undone!",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var nftproject = await (from a in db.Nftprojects
+                where a.Id == id
+                select a).FirstOrDefaultAsync();
+
+            if (nftproject == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+                return;
+            }
+            nftproject.State = "deleted";
+            nftproject.Activatepayinaddress = false;
+            await db.SaveChangesAsync();
+            await OnInitializedAsync();
+            await table.ReloadServerData();
+        }
+
+        StateHasChanged();
+    }
+
+    public async Task<TableData<Nftproject>> LoadTodos(TableState state, CancellationToken cancellationToken)
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+      
+        _searchstring = _searchstring.Trim();
+
+        if (!string.IsNullOrEmpty(_searchstring) && _searchstring.Length == 32)
+        {
+            if (Guid.TryParse(_searchstring, out var g1))
+            {
+                _searchstring = g1.ToString();
+                StateHasChanged();
+            }
+        }
+
+
+        var projects=await (from a in db.Nftprojects
+            .Include(x=>x.Customer)
+            where (CustomerId==null || a.CustomerId == CustomerId) && a.Projecttype == "marketplace-whitelabel" && a.State!="deleted"
+            select a).AsNoTracking().ToListAsync();
+
+
+        if (!string.IsNullOrEmpty(_searchstring))
+        {
+            projects = projects.Where(x => x.Projectname.ToLower().Contains(_searchstring.ToLower()) ||
+                                           (x.Description != null && x.Description.ToLower().Contains(_searchstring.ToLower())) ||
+                                           (x.Projecturl != null && x.Projecturl.ToLower().Contains(_searchstring.ToLower())) ||
+                                           x.Uid == _searchstring ||
+                                           x.CustomerId.ToString() == _searchstring).ToList();
+        }
+         
+        int count = projects.Count;
+
+
+        return new() { Items = projects.Skip(state.Page*state.PageSize).Take(state.PageSize), TotalItems = count };
+    }
+}

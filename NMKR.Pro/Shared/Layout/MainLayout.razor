@@ -1,0 +1,447 @@
+﻿@using CardanoSharp.Wallet.Enums
+@using Microsoft.AspNetCore.WebUtilities
+@inherits LayoutComponentBase
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@inject AppSettings settings
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@using Newtonsoft.Json.Linq;
+@using CardanoSharp.Wallet.Models.Addresses
+
+
+<HeadContent>
+    <meta charset="utf-8">
+    <title>NMKR Studio – Create and Sell NFTs on Your Own Website</title>
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." name="description">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="og:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="og:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="og:image">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="twitter:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="twitter:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="twitter:image">
+    <meta property="og:type" content="website">
+    <meta content="summary_large_image" name="twitter:card">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442936ea6f91301effc0_nmkr-favicon.png" rel="shortcut icon" type="image/x-icon">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442cff6ad54237cc81e4_nmkr-webclip.png" rel="apple-touch-icon">
+    <meta name="theme-color" content="#11f250">
+</HeadContent>
+<MudThemeProvider Theme="MyCustomTheme.Theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+@if (settings.UserId != null)
+{
+   
+
+    <MudLayout>
+        <MudAppBar Elevation="0">
+            <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                <img src="/images/nmkr_studio_white.svg" />
+                @if (!GlobalFunctions.IsMainnet())
+                {
+                    <MudText Class="mb-3 mt-3 ml-3" Typo="Typo.h4" Color="Color.Error">@GeneralConfigurationClass.EnvironmentName</MudText>
+                }
+            </MudHidden>
+           
+                <div Class="mud-width-full align-right" Style="text-align: right;">
+                    <!--<MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" OnClick="@(() => OpenDrawer(Anchor.Bottom))" Style="color: #11F250; border-color: transparent;">Help</MudButton>-->
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" @onclick="Logout" Style="color: white; border-color: transparent;">Logout</MudButton>
+                </div>
+            <MudSpacer />
+
+
+        </MudAppBar>
+
+
+        <MudDrawer @bind-Open="@settings.DrawerOpen" ClipMode="DrawerClipMode.Always">
+            <NavMenu />
+        </MudDrawer>
+        <MudMainContent>
+            
+           
+
+            <KycNotifier></KycNotifier>
+            <AdvertisingForToken/>
+            @Body
+        </MudMainContent>
+
+
+        <MudDrawer @bind-Open="@open" Width="@width" Anchor="@anchor" Elevation="0" Variant="@DrawerVariant.Temporary" Style="background-color: #f4f5f5ff">
+            <MudGrid Class="pt-4 pl-4 pr-4 pb-4 mud-width-full" Spacing="0">
+                <MudItem xs="12">
+                    <MudText Class="align-left d-flex mud-width-full mb-6" Typo="Typo.h3">Help Page</MudText>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudPaper Elevation="0" Class="border d-flex mud-width-full flex-wrap" Style="border-color:#E0E0E0;">
+                        <MudText Class="align-left d-flex mud-width-full mud-text-secondary mt-6 ml-5 mr-5" Typo="Typo.subtitle1">Find your answer</MudText>
+                        <MudText Class="d-flex mud-width-full mb-6 ml-5 mr-5" Typo="Typo.h5">Search in Docs</MudText>
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="@searchString" TextChanged="this.GetSearchFromGitbook" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="ml-5 mr-5 mb-6" Clearable="true"></MudTextField>
+
+                        <MudTable Items="@searchResults" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="false" Class="mud-width-full" Elevation="0" Style="overflow: scroll; height: 275px; overflow-x: hidden;">
+                            <HeaderContent>
+                                <MudTh>Search Results</MudTh>
+
+                            </HeaderContent>
+
+                            <RowTemplate>
+                                <MudTd DataLabel="Title">@context.Title</MudTd>
+                                <MudTd DataLabel="Link">
+                                    <div Class="flex-grow-1" Style="text-align: right;">
+                                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="@context.Link">Read</MudButton>
+                                    </div>
+                                </MudTd>
+
+                            </RowTemplate>
+                        </MudTable>
+
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="6" Class="pl-6">
+                    <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0; background-color: #11F250">
+                        <div Class="flex-grow-1 pt-5 pl-5 pr-5 pb-6">
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">Open a support ticket to talk to a human.</MudText>
+                        </div>
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="text-align: right;">
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://docs.nmkr.io/">Open Ticket</MudButton>
+                        </div>
+                    </MudPaper>
+                    <MudPaper Elevation="0" Class="mt-6 border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0;">
+                        <div Class="flex-grow-1 pt-5 pl-5 pr-5 pb-6">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">Quickstart Guide</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">Learn how to create & sell NFTs</MudText>
+                        </div>
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="text-align: right;">
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://docs.nmkr.io/nmkr-studio/how-to-quick-start-tutorials/quickstart-full-video-tutorial">Open Guide</MudButton>
+                        </div>
+                    </MudPaper>
+                    <MudPaper Elevation="0" Class="mt-6 border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0;">
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">Quickstart Guide</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">How to set up Metadata</MudText>
+                        </div>
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="text-align: right;">
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://docs.nmkr.io/nmkr-studio/how-to-quick-start-tutorials/how-to-set-up-metadata">Open Guide</MudButton>
+                        </div>
+                    </MudPaper>
+
+                    <MudPaper Elevation="0" Class="mt-6 border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0;">
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">Learn NMKR Studio</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">Learn about the basic workflow of NMKR Studio</MudText>
+                        </div>
+                        <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="text-align: right;">
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://docs.nmkr.io/nmkr-studio/basic-workflow">Open Guide</MudButton>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+        </MudDrawer>
+    </MudLayout>
+}
+
+@code {
+    private Customer customer { get; set; }
+
+
+
+    private List<SearchResult> searchResults = new();
+
+    public string searchString;
+    public string searchResult1_title;
+    public string searchResult1_url;
+
+    public string searchResult2_title;
+    public string searchResult2_url;
+
+    public string searchResult3_title;
+    public string searchResult3_url;
+
+    private bool _showWalletConnector { get; set; }
+    private async Task GetSearchFromGitbook()
+    {
+        if (searchString != "")
+        {
+            Console.WriteLine("Searching for " + searchString);
+            searchResults = new();
+
+            using var httpClient = new HttpClient();
+            string apiUrl = "https://api.gitbook.com/v1/spaces/-MiNmG5-cFqdW9QiF88r/search?query=" + searchString;
+
+            using var request = new HttpRequestMessage(new HttpMethod("GET"), apiUrl);
+            request.Headers.Add("Authorization", "Bearer gb_api_MyWAHSM2NsjmA1xKE2DZfGoW9VxvLI5Zbo8GLniE");
+
+            var response = await httpClient.SendAsync(request);
+            Console.WriteLine(response);
+            string responseString = response.Content.ReadAsStringAsync().Result;
+
+            JObject jsonData = JObject.Parse(responseString);
+            Console.WriteLine(responseString);
+            // get JSON result objects into a list
+            try
+            {
+                foreach (var page in jsonData["items"])
+                {
+                    SearchResult result = new SearchResult();
+                    result.Title = page["title"]?.ToString();
+                    result.Link = page["urls"]["app"]?.ToString();
+                    result.sectionList = new List<SearchResult.Section>();
+                    foreach (var section in page["sections"])
+                    {
+                        string sectionTitle = section["title"]?.ToString();
+                        string sectionBody = section["body"]?.ToString();
+                        SearchResult.Section newSection = new SearchResult.Section(sectionTitle, sectionBody);
+                        result.sectionList.Add(newSection);
+                    }
+                    searchResults.Add(result);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+        }
+    }
+
+
+    bool open;
+    Anchor anchor;
+    string width, height;
+
+    void OpenDrawer(Anchor anchor)
+    {
+        open = true;
+        this.anchor = anchor;
+
+        switch (anchor)
+        {
+            case Anchor.Start:
+                width = "300px";
+                height = "100%";
+                break;
+            case Anchor.End:
+                width = "700px";
+                height = "100%";
+                break;
+            case Anchor.Bottom:
+                width = "100%";
+                height = "400px";
+                break;
+            case Anchor.Top:
+                width = "100%";
+                height = "400px";
+                break;
+        }
+    }
+
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+
+    readonly MudblazorTheme MyCustomTheme = new MudblazorTheme();
+    private bool isSubmitting;
+    private string referer { get; set; }
+    private bool enableLocalization { get; set; }
+
+    // Check Login and check if the user was already logged in in the last 30 mintes
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(referer))
+            await localStorage.SetItemAsStringAsync("referral", referer);
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (settings.UserId == null)
+        {
+            bool ok = false;
+            var hash = await localStorage.GetItemAsync<string>("hash");
+            if (!string.IsNullOrEmpty(hash))
+            {
+                var h = await (from a in db.Loggedinhashes
+                    .Include(a => a.Customer).AsSplitQuery()
+                               where a.Hash == hash
+                               select a).FirstOrDefaultAsync();
+                if (h != null)
+                {
+                    if (h.Validuntil >= DateTime.Now)
+                    {
+                        settings.UserId = h.CustomerId;
+                        settings.hash = hash;
+                        ok = true;
+
+                        settings.ShowKycAlert = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "showkyc");
+
+                      /*  if (h.Customer.Kycprovider == "yoti")
+                        {
+                            YotiClasses yt = new YotiClasses();
+                            yt.SetKycState(db, settings);
+                        }*/
+                        await LoadCustomerAsync(db, firstRender);
+                    }
+                }
+            }
+
+            if (!ok) _navigationManager.NavigateTo("/login/", true);
+        }
+
+        if (settings.UserId != null)
+            await settings.ExtendLoginTime();
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings.OnChange += StateHasChanged;
+
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("referral", out var _referral))
+        {
+            referer = _referral;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await LoadCustomerAsync(db, false);
+        enableLocalization = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "enablelocalization");
+        bool maintenance = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "maintenancemode");
+
+        if (maintenance)
+        {
+            _navigationManager.NavigateTo("/maintenance", true);
+        }
+
+      /*  if (customer != null && customer.Kycprovider == "yoti")
+        {
+            YotiClasses yt = new YotiClasses();
+            yt.SetKycState(db, settings);
+        }*/
+        _showWalletConnector = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "showwalletconnector");
+
+        StateHasChanged();
+    }
+
+    private async Task LoadCustomerAsync(EasynftprojectsContext db, bool firstRender)
+    {
+        if (settings.UserId == null)
+            return;
+
+        customer = await (from a in db.Customers
+                          where a.Id == settings.UserId
+                          select a).AsNoTracking().FirstOrDefaultAsync();
+
+        try
+        {
+            if (firstRender)
+                await JS.InvokeAsync<string>("SetPlainDetails", customer.Firstname + " " + customer.Lastname, customer.Firstname, customer.Id.ToString());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task Logout()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await localStorage.ClearAsync();
+
+        settings.Logout();
+        StateHasChanged();
+        _navigationManager.NavigateTo("/login", true);
+        isSubmitting = false;
+    }
+
+
+    private void OnWalletConnect(Address wallet, string key)
+    {
+        Task.Run(async () => await OnWalletConnectAsync(wallet, key));
+    }
+
+
+    private async Task OnWalletConnectAsync(Address addr, string key)
+    {
+        if (addr.NetworkType == NetworkType.Mainnet && !GlobalFunctions.IsMainnet())
+        {
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Your wallet is a Mainnet wallet, but this is the Preprod version of NMKR", Severity.Error);
+            return;
+        }
+        if (addr.NetworkType != NetworkType.Mainnet && GlobalFunctions.IsMainnet())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Your wallet is a Testnet/Preprod wallet, but this is the Mainnet version of NMKR", Severity.Error);
+            return;
+        }
+
+        if (settings.UserId != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var customerx = await (from a in db.Customers where a.Id == settings.UserId select a).FirstOrDefaultAsync();
+            if (customerx != null)
+            {
+                customerx.Connectedwalletchangeaddress = addr.ToString();
+                customerx.Connectedwallettype = key;
+                await db.SaveChangesAsync();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Wallet successfully connected to your account", Severity.Success);
+                await LoadCustomerAsync(db, false);
+            }
+        }
+    }
+    private void OnWalletDisconnect(Address wallet, string key)
+    {
+        Task.Run(async () => await OnWalletDisconnectAsync(wallet, key));
+    }
+    private async Task OnWalletDisconnectAsync(Address addr, string key)
+    {
+        if (settings.UserId != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var customerx = await (from a in db.Customers where a.Id == settings.UserId select a).FirstOrDefaultAsync();
+            if (customerx != null)
+            {
+                customerx.Connectedwalletchangeaddress = null;
+                customerx.Connectedwallettype = null;
+                await db.SaveChangesAsync();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Wallet successfully disconnected from your account", Severity.Success);
+                await LoadCustomerAsync(db, false);
+            }
+        }
+    }
+
+
+    private async Task DisconnectWalletButtonPressed()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Do you really want to disconnect your wallet? It will no longer be possible to log in with this wallet.",
+            yesText: "Yes!", cancelText: "No");
+        if (result != null)
+        {
+            //  if (settings.myWebWallets != null)
+            {
+                //    await settings.myWebWallets.DisconnectWalletAsync();
+                await OnWalletDisconnectAsync(null, customer.Connectedwallettype);
+            }
+        }
+        isSubmitting = false;
+    }
+
+}

@@ -1,0 +1,39 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%">
+            <MudNumericField @bind-Value="IntValue" Variant="Variant.Outlined" Label="@Setting.Humanreadablesettingsname" />
+        </td>
+        <td>
+            <div class="ml-10">
+                <MudText Typo="Typo.body1">
+                    @Setting.Description
+                </MudText>
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+    [Parameter]
+    public string IntValue
+    {
+        get => _intValue.ToString();
+        set
+        {
+            if (value != _intValue.ToString())
+            {
+                _intValue =Convert.ToInt32(value);
+                IntValueChanged.InvokeAsync(_intValue.ToString());
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> IntValueChanged { get; set; }
+
+
+    private int _intValue = 0;
+
+}

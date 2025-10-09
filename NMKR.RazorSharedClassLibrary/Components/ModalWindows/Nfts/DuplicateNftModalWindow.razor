@@ -1,0 +1,135 @@
+﻿@inject ISnackbar Snackbar
+
+<MudOverlay Visible="OverlayisVisible" DarkBackground="true" Absolute="true" >
+    <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+    <MudText Color="Color.Success" Typo="Typo.h4">...Duplicating NFT @progress - Please wait...</MudText>
+</MudOverlay>
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Duplicate Tokens
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="dnc.CountDuplicates" For="@(() => dnc.CountDuplicates)" Label="Count duplicates" HelperText="How may duplicates do you want to create?" Immediate="true" Variant="Variant.Text" Min="1" Max="9999"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="dnc.StartingNumber" For="@(() => dnc.StartingNumber)" Label="Starting Number" HelperText="On which number should we start?" Immediate="true" Variant="Variant.Text" Min="1" Max="999999"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="dnc.LeadingZeros" For="@(() => dnc.LeadingZeros)" Label="Leading zeros" HelperText="How many leading zeros should the duplicates have" Immediate="true" Variant="Variant.Text" Min="0" Max="6"/>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudTextField Variant="Variant.Outlined" T="string" Label="Tokenname prefix"  Immediate="true" @bind-Value="dnc.Tokennameprefix" Lines="1"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField Variant="Variant.Outlined" T="string" Label="Tokenname suffix"  Immediate="true" @bind-Value="dnc.Tokennamesuffix" Lines="1"/>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@dnc.SetDisplayName"  Label="Set display name" />
+            </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField Variant="Variant.Outlined" T="string" Label="Displayname prefix"  Disabled="!dnc.SetDisplayName" Immediate="true" @bind-Value="dnc.Displaynameprefix" Lines="1"/>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField Variant="Variant.Outlined" T="string" Label="Displayname suffix"  Disabled="!dnc.SetDisplayName" Immediate="true" @bind-Value="dnc.Displaynamesuffix" Lines="1"/>
+                </MudItem>
+        </MudGrid>
+        <MudText Class="mb-4 mt-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">The resulting NFTs will have the following Tokennames: </MudText><MudText Class="mud-text-secondary mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">@dnc.TokennameSample</MudText>
+        <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">and the following displaynames: </MudText>
+        @if (dnc.SetDisplayName)
+        {
+            <MudText Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@dnc.DisplaySample</MudText>
+        }
+        else
+        {
+            <MudText Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">Equal to Tokenname</MudText>
+        }
+        
+        <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">Note: If a Tokenname already exists, we will skip this name.</MudText>
+    </DialogContent>
+
+
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="StartDuplicating">Start duplicating</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int NftId { get; set; }
+
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private bool OverlayisVisible;
+    private bool isSubmitting;
+    private string progress { get; set; }
+    private readonly DuplicateNftClass dnc = new();
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task StartDuplicating()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Are you sure?",
+            "Do you want to start the duplicate process?",
+            yesText: "Yes start!", cancelText: "Cancel");
+        if (result == null)
+        {
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = await (from a in db.Nfts
+            .Include(a=>a.Nftproject)
+                         where a.Id == NftId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+        if (nft == null)
+        {
+            
+            Snackbar.Add("NFT not found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        progress = "";
+        OverlayisVisible = true;
+        dnc.ProgressEvent+= delegate(int value, int max)
+        {
+            progress = (value + 1) + " of " + max;
+            StateHasChanged();
+        };
+        await dnc.StartDuplicating(db, nft.Uid);
+        OverlayisVisible = false;
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        dnc.OnChange+=delegate { StateHasChanged(); };
+    }
+
+
+
+}

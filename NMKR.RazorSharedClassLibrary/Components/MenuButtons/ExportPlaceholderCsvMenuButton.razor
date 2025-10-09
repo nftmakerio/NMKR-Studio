@@ -1,0 +1,118 @@
+﻿@using BlazorDownloadFile
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+<MudOverlay Visible="isSubmitting" DarkBackground="true" Absolute="false" ZIndex="9999">
+    <MudProgressCircular Indeterminate="true" />
+    <MudText Typo="Typo.body1">@progress</MudText>
+    </MudOverlay>
+
+<MudNavLink @onclick="(() => ExportPlaceholderCsv(NftProjectid))">Export placeholder data as CSV</MudNavLink>
+
+
+@code {
+    [Parameter] public int NftProjectid { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private string progress = "";
+
+    private async Task ExportPlaceholderCsv(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var project = await (from a in db.Nftprojects
+                             where a.Id == id
+                             select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+        var nfts = await (from a in db.Nfts
+            .Include(a => a.Metadata).AsSplitQuery()
+                          where a.NftprojectId == id && (a.State != "deleted") && a.MainnftId == null &&
+                                a.Isroyaltytoken == false
+                          select a).AsNoTracking().ToListAsync();
+
+
+
+        List<SavePlaceHolderCsvClass> sphc = new();
+        sphc.Add(new("asset_name"));
+        sphc.Add(new("display_name"));
+
+        foreach (var nft in nfts)
+        {
+            var t = sphc.Find(x => x.Name == "asset_name");
+            t.Values.Add(new() { Id = nft.Id, Value = nft.Name });
+            var t1 = sphc.Find(x => x.Name == "display_name");
+            t1.Values.Add(new() { Id = nft.Id, Value = nft.Displayname });
+
+            foreach (var metadatum in nft.Metadata)
+            {
+                var t2 = sphc.Find(x => x.Name == metadatum.Placeholdername);
+                if (t2 == null)
+                {
+                    t2 = new(metadatum.Placeholdername);
+                    sphc.Add(t2);
+                }
+                t2.Values.Add(new() { Id = metadatum.NftId, Value = metadatum.Placeholdervalue });
+            }
+
+        }
+
+
+
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname) + "_placeholder";
+        string filename = path + filteredfilename + ".zip";
+        string csvfilename = path + filteredfilename + ".csv";
+        Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+        await using (var writer = new StreamWriter(csvfilename))
+        {
+            await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                foreach (var holderCsv in sphc)
+                {
+                    csv.WriteField(holderCsv.Name);
+                }
+                await csv.NextRecordAsync();
+                for (int i = 0; i < sphc.First().Values.Count; i++)
+                {
+                    foreach (var holderCsv in sphc)
+                    {
+                        var value = holderCsv.Values.FirstOrDefault(x => x.Id == sphc.First().Values[i].Id);
+
+                        csv.WriteField(value != null ? value.Value : "");
+                    }
+                    await csv.NextRecordAsync();
+                }
+
+
+            }
+        }
+
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        isSubmitting = false;
+    }
+}

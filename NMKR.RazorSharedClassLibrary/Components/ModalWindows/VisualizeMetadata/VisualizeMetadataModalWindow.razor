@@ -1,0 +1,19 @@
+﻿
+<MudDialog>
+    <DialogContent>
+        <VisualizeMetadata Metadata="@Metadata" Cip68="@Cip68"></VisualizeMetadata>   
+   
+    </DialogContent>
+</MudDialog>
+
+
+
+@code {
+    [Parameter]
+    public string Metadata { get; set; }
+
+    [Parameter]
+    public bool Cip68 { get; set; }
+
+   
+}

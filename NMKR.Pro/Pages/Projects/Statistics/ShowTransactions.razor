@@ -1,0 +1,58 @@
+﻿@page "/txs/{projectid:int}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IConnectionMultiplexer _redis;
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Transactions & Refunds</MudText>
+
+    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+        <MudTabPanel Text="Mints">
+            <TransactionList CustomerId="@settings.UserId" ProjectId="@projectid" Redis="_redis"></TransactionList>
+        </MudTabPanel>
+        <MudTabPanel Text="Refunds">
+            <RefundList customerid="@settings.UserId" projectid="@projectid" Redis="_redis"></RefundList>
+        </MudTabPanel>
+    </MudTabs>
+
+</MudContainer>
+
+
+
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+    };
+
+    private Nftproject project = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        project = await (from a in db.Nftprojects
+                         where a.CustomerId == settings.UserId
+                               && a.State != "deleted" && a.Id == projectid
+                         select a).FirstOrDefaultAsync();
+
+        if (project == null)
+            return;
+
+        if (projectid != 0)
+            _items.Add(new("Project Statistics (" + project.Projectname + ")", href: "/managenft/" + projectid, disabled: true));
+        StateHasChanged();
+    }
+}

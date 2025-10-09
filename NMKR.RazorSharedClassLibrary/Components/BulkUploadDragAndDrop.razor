@@ -1,0 +1,431 @@
+﻿@inject ISnackbar Snackbar
+@using NMKR.Shared.Functions.Iagon
+@using NMKR.Shared.Classes.Iagon
+@using NMKR.Shared.Classes.CustomerData
+@using NMKR.Shared.Functions.Metadata
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+    <MudOverlay Visible="OverlayIsVisible" Absolute="true" Class="z-100">
+        <MudProgressCircular Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">@OverlayProgressText</MudText>
+        </MudOverlay>
+        <MudStack Style="width: 100%" >
+            <ol>
+                <li>
+                    Start by uploading your preview image. This can be .jpg, .jpeg, .png or .gif.
+                </li>
+                <ul style="list-style-type: circle;" Class="ml-10">
+                    <li>
+                        Example: Upload "Test NFT #0001.jpeg"
+                    </li>
+                    <li>
+                        A new NFT is created with Tokenname - "TestNFT0001" and Displayname - "Test NFT #0001
+                    </li>
+                </ul>
+                <br>
+                <li>
+                    (Optional) Then continue by adding Subfiles. These can be any type of file.
+                </li>
+                <ul style="list-style-type: circle;" Class="ml-10">
+                    <li>
+                        Example: Upload "Test NFT #0001.subfile.1.mp3" to add as subfile to "Test NFT #0001"
+                    </li>
+                </ul>
+                <br>
+                <li>(Optional) Finally, upload the metadata for the NFTs.</li>
+                <ul style="list-style-type: circle;" Class="ml-10">
+                    <li>
+                        Example: Upload "Test NFT #0001.metadata" in valid JSON format with Policy ID and 721 Section
+                    </li>
+                </ul>
+            </ol>
+
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="OnInputFileChanged" Hidden="false" Class="flex-1" InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20" InputStyle="opacity:0"
+                           @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass" MaximumFileCount="1000">
+            <ActivatorContent>
+                    <MudPaper Height="300px" Outlined="true" Class="@DragClass">
+                        <MudText Typo="Typo.h6">Drag and drop files here or click (Max. file count: 1000)</MudText>
+                        @foreach (var file in fileNames)
+                    {
+                        <MudChip T="string"  Color="Color.Dark" Text="@file.Name" />
+                    }
+                </MudPaper>
+            </ActivatorContent>
+        </MudFileUpload>
+        <MudText Typo="Typo.h6" Color="Color.Success" Class="mt-4">@SuccessMessage</MudText>
+        </MudStack>
+    </MudContainer>
+    @code {
+
+    [Parameter]
+    public int projectid { get; set; }
+        [Parameter]
+        public bool IsAdmin { get; set; }
+
+    private static string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string DragClass = DefaultDragClass;
+    private List<IBrowserFile> fileNames = new List<IBrowserFile>();
+    private bool OverlayIsVisible { get; set; }
+    private string OverlayProgressText { get; set; }
+    private string SuccessMessage { get; set; }
+    private int UploadedMainfiles = 0;
+    private int UploadedSubfiles = 0;
+    private int UploadedMetadata = 0;
+
+    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        UploadedMainfiles = 0;
+        UploadedSubfiles = 0;
+        UploadedMetadata = 0;
+        OverlayProgressText = "";
+        OverlayIsVisible = true;
+        SuccessMessage = "";
+
+        ClearDragClass();
+        int i = 0;
+        try
+        {
+            Directory.CreateDirectory(GeneralConfigurationClass.TempFilePath + projectid);
+
+            var files = e.GetMultipleFiles(1000);
+
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var project = await (from a in db.Nftprojects where a.Id == projectid select a).FirstOrDefaultAsync();
+            if (project == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Project not found.", Severity.Error);
+                return;
+            }
+            var lockedCustomerAssetsCheck = new LockedCustomerAssetsCheck(project.CustomerId);
+           
+
+            foreach (var file in files)
+            {
+                if (!IsAdmin)
+                {
+                    if (!lockedCustomerAssetsCheck.IsFurtherUploadAllowed())
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add("You have no more space/files available. Please lock NMKR Tokens to increase the storage space", Severity.Error);
+                        break;
+                    }
+                }
+
+
+                i++;
+                OverlayProgressText = "Sending file " + i + " of " + files.Count + "...Please wait";
+                StateHasChanged();
+                try
+                {
+                    Stream stream = file.OpenReadStream(51200000);
+                    string path1 = GeneralConfigurationClass.TempFilePath + projectid + Path.DirectorySeparatorChar + file.Name;
+
+                    FileStream fs = File.Create(path1);
+                    await stream.CopyToAsync(fs);
+                    stream.Close();
+                    fs.Close();
+                    fileNames.Add(file);
+                    await UploadFileToIpfsAndDb(db, file, project);
+                    if (!IsAdmin)
+                    {
+                        lockedCustomerAssetsCheck.LoadData(db);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add(ex.Message, Severity.Error);
+                }
+            }
+
+            if (UploadedMainfiles + UploadedSubfiles + UploadedMetadata > 0)
+            {
+                SuccessMessage = $"Successfully uploaded files: {UploadedMainfiles} NFTs, {UploadedSubfiles} Subfiles, {UploadedMetadata} Metadata files";
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(ex.Message, Severity.Error);
+            return;
+        }
+        finally
+        {
+            OverlayProgressText = "";
+            OverlayIsVisible = false;
+        }
+
+    }
+    public void Dispose()
+    {
+        try
+        {
+            GlobalFunctions.EmptyFolder(GeneralConfigurationClass.TempFilePath + projectid);
+        }
+        catch
+        { }
+    }
+
+    private async Task Clear()
+    {
+        foreach (var file in fileNames)
+        {
+            var path1 = GeneralConfigurationClass.TempFilePath + projectid + Path.DirectorySeparatorChar + file.Name;
+            File.Delete(path1);
+        }
+
+        fileNames.Clear();
+        ClearDragClass();
+        await Task.Delay(100);
+    }
+
+    private async Task UploadFileToIpfsAndDb(EasynftprojectsContext db, IBrowserFile file, Nftproject project)
+    {
+        string filename = Path.GetFileNameWithoutExtension(file.Name);
+        string extension = file.Name.Replace(filename, "").ToLower();
+        int? subfileid = null;
+
+        string tokenname = GlobalFunctions.FilterTokenname(filename);
+        if (!string.IsNullOrEmpty(project.Tokennameprefix) && tokenname.StartsWith(project.Tokennameprefix))
+            tokenname = tokenname.Substring(project.Tokennameprefix.Length);
+
+        if (!await CheckUploadedFile(db, file, tokenname))
+        {
+            return;
+        }
+        var path1 = GeneralConfigurationClass.TempFilePath + projectid + Path.DirectorySeparatorChar + file.Name;
+
+        // Check for metadata
+        if (file.Name.ToLower().EndsWith(".metadata"))
+        {
+            var nft = (from a in db.Nfts
+                       where a.NftprojectId == projectid && a.Name == tokenname && a.MainnftId == null && a.State != "deleted"
+                       select a).FirstOrDefault();
+
+            if (nft == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Main file not found {file.Name}.", Severity.Error);
+                return;
+            }
+            else
+            {
+                string error = GlobalFunctions.CheckMetadataFile(db, projectid, path1, new CheckMetadataForCip25Fields());
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"{error} {file.Name}.", Severity.Error);
+                    return;
+                }
+            }
+            nft.Metadataoverride = await File.ReadAllTextAsync(path1);
+            await db.SaveChangesAsync();
+            UploadedMetadata++;
+            return;
+        }
+        // End Check for metadata
+        // Check for metadata Cip68
+        if (file.Name.ToLower().EndsWith(".metadatacip68"))
+        {
+            var nft = (from a in db.Nfts
+                where a.NftprojectId == projectid && a.Name == tokenname && a.MainnftId == null && a.State != "deleted"
+                select a).FirstOrDefault();
+
+            if (nft == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Main file not found {file.Name}.", Severity.Error);
+                return;
+            }
+            else
+            {
+                string error = GlobalFunctions.CheckMetadataFile(db, projectid, path1, new CheckMetadataForCip68Fields());
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"{error} {file.Name}.", Severity.Error);
+                    return;
+                }
+            }
+            nft.Metadataoverridecip68 = await File.ReadAllTextAsync(path1);
+            await db.SaveChangesAsync();
+            UploadedMetadata++;
+            return;
+        }
+        // End Check for metadata Cip68
+
+        // Check for Placeholder file
+        if (file.Name.ToLower().StartsWith("placeholder") && file.Name.ToLower().EndsWith(".csv"))
+        {
+            if (File.Exists(path1))
+            {
+                var csv = await File.ReadAllTextAsync(path1);
+                var projectx = await (from a in db.Nftprojects where a.Id == projectid select a).FirstOrDefaultAsync();
+                if (projectx== null)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"Project not found. Please contact the support", Severity.Error);
+                    return;
+                }
+                projectx.Placeholdercsv = csv;
+                projectx.Checkcsv = true;
+                await db.SaveChangesAsync();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Placeholder file queued for importing.", Severity.Success);
+            }
+            return;
+        }
+        // End Check for Placeholder file
+
+        var u = await IpfsFunctions.AddFileAsync(path1);
+        if (string.IsNullOrEmpty(u))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Internal error while uploading the file to IPFS {file.Name}. Please contact the support.", Severity.Error);
+
+        }
+        else
+        {
+            Ipfsadd ia = Ipfsadd.FromJson(u);
+
+            // Upload also to Iagon if storage is set to iagon
+            IagonUploadResultClass iagon = null;
+            if (project.Storage == "iagon")
+            {
+                iagon = await IagonFunctions.AddFileAsync(path1, project.Uid, tokenname);
+                if (iagon == null || iagon.Success == false)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"Internal error while uploading the file to Iagon {file.Name}. Please contact the support. {iagon?.Message}", Severity.Error);
+                }
+            }
+
+
+            File.Delete(path1);
+
+            if (file.Name.ToLower().Contains(".subfile."))
+            {
+                filename = filename.Split(".subfile.").First();
+                int no = GetNumberSubfile(file.Name.ToLower());
+                if (no == 0)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"Subfile no is invalid: {file.Name}.", Severity.Error);
+                    return;
+                }
+                string tokenname2 = GlobalFunctions.FilterTokenname(filename);
+                var nft = (from a in db.Nfts
+                           where a.NftprojectId == projectid && a.Name == tokenname2 && a.State != "deleted"
+                           select a).AsNoTracking().FirstOrDefault();
+
+                if (nft == null)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"Main file not found {file.Name}.", Severity.Error);
+                    return;
+                }
+                subfileid = nft.Id;
+                UploadedSubfiles++;
+            }
+            else
+                UploadedMainfiles++;
+
+            Nft n2 = new()
+                {
+                    Filename = "",
+                    Name = tokenname,
+                    Displayname = filename,
+                    Ipfshash = ia.Hash,
+                    NftprojectId = projectid,
+                    State = "free",
+                    Minted = false,
+                    Checkpolicyid = false,
+                    Mimetype = file.ContentType,
+                    Detaildata = filename,
+                    Soldcount = 0,
+                    MainnftId = subfileid,
+                    Reservedcount = 0,
+                    Errorcount = 0,
+                    Metadataoverride = null,
+                    Policyid = project.Policyid,
+                    Created = DateTime.Now,
+                    Filesize = file.Size,
+                    Assetid = GlobalFunctions.GetAssetId(project.Policyid,
+                        project.Tokennameprefix, tokenname),
+                    Uid = Guid.NewGuid().ToString(),
+                    Multiplier = project.Multiplier,
+                    Iagonid = iagon?.Data?.Id,
+                    Iagonuploadresult = iagon != null ? JsonConvert.SerializeObject(iagon) : null,
+                    Uploadsource = "BulkViaWebsite",
+                };
+            await db.Nfts.AddAsync(n2);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private async Task<bool> CheckUploadedFile(EasynftprojectsContext db, IBrowserFile file, string tokenname)
+    {
+        if (file.Name.ToLower().EndsWith(".metadata"))
+            return true;
+        if (file.Name.ToLower().EndsWith(".metadatacip68"))
+            return true;
+        if (file.Name.ToLower().StartsWith("placeholder") && file.Name.ToLower().EndsWith(".csv"))
+            return true;
+
+        string filename = Path.GetFileNameWithoutExtension(file.Name);
+        string extension = file.Name.Replace(filename, "").ToLower();
+        var mime = GlobalFunctions.GetMimeType(db, extension, !file.Name.ToLower().Contains(".subfile."));
+        if (mime == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Filetype is not valid: {file.Name}.", Severity.Error);
+            return false;
+        }
+
+        if (!filename.ToLower().Contains(".subfile."))
+        {
+            var nft = await (from a in db.Nfts where a.NftprojectId == projectid && a.Name == tokenname select a).AsNoTracking().FirstOrDefaultAsync();
+            if (nft != null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Filename already exists {file.Name}.", Severity.Error);
+                return false;
+            }
+        }
+
+        return true;
+    }
+    private int GetNumberSubfile(string sub)
+    {
+        var o1 = sub.Split(".subfile.").Last();
+        var o2 = o1.Split(".").First();
+        if (string.IsNullOrEmpty(o2))
+            return 0;
+
+        int no = 0;
+        try
+        {
+            no = Convert.ToInt32(o2);
+        }
+        catch (Exception)
+        {
+        }
+
+        return no;
+    }
+
+
+    private void SetDragClass()
+    {
+        DragClass = $"{DefaultDragClass} mud-border-primary";
+    }
+
+    private void ClearDragClass()
+    {
+        DragClass = DefaultDragClass;
+    }
+
+}

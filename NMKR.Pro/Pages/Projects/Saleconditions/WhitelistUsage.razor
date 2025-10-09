@@ -1,0 +1,43 @@
+﻿@page "/whitelistusage/{projectid:int}/{saleconditionid:int}"
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <ShowWhitelisteUsage projectid="@projectid" saleconditionid="@saleconditionid"></ShowWhitelisteUsage>
+</MudContainer>
+
+
+
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public int saleconditionid { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+        
+    };
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var project = await (from a in db.Nftprojects
+            where a.State != "deleted" && a.Id == projectid
+            select a).FirstOrDefaultAsync();
+
+        if (project == null)
+            return;
+
+        if (projectid != 0)
+        {
+            _items.Add(new("Pricelist (" + project.Projectname + ")", href: "/pricelist/" + projectid));
+            _items.Add(new("Sale Conditions (" + project.Projectname + ")", href: "/saleconditions/" + projectid+"/"+project.Uid));
+            _items.Add(new("Whitelist usage (" + project.Projectname + ")", href: "/whitelistusage/" + projectid + "/" + saleconditionid, disabled: true));
+        }
+
+        StateHasChanged();
+    }
+}

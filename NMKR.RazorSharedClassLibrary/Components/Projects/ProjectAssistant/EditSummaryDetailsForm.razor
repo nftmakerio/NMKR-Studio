@@ -1,0 +1,232 @@
+﻿@using NMKR.Shared.Classes.Projects
+<MudSimpleTable Style="overflow-x: auto;">
+    <tbody>
+    <tr>
+        <td style="width: 200px">
+            Project Template:
+        </td>
+        <td>
+            <MudText>@Value.Template.Title</MudText>
+        </td>
+    </tr>
+    <tr>
+        <td style="width: 200px">
+            Project Type:
+        </td>
+        <td>
+            @switch (Value.Template.Projecttype)
+            {
+                case "nft":
+                        <MudText>Non Fungible Token (NFT)</MudText>
+                    break;
+                    case "ft":
+                    <MudText>Fungible Token</MudText>
+                    break;
+                    case "misc":
+                    <MudText>Miscellaneous</MudText>
+                    break;
+            }
+        </td>
+    </tr>
+    <tr>
+        <td style="width: 200px">
+            Project/Collection Name:
+        </td>
+        <td>
+            <MudText>@Value.Projectname </MudText>
+        </td>
+    </tr>
+    <tr>
+        <td>Blockchains:</td>
+        <td>
+            @if (Value.cardano)
+            {
+                <ShowBlockchainIcon Blockchain="Blockchain.Cardano"/>
+                <span>Cardano</span>
+            }
+            &nbsp;
+            @if (Value.solana)
+            {
+                <ShowBlockchainIcon Blockchain="Blockchain.Solana"/>
+                <span>Solana</span>
+            }
+            &nbsp;
+            @if (Value.aptos)
+            {
+                <ShowBlockchainIcon Blockchain="Blockchain.Aptos"/>
+                <span>Aptos</span>
+            }
+            &nbsp;
+            @if (Value.bitcoin)
+            {
+                <ShowBlockchainIcon Blockchain="Blockchain.Bitcoin"/>
+                <span>Bitcoin</span>
+            }
+        </td>
+    </tr>
+
+
+    @if (Value.solana)
+    {
+        <tr>
+            <td>Solana Symbol:</td>
+            <td>
+                <MudText>
+                    @Value.SolanaSymbol
+                </MudText>
+            </td>
+        </tr>
+
+        <tr>
+            <td>Solana Collection Family:</td>
+            <td>
+                <MudText>
+                    @Value.Solanacollectionfamily
+                </MudText>
+            </td>
+        </tr>
+
+
+        <tr>
+            <td>Seller Fee Basis Points:</td>
+            <td>
+                <MudText>
+                    @Value.SellerFeeBasisPoints
+                </MudText>
+            </td>
+        </tr>
+    }
+
+    @if (Value.aptos)
+    {
+        <tr>
+            <td>Aptos Collection Name:</td>
+            <td>
+                <MudText>
+                    @Value.AptosCollectionName
+                </MudText>
+            </td>
+        </tr>
+    }
+
+
+    <tr>
+        <td>Description:</td>
+        <td>
+            <MudText>
+                @Value.Description
+            </MudText>
+        </td>
+    </tr>
+
+    @if (!string.IsNullOrEmpty(Value.Projecturl))
+    {
+        <tr>
+            <td>Url:</td>
+            <td>
+                <MudText>
+                    @Value.Projecturl
+                </MudText>
+            </td>
+        </tr>
+    }
+
+    @if (!Value.IsNftProject)
+    {
+        <tr>
+            <td>Max NFT supply:</td>
+            <td>
+                <MudText>
+                    @Value.MaxNftSupply
+                </MudText>
+            </td>
+        </tr>
+    }
+
+
+    @if (Value.cardano)
+    {
+        <tr>
+            <td>Cardano Payout wallet:</td>
+            <td>
+                <MudText>
+                    @(Value.CardanoWalletId == 0 ? "internal wallet" : Value.wallets.Find(x => x.Id == Value.CardanoWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(Value.wallets.Find(x => x.Id == Value.CardanoWalletId)?.Walletaddress, 6) + ")")
+                </MudText>
+            </td>
+        </tr>
+    }
+    @if (Value.solana)
+    {
+        <tr>
+            <td>Solana Payout wallet:</td>
+            <td>
+                <MudText>
+                    @(Value.SolanaWalletId == 0 ? "internal wallet" : Value.wallets.Find(x => x.Id == Value.SolanaWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(Value.wallets.Find(x => x.Id == Value.SolanaWalletId)?.Walletaddress, 6) + ")")
+                </MudText>
+            </td>
+        </tr>
+    }
+    @if (Value.aptos)
+    {
+        <tr>
+            <td>Aptos Payout wallet:</td>
+            <td>
+                <MudText>
+                        @(Value.AptosWalletId == 0 ? "internal wallet" : Value.wallets.Find(x => x.Id == Value.AptosWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(Value.wallets.Find(x => x.Id == Value.AptosWalletId)?.Walletaddress, 6) + ")")
+                </MudText>
+            </td>
+        </tr>
+    }
+    @if (Value.bitcoin)
+    {
+        <tr>
+            <td>Bitcoin Payout wallet:</td>
+            <td>
+                <MudText>
+                        @(Value.BitcoinWalletId == 0 ? "internal wallet" : Value.wallets.Find(x => x.Id == Value.BitcoinWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(Value.wallets.Find(x => x.Id == Value.BitcoinWalletId)?.Walletaddress, 6) + ")")
+                </MudText>
+            </td>
+        </tr>
+    }
+    @if (Value.cardano)
+    {
+
+        <tr>
+            <td>Policy will expire:</td>
+            <td>
+                @if (Value.PolicyExpires)
+                {
+                    <MudText>Yes</MudText>
+                }
+                else
+                {
+                    <MudText>No</MudText>
+                }
+            </td>
+        </tr>
+        @if (Value.PolicyExpires)
+        {
+            <tr>
+                <td>Expiration date:</td>
+                <td>
+                    @if (Value.PolicyExpiration != null)
+                    {
+                        <MudText>@Value.PolicyExpiration.Value.ToLongDateString()</MudText>
+                    }
+                </td>
+            </tr>
+        }
+    }
+    </tbody>
+</MudSimpleTable>
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [Parameter]
+    public CreateProjectFromTemplateClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateProjectFromTemplateClass> ValueChanged { get; set; }
+}

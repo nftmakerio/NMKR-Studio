@@ -1,0 +1,67 @@
+﻿@inject ISnackbar Snackbar
+
+
+<MudDialog>
+    <DialogContent>
+            <MudTextField Variant="Variant.Outlined" Label="Wallet Address" @bind-Value="wallet.Walletaddress" Lines="1" Immediate="true" Class="mb-3" ReadOnly="@(!IsAdmin)"/>
+        <MudTextField Variant="Variant.Outlined" Label="Comment" @bind-Value="wallet.Comment" Lines="1" Immediate="true" Class="mb-3"/>
+        @if (IsAdmin)
+        {
+            <MudSelect T="string" Label="State" @bind-Value="wallet.State">
+                <MudSelectItem Value="@("active")"/>
+                <MudSelectItem Value="@("deleted")"/>
+                <MudSelectItem Value="@("notactive")"/>
+            </MudSelect>
+        }
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="SaveComment" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+
+    [Parameter]
+    public Customerwallet wallet { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+
+    private readonly EasynftprojectsContext _db = new(GlobalFunctions.optionsBuilder.Options);
+
+    private bool isSubmitting;
+
+    void Cancel() => MudDialog.Cancel();
+
+    public async Task SaveComment()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var w = await (from a in _db.Customerwallets
+                       where a.Id == wallet.Id
+                       select a).FirstOrDefaultAsync();
+
+
+        if (w != null)
+        {
+            w.Comment = wallet.Comment;
+            w.Walletaddress = wallet.Walletaddress;
+            w.State = wallet.State;
+            await _db.SaveChangesAsync();
+        }
+
+
+        MudDialog.Close(DialogResult.Ok(""));
+
+        isSubmitting = false;
+    }
+
+}

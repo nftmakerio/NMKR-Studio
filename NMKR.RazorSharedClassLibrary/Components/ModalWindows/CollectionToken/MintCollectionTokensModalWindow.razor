@@ -1,0 +1,441 @@
+﻿@inject IJSRuntime JSRuntime 
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@inject TimerServices Timer
+@using NMKR.Shared.Functions.Metadata
+@implements IDisposable
+
+<MudOverlay Visible="isSubmitting" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Color="Color.Tertiary" Indeterminate="true" />
+</MudOverlay>
+
+
+<MudDialog Style="padding: 20px; ">
+        <TitleContent>
+        <MudText Typo="Typo.h3">
+            Collection Token
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Royalty token">
+                <MudSlider @bind-Value="royaltypercent" Min="0" Max="100" Step="0.5">Royalty percent: @((royaltypercent).ToString("F1", CultureInfo.GetCultureInfo("en-US")))</MudSlider>
+                <MudTextField Variant="Variant.Outlined" Class="mt-5" T="string" Label="Cardano Address"  Immediate="true" @bind-Value="royaltyaddress" Lines="1" RequiredError="The address is required"/>
+            </MudTabPanel>
+            <MudTabPanel Text="Identity token">
+                @if (digitalidentity == null && project!=null)
+                {
+                    <MudText Typo="Typo.h6">Step 1:</MudText>
+                    <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="ConfirmButtonPressed">Confirm identity on IAMX (external provider)</MudButton>
+                    <br/><br/>
+                    <MudText Typo="Typo.h6">Step 2:</MudText>
+                    <MudText Typo="Typo.body1">Wait until identity is confirmed</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Error">STATE: NOT CONFIRMED</MudText>
+                }
+                @if (digitalidentity != null && project!=null)
+                {
+                    <MudText Typo="Typo.h6">Step 1:</MudText>
+                    <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="ConfirmButtonPressed">Re-Confirm identity on IAMX (external provider)</MudButton>
+                    <br/><br/>
+                    <MudText Typo="Typo.h6">Step 2:</MudText>
+                    <MudText Typo="Typo.body1">Wait until identity is confirmed</MudText>
+                    @if (digitalidentity.State == "active")
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Success">STATE: CONFIRMED</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Error">STATE: WAITING FOR CONFIRMATION
+                <MudTooltip Color="Color.Dark" Text="Refresh" Placement="Placement.Start" Class="ml-5">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Refresh" Size="Size.Medium" @onclick="CheckIdentityState"></MudIconButton>
+                </MudTooltip>
+                        </MudText> 
+                    }
+                }
+                <br/>
+                <MudText Typo="Typo.h6">Step 3:</MudText>
+                <MudText Typo="Typo.body1">Mint the collection token with the button below</MudText>
+            </MudTabPanel>
+        </MudTabs>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Secondary" Variant="Variant.Outlined" OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="MintTokens" Disabled="isSubmitting">Mint token</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int nftprojectid { get; set; }
+
+    private bool isSubmitting;
+    public double royaltypercent = 0;
+    public string royaltyaddress = "";
+
+    private Nftproject? project;
+    private Digitalidentity? digitalidentity;
+    private string iamxLink { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+
+    protected override void OnInitialized()
+    {
+        Timer.SetTimer(2000);
+        Timer.OnElapsed += TimerElapsedHandler;
+        Timer.Start();
+    }
+
+    public void Dispose()
+    {
+        Timer.Stop();
+        Timer.OnElapsed -= TimerElapsedHandler;
+    }
+
+    private void TimerElapsedHandler()
+    {
+        this.InvokeAsync(() => CheckIdentityState());
+    }
+
+    private async Task CheckIdentityState()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        try
+        {
+            Timer.Stop();
+            await CheckIdentity(db);
+        }
+        catch
+        {
+
+        }
+        finally
+        {
+            Timer.Start();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        project = await (from a in db.Nftprojects
+            .Include(a => a.Customer)
+            where a.Id == nftprojectid
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (project == null)
+        {
+            Cancel();
+            return;
+        }
+
+
+        if (project.Hasroyality)
+        {
+            royaltyaddress = project.Royalityaddress;
+            royaltypercent = project.Royalitypercent;
+        }
+
+        await CheckIdentity(db);
+    }
+
+
+    private async Task CheckIdentity(EasynftprojectsContext db)
+    {
+        digitalidentity = await (from a in db.Digitalidentities
+            where a.NftprojectId == nftprojectid && a.State != "error"
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        StateHasChanged();
+    }
+
+
+    private async Task ConfirmButtonPressed()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        iamxLink = "https://nftidentity.iamx.id/?policyid=" + project.Policyid + "&uid=" + project.Uid + "&testnet=" + (GlobalFunctions.IsMainnet() ? "false" : "true");
+        if (digitalidentity == null)
+        {
+            await db.Digitalidentities.AddAsync(new() {NftprojectId = nftprojectid, Created = DateTime.Now, Policyid = project.Policyid, State = "notactive", Didprovider = "IAMX"});
+        }
+        else
+        {
+            var did = await (from a in db.Digitalidentities
+                where a.NftprojectId == nftprojectid && a.State != "error"
+                select a).FirstOrDefaultAsync();
+            did.Created = DateTime.Now;
+            did.State = "notactive";
+        }
+        await db.SaveChangesAsync();
+        await CheckIdentity(db);
+        await JSRuntime.InvokeVoidAsync("open", iamxLink, "_blank");
+    }
+
+    private async Task MintTokens()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+        StateHasChanged();
+
+        bool mintRoyalty = false;
+        bool mintIdentity = false;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (!string.IsNullOrEmpty(royaltyaddress))
+        {
+            var valid = ConsoleCommand.CheckIfAddressIsValid(db, royaltyaddress, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain);
+
+            if (!valid)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Entered royalty address is not a valid Cardano address. Please enter a correct one.", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            if (project.Customer.Newpurchasedmints < 1)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("You don't have enough mint credits for this transaction. Please buy mint credits first.", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            mintRoyalty = true;
+        }
+
+
+        if (digitalidentity != null)
+        {
+            if (digitalidentity.State == "active")
+                mintIdentity = true;
+        }
+
+
+        if (mintRoyalty == false && mintIdentity == false)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have to specify the royalties and/or create an digital identity", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        string tokenstomint = "";
+        if (mintRoyalty)
+            tokenstomint = "royalty";
+
+        if (mintIdentity)
+        {
+            if (!string.IsNullOrEmpty(tokenstomint))
+                tokenstomint += " and identity";
+            else
+                tokenstomint = "identity";
+        }
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Are you sure?",
+            $"We are creating the collection token with {tokenstomint} information, setting the metadata, minting this token and finally burning it!",
+            yesText: "Yes", cancelText: "No");
+
+        if (result == true)
+        {
+            await MintTheTokens(db, mintRoyalty, mintIdentity);
+        }
+
+
+        isSubmitting = false;
+    }
+
+    private async Task MintTheTokens(EasynftprojectsContext db, bool mintRoyalty, bool mintIdentity)
+    {
+
+        var n1 = await (from a in db.Nfts
+            where a.NftprojectId == nftprojectid && a.Isroyaltytoken == true
+            select a).FirstOrDefaultAsync();
+
+        string metadaten = ConsoleCommand.CreateCollectionTokenJson(royaltyaddress, royaltypercent, project.Policyid, digitalidentity == null ? "" : digitalidentity.Ipfshash, "IAMX");
+
+
+        if (n1 == null)
+        {
+            n1 = new()
+            {
+                NftprojectId = nftprojectid,
+                Name = "",
+                State = "reserved",
+                Reservedcount = project.Maxsupply,
+                Soldcount = 0,
+                Errorcount = 0,
+                Burncount = 0,
+                Metadataoverride = metadaten,
+                Checkpolicyid = false,
+                Uploadedtonftstorage = true,
+                Isroyaltytoken = true,
+                MetadatatemplateId = 1,
+                Filename = "", Ipfshash = "", Filesize = 0,
+                Minted = false,
+                Uid = Guid.NewGuid().ToString()
+            };
+
+            await db.Nfts.AddAsync(n1);
+        }
+        else
+        {
+            n1.Metadataoverride = metadaten;
+        }
+        await db.SaveChangesAsync();
+
+
+    // Create Burning address
+        var be = await GlobalFunctions.CreateBurningAddressAsync(db, nftprojectid, DateTime.Now.AddMinutes(60), Blockchain.Cardano);
+
+        if (be == null || string.IsNullOrEmpty(be.Address))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Error while creating burning endpoint. Please contact support", Severity.Error);
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(false));
+            return;
+        }
+        string burningEndpoint = be.Address;
+
+
+    // Create the Tokens
+
+        await CreateTheTokens(db, n1.Id, burningEndpoint, mintRoyalty, mintIdentity);
+
+
+    }
+
+    private async Task CreateTheTokens(EasynftprojectsContext db, int nftid, string receiveraddress, bool mintRoyalty, bool mintIdentity)
+    {
+        var nft = await (from a in db.Nfts
+            .Include(a => a.Nftproject)
+            .ThenInclude(a => a.Customer)
+            .AsSplitQuery()
+            .Include(a => a.Instockpremintedaddress)
+            .AsSplitQuery()
+            .Include(a => a.Nftproject)
+            .ThenInclude(a => a.Settings)
+            .AsSplitQuery()
+            .Include(a => a.InverseMainnft)
+            .ThenInclude(a => a.Metadata)
+            .AsSplitQuery()
+            .Include(a => a.Metadata)
+            .AsSplitQuery()
+            where a.Id == nftid
+            select a).FirstOrDefaultAsync();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Error while creating royalty token. Please contact support", Severity.Error);
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(false));
+            return;
+        }
+        var paywallet = await GlobalFunctions.GetNmkrPaywalletAndBlockAsync(db,0,"MintCollectionTokenModalWindow",null);
+
+        if (paywallet == null)
+        {
+            Snackbar.Add("All pay wallets are busy in the moment. Please try again in a few seconds", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GetMetadataClass gmc = new(nft.Id, "",true);
+        MintManuallyClass mmc1 = new()
+        {
+            BurnResult = true,
+            Metadata = (await gmc.MetadataResultAsync()).Metadata,
+            PolicyId = nft.Nftproject.Policyid,
+            Prefix = "",
+            ReceiverAddress = receiveraddress,
+            Tokenname = "",
+            Projectid = nft.NftprojectId,
+            SenderAddress = paywallet.Address,
+            SenderSKey = Encryption.DecryptString(paywallet.Privateskey, GeneralConfigurationClass.Masterpassword + paywallet.Salt),
+            SenderVKey = Encryption.DecryptString(paywallet.Privatevkey, GeneralConfigurationClass.Masterpassword + paywallet.Salt)
+        };
+
+        var s = ConsoleCommand.MintManually(db,_redis, project, mmc1,  GlobalFunctions.IsMainnet(), 0, "", out var buildTransaction);
+        await GlobalFunctions.LogMessageAsync(db, "MintAndSendCollectionToken " + paywallet.Address + " - " + s, buildTransaction.LogFile);
+
+        if (s != "OK")
+        {
+            db.Nfts.Remove(nft);
+            await db.SaveChangesAsync();
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Error while creating collection token (2). Please contact support", Severity.Error);
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(false));
+            return;
+        }
+        var proj1 = await (from a in db.Nftprojects
+            .Include(a => a.Customer)
+            where a.Id == nftprojectid
+            select a).FirstOrDefaultAsync();
+        if (proj1 == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Error while creating collection token (3). Please contact support", Severity.Error);
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(false));
+            return;
+        }
+        if (mintRoyalty)
+        {
+            proj1.Hasroyality = true;
+            proj1.Royalityaddress = royaltyaddress;
+            proj1.Royalitypercent = (float) royaltypercent;
+            proj1.Royaltiycreated = DateTime.Now;
+        }
+        else
+        {
+            proj1.Hasroyality = false;
+            proj1.Royalityaddress = "";
+            proj1.Royalitypercent = 0;
+        }
+        proj1.Hasidentity = mintIdentity;
+        await db.SaveChangesAsync();
+
+        nft.State = "sold";
+        nft.Selldate = DateTime.Now;
+        nft.Minted = true;
+        nft.Receiveraddress = receiveraddress;
+        nft.Soldcount = 1;
+        nft.Reservedcount = 0;
+        nft.Errorcount = 0;
+
+        await db.SaveChangesAsync();
+
+        await GlobalFunctions.ExecuteSqlWithFallbackAsync(db, $"update adminmintandsendaddresses set addressblocked=1,blockcounter=0,lasttxhash='{buildTransaction.TxHash}', lasttxdate=NOW() where id='{paywallet.Id}'", 0);
+        await GlobalFunctions.SaveTransactionAsync(db,_redis, buildTransaction, nft.Nftproject.CustomerId, nft.NftprojectId, nameof(TransactionTypes.mintfromcustomeraddress), null, nft.Id, 1, Coin.ADA);
+       
+        await GlobalFunctions.ReduceMintCouponsAsync(db, proj1.CustomerId, 0.5f);
+
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Collection token successfully created", Severity.Success);
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+}

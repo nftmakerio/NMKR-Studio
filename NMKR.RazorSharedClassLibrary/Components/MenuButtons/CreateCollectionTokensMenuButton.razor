@@ -1,0 +1,38 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.CollectionToken
+@inject IConnectionMultiplexer _redis;
+@inject ISnackbar Snackbar
+
+@if (Project.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+{
+    <MudNavLink @onclick="(() => CreateCollectionTokens())">Cardano Collection Token</MudNavLink>
+}
+@code {
+    [Parameter] public Nftproject Project { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+    private async Task CreateCollectionTokens()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (Project.Policyexpire != null && Project.Policyexpire < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Policy is locked now. Minting is not longer possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(MintCollectionTokensModalWindow.nftprojectid), Project.Id } };
+        var dialog = await DialogService.ShowAsync<MintCollectionTokensModalWindow>("Mint collection token(s)", parameters, maxWidth);
+        await dialog.Result;
+        isSubmitting = false;
+    }
+
+}

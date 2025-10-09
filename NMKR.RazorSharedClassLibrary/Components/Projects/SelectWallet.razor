@@ -1,0 +1,78 @@
+﻿@inject NavigationManager NavigationManager
+
+<MudSelect T="int" Label="@("Select Payout wallet "+Coin.ToString())" @bind-Value="@_value">
+    @if (GeneralConfigurationClass.EnableInternalWallets)
+    {
+        <MudSelectItem Value="0">internal Wallet</MudSelectItem>
+    }
+    @foreach (var w in wallets.Where(a => a.Cointype == Coin.ToString()))
+    {
+        <MudSelectItem Value="@w.Id">@(w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")")</MudSelectItem>
+    }
+    @if (wallets.All(a => a.Cointype != Coin.ToString()) && !GeneralConfigurationClass.EnableInternalWallets)
+    {
+        <MudSelectItem Value="0">Please set up your @Blockchain.ToString() wallet first</MudSelectItem>
+    }
+</MudSelect>
+@if (ShowSetupButton)
+{
+    <MudButton Variant="Variant.Outlined" OnClick="SetupWallet" Color="Color.Primary" Class="mt-3">Setup Wallets</MudButton>
+}
+
+  @code {
+
+      [Parameter]
+      public int CustomerId { get; set; }
+
+      [Parameter]
+      public bool IsAdmin { get; set; }
+
+    
+      [Parameter]
+      public Blockchain Blockchain { get; set; }
+
+      [Parameter]
+      public Coin Coin { get; set; }
+      [Parameter]
+      public EventCallback<int> ValueChanged { get; set; }
+      [Parameter]
+      public bool ShowSetupButton { get; set; } = true;
+      [Parameter]
+      public int Value { get; set; }
+      private int _value
+      {
+          get => Value;
+          set
+            {
+                Value = value;
+                ValueChanged.InvokeAsync(value);
+            }
+      }
+
+      private List<Customerwallet> wallets = new();
+
+      protected override async Task OnInitializedAsync()
+      {
+          await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+          wallets = await (from a in db.Customerwallets
+              where a.CustomerId == CustomerId && a.State == "active"
+              select a).ToListAsync();
+          if (Value == 0)
+          {
+              Value = (wallets.FirstOrDefault(x => x.Cointype == Coin.ToString())?.Id) ?? 0;
+          }
+      }
+      protected override async Task OnParametersSetAsync()
+      {
+         StateHasChanged();
+      }
+
+      private void SetupWallet()
+      {
+          if (IsAdmin)
+              NavigationManager.NavigateTo("/wallets/" + CustomerId);
+          else
+              NavigationManager.NavigateTo("/wallets");
+      }
+  }

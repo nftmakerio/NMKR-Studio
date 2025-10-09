@@ -1,0 +1,362 @@
+﻿@page "/directsales"
+@using NMKR.Shared.Functions.Api
+@using System.Threading
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Smart Contract Secondary Sales</MudText>
+
+    <MudTable ServerData="LoadTodos" @ref="table" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Directsale" Loading="@progressIsVisible" Class="border" Elevation="0" Style="border-color:#E0E0E0">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>State</MudTh>
+            <MudTh Style="text-align:right">Price</MudTh>
+            <MudTh Style="text-align:right">Royalties</MudTh>
+            <MudTh Style="text-align:right">MktPlc Fee</MudTh>
+            <MudTh>Created (UTC)</MudTh>
+            <MudTh>Image</MudTh>
+            <MudTh>NFT/Token</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            @{
+                var state = GetTransactionState(context);
+            }
+            <MudTd>
+              @context.Name
+            </MudTd>
+
+            <MudTd>
+                @switch (state)
+                {
+                    case "waitingforsale":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Ready to buy</NMKRChip>
+                        break;
+                    case "sold":
+                        <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Finished (NFT sold)</NMKRChip>
+                        break;
+                    case "canceled":
+                        <NMKRChip Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Canceled (NFT not sold)</NMKRChip>
+                        break;
+                    case "waitingforlocknft":
+                        <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Wait for NFT lock</NMKRChip>
+                        break;
+                    case "readytosignbyseller":
+                        <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Wait for NFT lock</NMKRChip>
+                        break;
+                    case "readytosignbysellercancel":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Cancel state</NMKRChip>
+                        break;
+                    case "readytosignbybuyer":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Ready to buy</NMKRChip>
+                        break;
+                }
+            </MudTd>
+
+            <MudTd Style="text-align: right">
+                @GlobalFunctions.FormatCurrency(context.Price,2) ADA
+            </MudTd>
+
+            <MudTd Style="text-align: right">
+                @(context.Royaltyfeespercent == null ? "0 %" : context.Royaltyfeespercent + " %")
+                @if (context.Royaltyfeespercent != null)
+                {
+                    <small>to: </small>
+                    <small>
+                        <ShowAddress Address="@context.Royaltyaddress" Blockchain="Blockchain.Cardano"></ShowAddress>
+                    </small>
+                }
+            </MudTd>
+            <MudTd Style="text-align: right">
+                @(context.Marketplacefeepercent == null ? "" : context.Marketplacefeepercent + " %")
+            </MudTd>
+            <MudTd>
+                @context.Created
+                <br/>
+                <small>
+                @context.Smartcontract.Smartcontractname
+                </small>
+            </MudTd>
+            <MudTd>
+                @if (context.DirectsalesNfts.Any() && !string.IsNullOrEmpty(context.DirectsalesNfts.First().Ipfshash))
+                {
+                    <a href="@(context.DirectsalesNfts.First().Ipfshash)" target="_blank"> <img src="@(context.DirectsalesNfts.First().Ipfshash)" height="50"></a>
+                }
+            </MudTd>
+            <MudTd>
+                @if (context.DirectsalesNfts.Any())
+                {
+                    <MudText>@context.DirectsalesNfts.First().Tokencount x @GlobalFunctions.FromHexString(context.DirectsalesNfts.First().Tokennamehex)</MudText>
+                    <small>Policy: @context.DirectsalesNfts.First().Policyid</small>
+
+                    <br />
+                    <small>Hex: @context.DirectsalesNfts.First().Tokennamehex</small>
+                    <br/>
+                    <small>Fingerprint: @Bech32Engine.GetFingerprint(context.DirectsalesNfts.First().Policyid,context.DirectsalesNfts.First().Tokennamehex)</small>
+                }
+            </MudTd>
+            <MudTd Style="text-align: right">
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">Edit</MudNavLink>
+                <MudDivider Class="my-2" />
+                @if (state == "waitingforlocknft" || state=="readytosignbyseller")
+                {
+                    <MudNavLink @onclick="() =>LockNft(context.Transactionid)" Icon="@Icons.Material.Filled.Lock">Lock NFT</MudNavLink>
+                }
+                @if (state == "waitingforsale")
+                {
+                    <MudNavLink @onclick="() => ShowAddress(context.Transactionid)" Icon="@Icons.Material.Filled.Payment">Show Buy link</MudNavLink>
+                }
+                @if (state == "waitingforsale" || state == "readytosignbysellercancel" || state == "readytosignbybuyer")
+                {
+                    <MudNavLink @onclick="() => CancelSale(context.Transactionid)" Icon="@Icons.Material.Filled.Payment">Cancel sale</MudNavLink>
+                }
+                @if (state != "waitingforsale" && state != "readytosignbysellercancel" && state != "readytosignbybuyer")
+                {
+                    <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete">Delete</MudNavLink>
+                }
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false"
+               Class="mt-5 mb-5 rounded-xl px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               OnClick="Add">
+        Create new sale
+    </MudButton>
+</MudContainer>
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool progressIsVisible { get; set; } = false;
+    private bool isSubmitting;
+    private MudTable<Directsale> table { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Directsales", href: "/directsales", disabled: true),
+
+    };
+  
+    public async Task<TableData<Directsale>> LoadTodos(TableState state, CancellationToken token)
+    {
+        progressIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var directsales = await (from a in db.Directsales
+            .Include(a => a.DirectsalesNfts)
+            .AsSplitQuery()
+            .Include(a=>a.Smartcontract)
+            .AsSplitQuery()
+            where a.CustomerId == (int)settings.UserId && a.State != "deleted"
+            orderby a.Created descending
+            select a).AsNoTracking().Skip(state.Page*state.PageSize).Take(state.PageSize).ToListAsync();
+
+        var directsalesc = await (from a in db.Directsales
+            where a.CustomerId == (int) settings.UserId && a.State != "deleted"
+            select a).CountAsync();
+
+        progressIsVisible = false;
+        StateHasChanged();
+
+        return new() { Items = directsales, TotalItems = directsalesc };
+    }
+
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        bool? result = await DialogService.ShowMessageBox(
+        "Warning",
+        "Are you sure you want to delete this sale?",
+        yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+            string sql = $"update directsales set state='deleted' where id={id}";
+            await GlobalFunctions.ExecuteSqlWithFallbackAsync(db, sql);
+            await table.ReloadServerData();
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Sale deleted", Severity.Success);
+            await table.ReloadServerData();
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        var directsale = await (from a in db.Directsales
+            .Include(a=>a.DirectsalesNfts)
+                                where a.Id == id
+                                select a).FirstOrDefaultAsync();
+
+        if (directsale == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - Please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+     
+        if (directsale.State == "sold")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Sale is already finished - change not possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (directsale.State == "canceled")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Sale is canceled - change not possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (directsale.DirectsalesNfts == null || !directsale.DirectsalesNfts.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - change not possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        EditDirectsaleClass ds = new() { Id = directsale.Id, Count = directsale.DirectsalesNfts.First().Tokencount, Price = directsale.Price / 1000000, 
+            Fingerprint = Bech32Engine.GetFingerprint(directsale.DirectsalesNfts.First().Policyid, directsale.DirectsalesNfts.First().Tokennamehex), Name = directsale.Name};
+        var parameters = new DialogParameters { { nameof(EditDirectsaleModalWindow.directsale), ds } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditDirectsaleModalWindow>("Edit sale", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await table.ReloadServerData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task ShowAddress(string transactionid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        string transtype = "adsid=";
+        string link = $"{GeneralConfigurationClass.Paywindowlink}{transtype}{transactionid}&a=buy";
+
+        var parameters = new DialogParameters { { nameof(ShowPaymentUrlModalWindow.Link), link } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<ShowPaymentUrlModalWindow>("Buy Payment Link", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        await table.ReloadServerData();
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task CancelSale(string transactionid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        string transtype = "adsid=";
+        string link = $"{GeneralConfigurationClass.Paywindowlink}{transtype}{transactionid}&a=manage";
+
+        var parameters = new DialogParameters { { nameof(ShowPaymentUrlModalWindow.Link), link } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<ShowPaymentUrlModalWindow>("Cancel Payment Link", parameters, maxWidth);
+
+        var result = await dialog.Result;
+        await table.ReloadServerData();
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+
+    private async Task LockNft(string transactionid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        string transtype = "adsid=";
+        string link = $"{GeneralConfigurationClass.Paywindowlink}{transtype}{transactionid}&a=list";
+
+        var parameters = new DialogParameters { { nameof(ShowPaymentUrlModalWindow.Link), link } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<ShowPaymentUrlModalWindow>("List Payment Link", parameters, maxWidth);
+
+        var result = await dialog.Result;
+        await table.ReloadServerData();
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+
+    private async Task Add()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        EditDirectsaleClass newdirectsale = new EditDirectsaleClass() {Price = 5, SmartcontractId = 0, Count = 1};
+        var parameters = new DialogParameters { { nameof(EditDirectsaleModalWindow.directsale), newdirectsale } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditDirectsaleModalWindow>("Add directsale", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await table.ReloadServerData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private string GetTransactionState(Directsale context)
+    {
+        var tx=ApiFunctions.GetTransactionResult(context.Transactionid);
+
+        if (tx == null)
+            return "error";
+
+        if (context.State != tx.PaymentTransactionSubStateResult.PaymentTransactionSubstate.ToString())
+        {
+            using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+            string sql = $"update directsales set state='{tx.PaymentTransactionSubStateResult.PaymentTransactionSubstate.ToString()}' where id={context.Id} and state!='deleted'";
+            GlobalFunctions.ExecuteSqlWithFallback(db, sql);
+        }
+
+        return tx.PaymentTransactionSubStateResult.PaymentTransactionSubstate.ToString();
+
+    }
+
+}

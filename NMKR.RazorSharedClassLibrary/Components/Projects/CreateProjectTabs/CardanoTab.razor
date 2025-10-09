@@ -1,0 +1,160 @@
+﻿<EditForm Model="@Value" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <MudGrid Class="mb-10 pa-5 mr-3 ml-1 mt-5" Style="border-radius: 0rem; border-width: 1px; border-color: #d2d2d2;">
+            <MudItem xs="12">
+            <MudText Typo="Typo.h5" Color="Color.Dark">Cardano</MudText>
+        </MudItem>
+            <MudItem xs="12" sm="6" md="3" >
+                <SelectWallet @bind-Value="Value.CardanoWalletId" Coin="Coin.ADA" Blockchain="Blockchain.Cardano" IsAdmin="@IsAdmin" CustomerId="@CustomerId"></SelectWallet>
+            </MudItem>
+
+            @if ((model.ft_nonft_project == 1 || model.ft_nonft_project == 0) && model.cardano)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h5" Color="Color.Dark">CIP Standard</MudText>
+                </MudItem>
+            }
+            <MudItem xs="12" >
+
+                <!-- CIP Standard Start -->
+                <MudGrid>
+                    @if ((model.ft_nonft_project == 1 || model.ft_nonft_project == 0) && model.cardano)
+                    {
+                        <MudItem sm="12" xs="12">
+                            <MudRadioGroup @bind-Value="@Value.CipStandard" T="int">
+                                <MudRadio Value="0">
+                                    CIP25 project
+                                    <TooltipHelper Description="cip25"></TooltipHelper>
+                                </MudRadio>
+                                <MudRadio  Value="1">
+                                    CIP68 project
+                                    <TooltipHelper Description="cip68"></TooltipHelper>
+                                </MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+                    }
+                    @if (Value.CipStandard == 1)
+                    {
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h5">CIP68 Options</MudText>
+                        </MudItem>
+                        <MudItem sm="6" xs="12">
+                            <MudSelect T="int" Label="CIP68 Reference Tokens Address" @bind-Value="Value.Cip68ReferenceAddressType">
+                                <MudSelectItem Value="-1">New Managed Wallet</MudSelectItem>
+                                <MudSelectItem Value="0">Own Address</MudSelectItem>
+                                @foreach (var smartcontract in smartcontracts)
+                                {
+                                    <MudSelectItem Value="@smartcontract.Id" Disabled="@(smartcontract.State != "active")">@smartcontract.Smartcontractname</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <MudItem sm="6" xs="12">
+                            <MudSelect T="int" Label="CIP68 Metadata Extra field" @bind-Value="Value.Cip68ExtrafieldType">
+                                <MudSelectItem Value="0">Nothing</MudSelectItem>
+                                <MudSelectItem Value="1">Own Value - String</MudSelectItem>
+                                <MudSelectItem Value="2">Own Value - Hex-Encoded value</MudSelectItem>
+                                <MudSelectItem Value="3">PKH of Policy Address</MudSelectItem>
+                                <MudSelectItem Value="4">The PKH of the address to which the user token is minted.</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem sm="6" xs="12">
+                            @if (Value.Cip68ReferenceAddressType == 0)
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label="CIP68 Reference Tokens Address"
+                                              @bind-Value="Value.Cip68ReferenceAddress" For="@(() => Value.Cip68ReferenceAddress)" Immediate="true" />
+                            }
+                            else
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label="Managed Wallet Passwort" T="string" ReadOnly="true" Text="@model.Password" />
+                            }
+                        </MudItem>
+                        <MudItem sm="6" xs="12">
+                            @if (Value.Cip68ExtrafieldType == 1)
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label="CIP68 Metadata Extra field - String"
+                                              @bind-Value="Value.Cip68Extrafield" For="@(() => Value.Cip68Extrafield)" Immediate="true" />
+                            }
+                            @if (Value.Cip68ExtrafieldType == 2)
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label="CIP68 Metadata Extra field - Hex Encoded value"
+                                              @bind-Value="Value.Cip68Extrafield" For="@(() => Value.Cip68Extrafield)" Immediate="true" />
+                            }
+                        </MudItem>
+                        <MudItem xs="12">
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                <!-- CIP Standard END -->
+        </MudItem>
+            
+            <MudItem xs="12">
+                <MudText Typo="Typo.h5">Policy</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudRadioGroup @bind-Value="@Value.NewPolicy" T="int">
+                    <MudRadio Value="0" Color="Color.Tertiary">New policy</MudRadio>
+                    <MudRadio Value="1" Color="Color.Tertiary">Existing policy</MudRadio>
+                    <TooltipHelper Description="What is the policy?" />
+                </MudRadioGroup>
+            </MudItem>
+            @if (Value.NewPolicy == 0)
+            {
+                <MudItem xs="12">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@Value.PolicyExpires" Label="Policyscript will lock" />
+                </MudItem>
+                @if (Value.PolicyExpires)
+                {
+                    <MudItem xs="12">
+                        <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" Label="When will the Policyscript lock?" Color="Color.Tertiary" DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" @bind-Date="Value.PolicyExpiration" />
+                    </MudItem>
+                }
+            }
+            else
+            {
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Policyid" HelperText="Enter your existing policyid" Required="true"
+                                  @bind-Value="Value.PolicyId" For="@(() => Value.PolicyId)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Signing Key" HelperText="Enter the signing key for this policyid" Lines="5" Required="true"
+                                  @bind-Value="Value.PrivateSigningkey" For="@(() => Value.PrivateSigningkey)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Verification Key" HelperText="Enter the verification key for this policyid" Lines="5" Required="true"
+                                  @bind-Value="Value.PrivateVerifykey" For="@(() => Value.PrivateVerifykey)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Policy script" HelperText="Enter the existing policy script" Lines="10" Required="true"
+                                  @bind-Value="Value.PolicyScript" For="@(() => Value.PolicyScript)" />
+                </MudItem>
+            }
+        </MudGrid>
+
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="OnPreviousClick" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+    </MudContainer>
+
+</EditForm>
+@code {
+    [Parameter]
+    public CreateNewProjectBlockchainsClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateNewProjectBlockchainsClass> ValueChanged { get; set; }
+
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool iagonenabled { get; set; }
+    [Parameter] public List<Activeblockchain> activeblockchains { get; set; }
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnPreviousClick { get; set; }
+
+    [Parameter] public bool isSubmitting { get; set; }
+    [Parameter] public CreateNewProjectClass model { get; set; }
+    private List<Smartcontract> smartcontracts = new();
+
+}

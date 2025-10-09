@@ -1,0 +1,181 @@
+﻿@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+
+
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Class="mr-3" />Mint manually
+                <hr />
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+
+            <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+                <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+                    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+                </MudOverlay>
+
+                <MudGrid Class="mb-3">
+                    <MudItem xs="12">
+                        <MudTextField Variant="Variant.Outlined" Label="PolicyID"
+                                      @bind-Value="mmc.PolicyId" For="@(() => mmc.PolicyId)" ReadOnly="true" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField Variant="Variant.Outlined" Label="Prefix"
+                                      @bind-Value="mmc.Prefix" For="@(() => mmc.Prefix)" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField Variant="Variant.Outlined" Label="Tokenname"
+                                      @bind-Value="mmc.Tokenname" For="@(() => mmc.Tokenname)" />
+                    </MudItem>
+                
+                    <MudItem xs="12">
+                        <MudTextField Variant="Variant.Outlined" Label="Metdata" Lines="8"
+                                      @bind-Value="mmc.Metadata" For="@(() => mmc.Metadata)" />
+                    </MudItem>
+
+
+                </MudGrid>
+
+
+            </MudContainer>
+        </DialogContent>
+        <DialogActions>
+            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Close">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="Mint" Color="Color.Tertiary" Disabled="isSubmitting">Mint</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    [Parameter]
+    public MintManuallyClass mmc1 { get; set; }
+
+
+    private bool isSubmitting;
+    private bool isVisible;
+
+    private MintManuallyClass mmc = new(){BurnResult = true};
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (mmc1 != null)
+            mmc = mmc1;
+        else
+        {
+            mmc.PolicyId = project.Policyid;
+            mmc.Prefix = project.Tokennameprefix;
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task Mint()
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var customer = await (from a in db.Customers
+                                  where a.Id == project.CustomerId
+                                  select a).AsNoTracking().FirstOrDefaultAsync();
+
+        
+            if (customer == null)
+        {
+            Snackbar.Add("Customer not found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+          /*  if (customer.Addressblocked)
+            {
+                Snackbar.Add("The payment address is currently blocked. Please try again in a few seconds", Severity.Error);
+                isSubmitting = false;
+                return;
+            }*/
+
+        if (customer.Newpurchasedmints < project.Settings.Mintandsendcoupons)
+            {
+                Snackbar.Add("You don't have enough mint credits for this transaction. Please buy mint credits first.", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+        var paywallet = await GlobalFunctions.GetNmkrPaywalletAndBlockAsync(db,0,"ToolsMintModalWindowStudio",null);
+        if (paywallet == null)
+        {
+            Snackbar.Add("All pay wallets are busy in the moment. Please try again in a few seconds", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        mmc.SenderAddress=paywallet.Address;
+        mmc.SenderSKey = Encryption.DecryptString(paywallet.Privateskey, GeneralConfigurationClass.Masterpassword + paywallet.Salt);
+        mmc.SenderVKey = Encryption.DecryptString(paywallet.Privatevkey, GeneralConfigurationClass.Masterpassword + paywallet.Salt);
+
+        if (string.IsNullOrEmpty(mmc.Metadata))
+        {
+            Snackbar.Add("Metadata must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(mmc.Tokenname))
+        {
+            Snackbar.Add("Tokenname must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (mmc.BurnResult)
+        {
+            var be = await GlobalFunctions.CreateBurningAddressAsync(db, mmc.Projectid, DateTime.Now.AddHours(5), Blockchain.Cardano, true);
+            if (be != null)
+                mmc.ReceiverAddress = be.Address;
+        }
+
+        if (string.IsNullOrEmpty(mmc.Tokenname))
+        {
+            Snackbar.Add("Receiver (or Burning) Address can not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        isVisible = true;
+        StateHasChanged();
+       
+        var s = ConsoleCommand.MintManually(db,_redis, project, mmc,  GlobalFunctions.IsMainnet(),0,"", out var buildTransaction);
+      
+
+        if (s != "OK")
+        {
+            Snackbar.Add($"Mint was not successful - {buildTransaction.ErrorMessage}{s}", Severity.Error);
+            await GlobalFunctions.ExecuteSqlWithFallbackAsync(db,
+                $"update adminmintandsendaddresses set addressblocked=0,blockcounter=0,lasttxhash='', lasttxdate=NOW() where id='{paywallet.Id}'",
+                0);
+        }
+        else
+        {
+            Snackbar.Add($"Mint was successful - Tx-Id: {buildTransaction.TxHash}", Severity.Success);
+            await GlobalFunctions.ReduceMintCouponsAsync(db, customer.Id, project.Settings.Mintandsendcoupons);
+
+            Close();
+        }
+
+        isVisible = false;
+        isSubmitting = false;
+    }
+
+    }

@@ -1,0 +1,60 @@
+﻿@using Microsoft.AspNetCore.WebUtilities
+@inherits LayoutComponentBase
+@inject NavigationManager _navigationManager
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+
+<MudThemeProvider Theme="MyCustomTheme.Theme" />
+
+<div style="height: 100vh; width:100%;display: flex;flex-wrap: wrap;">
+    <div style="height: 100%; width:50%;background-color: white; display:inline-block;flex: 1 0 50%;white-space: nowrap;">
+        <MudLayout>
+            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center pb-10 pt-10" Style="height: 100%">
+                <div class="d-flex flex-column mud-width-full">
+                    <MudPaper Elevation="0" Class="pa-8" Width="100%" MaxWidth="1200px">
+                        @if (!GlobalFunctions.IsMainnet())
+                        {
+                            <MudText Color="Color.Error">@GeneralConfigurationClass.EnvironmentName</MudText>
+                        }
+                        @Body
+                    </MudPaper>
+                </div>
+            </MudContainer>
+        </MudLayout>
+    </div>
+    <div Class="d-none d-lg-flex d-xl-flex d-xxl-flex" style="justify-content: center;align-items: center;height: 100%; width:50%;background-color: #11F250;flex: 1 0 50%;white-space: nowrap;">
+        <MudImage Class="object-center" Src="images/nmkr-studio-logo.svg" Alt="MKR Studio Logo" ObjectFit="ObjectFit.Cover" />
+    </div>
+</div>
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+@code {
+
+    readonly MudblazorTheme MyCustomTheme = new MudblazorTheme();
+    private string referer { get; set; }
+
+  
+    protected override void OnInitialized()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("referral", out var _referral))
+        {
+            referer = _referral;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        //  if (firstRender)
+        {
+
+
+        }
+        if (!string.IsNullOrEmpty(referer))
+            await localStorage.SetItemAsStringAsync("referral", referer);
+    }
+
+}

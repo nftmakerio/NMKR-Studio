@@ -1,0 +1,48 @@
+﻿@using NMKR.Shared.Blockchains.BITCOIN
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+<MudText>@CostsText</MudText>
+
+@code {
+
+    [Parameter]
+    public int NftId { get; set; }
+
+    private string CostsText { get; set; } = "Calculating costs...Please wait";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Dummy Address to calculate the costs
+        string Address = GlobalFunctions.IsMainnet() ? 
+            "bc1q4uw0gv4p9w33ejvrwcl59965l7xxfnewjjnwyp" : 
+            "tb1qx8dd72wzgaremlcc849shy6pspv8p58mh9yqnc";
+
+        BitcoinBlockchainFunctions blockchain = new BitcoinBlockchainFunctions();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = await (from a in db.Nfts
+                .Include(a => a.Nftproject)
+                .ThenInclude(a => a.Customer).AsSplitQuery()
+                .Include(a => a.Instockpremintedaddress).AsSplitQuery()
+                .Include(a => a.Nftproject)
+                .ThenInclude(a => a.Settings).AsSplitQuery()
+                .Include(a => a.InverseMainnft)
+                .ThenInclude(a => a.Metadata).AsSplitQuery()
+                .Include(a => a.Metadata).AsSplitQuery()
+                         where a.Id == NftId
+                         select a).FirstOrDefaultAsync();
+
+        if (nft == null)
+        {
+            return;
+        }
+
+
+        var mintingcosts = await blockchain.GetMintingCostsAsync(nft, nft.Nftproject, Address);
+        mintingcosts += 1000; // estimated Fees
+
+        decimal btc = mintingcosts / 100_000_000m;
+        var coupons = (nft.Nftproject.Settings.Mintandsendcoupons * await GlobalFunctions.GetRequiredMintCouponsAsync(db, _redis, mintingcosts, Coin.BTC));
+        CostsText = $"Estimated costs: ≈ {mintingcosts} sats = {btc.ToString("0.########")} BTC - Required Mintcoupons: " + coupons;
+    }
+}

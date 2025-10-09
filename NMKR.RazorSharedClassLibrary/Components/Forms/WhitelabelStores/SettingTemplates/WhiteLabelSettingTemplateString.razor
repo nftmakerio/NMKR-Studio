@@ -1,0 +1,45 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%">
+            <MudTextField @bind-Value="StringValue" Label="@(Setting.Humanreadablesettingsname + (Setting.Mandantory ? "" : " (optional)"))"
+                          Variant="Variant.Outlined" Immediate="true" 
+                              HelperText="@((Setting.Maxlength!=null && Setting.Maxlength>0) ? GlobalFunctions.CharHelper($"Max. {Setting.Maxlength} characters", StringValue ?? ""):"")"   
+                          >
+            </MudTextField>
+        </td>
+        <td>
+            <div class="ml-10">
+                <MudText Typo="Typo.body1">
+                    @Setting.Description
+                </MudText>
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+    [Parameter]
+    public string Type { get; set; }
+    [Parameter] 
+    public string StringValue
+    {
+        get => _stringValue;
+        set
+        {
+            if (value != _stringValue)
+            {
+                _stringValue = value;
+                StringValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> StringValueChanged { get; set; }
+
+
+    private string _stringValue = "";
+  
+}

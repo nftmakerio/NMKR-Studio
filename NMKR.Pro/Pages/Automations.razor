@@ -1,0 +1,27 @@
+﻿@page "/automations"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Automations</MudText>
+
+    <MudPaper Elevation="0" Class=" border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+        <zapier-full-experience class="mt-4 mb-4 mr-4 ml-4"
+            client-id="n9RYWQROo3ExRFKrinYvZjgvjt9H7rJbIc7lvGKk"
+            theme="light"
+            intro-copy-display="show"
+            app-search-bar-display="show"
+            zap-call-to-action-display="show">
+
+        </zapier-full-experience>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Automations", href: "/automations", disabled: true),
+    };
+}

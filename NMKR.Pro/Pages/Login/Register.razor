@@ -1,0 +1,314 @@
+﻿@layout RegisterLayout
+@page "/register"
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.Solana
+@using InputType = MudBlazor.InputType
+@using NMKR.Shared.Mailerlite
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject IStringLocalizer _loc
+
+
+<HeadContent>
+    <meta charset="utf-8">
+    <title>NMKR Studio - Sign Up</title>
+    <meta content="Sign up for a free NMKR Studio account." name="description">
+    <meta content="NMKR Studio - Sign Up" property="og:title">
+    <meta content="Sign up for a free NMKR Studio account." property="og:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="og:image">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="twitter:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="twitter:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="twitter:image">
+    <meta property="og:type" content="website">
+    <meta content="summary_large_image" name="twitter:card">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442936ea6f91301effc0_nmkr-favicon.png" rel="shortcut icon" type="image/x-icon">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442cff6ad54237cc81e4_nmkr-webclip.png" rel="apple-touch-icon">
+    <meta name="theme-color" content="#11f250">
+</HeadContent>
+
+
+
+<MudText Typo="Typo.h4" GutterBottom="true">Sign Up</MudText>
+<MudText>@_loc["Already have an account?"] <MudLink Href="/login">@_loc["Sign In"]</MudLink></MudText>
+<EditForm Model="@registerdata" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    @if(nextStep == false)
+    {
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["E-mail"]" @bind-Value="@registerdata.Email" For="@(() => registerdata.Email)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["FirstName"]" @bind-Value="@registerdata.Firstname" For="@(() => registerdata.Firstname)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["LastName"]" @bind-Value="@registerdata.Lastname" For="@(() => registerdata.Lastname)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" @bind-Value="@registerdata.Password" Label="@_loc["Password"]" InputType="InputType.Password" For="@(() => registerdata.Password)" />
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" @bind-Value="@registerdata.Password2" Label="@_loc["Password confirmation"]" InputType="InputType.Password" For="@(() => registerdata.Password2)" />
+
+        <MudButton DropShadow="false" Variant="Variant.Filled" Class="mt-6 rounded-xl px-6 py-3" Color="Color.Tertiary" Size="Size.Large" @onclick="ToggleNextStep">@_loc["Next"]</MudButton>
+    }
+    else if (nextStep == true)
+    {
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["Street"]" @bind-Value="@registerdata.Street" For="@(() => registerdata.Street)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["Zip"]" @bind-Value="@registerdata.Zip" For="@(() => registerdata.Zip)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["City"]" @bind-Value="@registerdata.City" For="@(() => registerdata.City)"></MudTextField>
+        <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["Company"]" @bind-Value="@registerdata.Company" For="@(() => registerdata.Company)" Immediate="true" ></MudTextField>
+
+        <MudSelect Class="mt-6" Label="@_loc["Country"]" @bind-Value="registerdata.CountryId" Variant="Variant.Outlined">
+        @foreach (var w in countries)
+        {
+            <MudSelectItem Class="mt-6" Value="@w.Id">@_loc[@w.Nicename]</MudSelectItem>
+
+        }
+        </MudSelect>
+        @if (!string.IsNullOrEmpty(registerdata.Company))
+        {
+            <MudTextField Class="mt-6" Variant="Variant.Outlined" T="string" Label="@_loc["VAT registration number (if applicable)"]" @bind-Value="@registerdata.UstId" For="@(() => registerdata.UstId)"></MudTextField>
+        }
+
+        <div Class="d-flex justify-space-between align-center">
+            <MudCheckBox T="bool" Color="Color.Primary" UncheckedColor="Color.Default" Label="@_loc["Subscribe to Newsletter"]" @bind-Value="@registerdata.Newsletter" Class="ml-n1 mt-3"></MudCheckBox>
+        </div>
+        <div Class="d-flex justify-space-between align-center">
+            <MudCheckBox Color="Color.Primary"  UncheckedColor="Color.Default" T="bool" @bind-Value="@registerdata.Agreement" Class="ml-n1">
+            @_loc["I agree to the"]
+                <a href="https://www.nmkr.io/legal#terms" target="_blank">
+                @_loc["terms"]
+                </a>
+            @_loc["and"]
+                <a href="https://www.nmkr.io/legal#privacy" target="_blank">
+                @_loc["privacy"]
+                </a>
+            </MudCheckBox>
+        </div>
+        <!--<ReCAPTCHA @ref="reCAPTCHAComponent" SiteKey=@GeneralConfigurationClass.RecaptchaWebsite OnSuccess="OnSuccess" OnExpired="OnExpired" /> -->
+        <MudButton DropShadow="false" Variant="Variant.Outlined" Class="mt-3 mr-3 rounded-xl px-6 py-3" Color="Color.Secondary" Size="Size.Large" @onclick="ToggleNextStep">@_loc["Back"]</MudButton>
+
+        <MudButton DropShadow="false" Variant="Variant.Filled" Class="mt-3 mr-3 rounded-xl px-6 py-3" Color="Color.Tertiary" Disabled="@(!registerdata.Agreement || isSubmitting)" ButtonType="ButtonType.Submit" Size="Size.Large">@_loc["Sign Up"]</MudButton>
+    }
+
+    <MudText Color="@Color.Error" Class="mt-3">
+        @errormessage
+    </MudText>
+</EditForm>
+
+
+@code {
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+
+    public RegisterClass registerdata { get; set; }
+    private string errormessage { get; set; }
+    //   private EasynftprojectsContext _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+    private List<Country> countries = new();
+
+    private void OnChange(object sender, EventArgs args)
+    {
+        errormessage = "";
+        StateHasChanged();
+    }
+    private ReCAPTCHA reCAPTCHAComponent;
+
+    private bool ValidReCAPTCHA = false;
+
+    private readonly bool ServerVerificatiing = false;
+
+    private bool DisablePostButton => !ValidReCAPTCHA || ServerVerificatiing;
+
+    private void OnSuccess()
+    {
+        ValidReCAPTCHA = true;
+    }
+
+    private void OnExpired()
+    {
+        ValidReCAPTCHA = false;
+    }
+
+    protected override void OnInitialized()
+    {
+        registerdata = new();
+        registerdata.Change += OnChange;
+        using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        countries = (from a in db.Countries
+                     orderby a.Name
+                     select a).AsNoTracking().ToList();
+
+
+        if (ConnectionInfo != null)
+        {
+            var ip = GlobalFunctions.GetIpAsUInt32(ConnectionInfo.RemoteIpAddress);
+
+            var ipinfo = (from a in db.Ip2locationDb11s
+                          where ip <= a.IpTo
+                          orderby a.IpTo
+                          select a).AsNoTracking().FirstOrDefault();
+            if (ipinfo != null)
+            {
+                registerdata.Zip = ipinfo.ZipCode;
+                registerdata.City = ipinfo.CityName;
+                var id = countries.FirstOrDefault(x => x.Iso == ipinfo.CountryCode);
+                if (id != null)
+                    registerdata.CountryId = id.Id;
+
+            }
+        }
+    }
+    private bool isSubmitting;
+    private async Task HandleValidSubmit()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        try
+        {
+          
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var u = await (from a in db.Customers
+                           where a.Email.ToLower() == registerdata.Email.ToLower()
+                           select a).FirstOrDefaultAsync();
+
+            if (u != null)
+            {
+                errormessage = @_loc["Email/Email already exists in our System. Please login"];
+                isSubmitting = false;
+                return;
+            }
+
+            var cn = ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+            if (cn.ErrorCode != 0)
+            {
+                errormessage = cn.ErrorMessage;
+                isSubmitting = false;
+                return;
+            }
+            var referal = await localStorage.GetItemAsync<string>("referal");
+
+
+            CryptographyProcessor cp = new();
+            string salt = cp.CreateSalt(30);
+            string hash = cp.GenerateHash(registerdata.Password, salt);
+            string confirmationcode = GlobalFunctions.GetGuid();
+            IBlockchainFunctions solanaBlockchainFunctions = new SolanaBlockchainFunctions();
+            var solanawallet = solanaBlockchainFunctions.CreateNewWallet();
+            IBlockchainFunctions aptosBlockchainFunctions = new AptosBlockchainFunctions();
+            var aptoswallet = aptosBlockchainFunctions.CreateNewWallet();
+
+
+            Customer c = new()
+            {
+                Email = registerdata.Email,
+                Firstname = registerdata.Firstname,
+                Lastname = registerdata.Lastname,
+                Street = registerdata.Street,
+                Company = registerdata.Company,
+                Zip = registerdata.Zip,
+                City = registerdata.City,
+                CountryId = registerdata.CountryId,
+                Password = hash,
+                Created = DateTime.Now,
+                Failedlogon = 0,
+                Ipaddress = ConnectionInfo?.RemoteIpAddress,
+                Mobilenumber = "",
+                Confirmationcode = confirmationcode,
+                Salt = salt,
+                Twofactor = "none",
+                State = "notactive",
+                Lovelace = 0,
+                Chargemintandsendcostslovelace = 0,
+                Newpurchasedmints = 0,
+                DefaultsettingsId = 3,
+                Adaaddress = cn.Address,
+                Ustid = registerdata.UstId,
+                Sendmailonnews = registerdata.Newsletter,
+                Privateskey = Encryption.EncryptString(cn.privateskey, salt),
+                Privatevkey = Encryption.EncryptString(cn.privatevkey, salt),
+                Referal = referal,
+                Showkycstate = true,
+                Solanapublickey = solanawallet.Address,
+                Solanaseedphrase = Encryption.EncryptString(solanawallet.SeedPhrase, salt),
+                Aptosaddress = aptoswallet.Address,
+                Aptosseed = Encryption.EncryptString(aptoswallet.SeedPhrase, salt),
+                Aptosprivatekey = Encryption.EncryptString(aptoswallet.privateskey, salt),
+            };
+
+            await db.Customers.AddAsync(c);
+            await db.SaveChangesAsync();
+            SendEmailAsync(confirmationcode, @_loc[registerdata.Email], c.Id);
+
+
+            bool? result = await DialogService.ShowMessageBox(
+                @_loc["E-Mail Confirmation"],
+                @_loc["Please check your email for the link to activate your account!"]);
+
+
+
+            if (GlobalFunctions.IsMainnet())
+            {
+                AddSubscriberToMailerliteClass ml = new AddSubscriberToMailerliteClass();
+                await ml.AddSubscriberToMailerlite(c.Id);
+            }
+
+
+            NavigationManager.NavigateTo("/login",true);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public void SendEmailAsync(string code, string email, int userid)
+    {
+        Dictionary<string, string> d = new()
+        {
+            {"{ipaddress}", System.Web.HttpUtility.UrlEncode(ConnectionInfo?.RemoteIpAddress)},
+            {"{confirmationcode}", System.Web.HttpUtility.UrlEncode(code)}
+        };
+
+        SendMailClass smc = new();
+        smc.SendConfirmationMail(ConfirmationTypes.ConfirmEMail, email, d, userid);
+    }
+
+    private bool nextStep = false;
+
+    void ToggleNextStep()
+    {
+        if (string.IsNullOrEmpty(registerdata.Email))
+        {
+            errormessage = @_loc["Please enter a valid email address"];
+            return;
+        }
+        if (GlobalFunctions.IsValidEmail(registerdata.Email) == false)
+        {
+            errormessage = @_loc["Please enter a valid email address"];
+            return;
+        }
+        if (string.IsNullOrEmpty(registerdata.Firstname))
+        {
+            errormessage = @_loc["Please enter a valid first name"];
+            return;
+        }
+        if (string.IsNullOrEmpty(registerdata.Lastname))
+        {
+            errormessage = @_loc["Please enter a valid last name"];
+            return;
+        }
+        if (string.IsNullOrEmpty(registerdata.Password))
+        {
+            errormessage = @_loc["Please enter a valid password"];
+            return;
+        }
+        if (registerdata.Password != registerdata.Password2)
+        {
+            errormessage = @_loc["Passwords do not match"];
+            return;
+        }
+
+        nextStep = !nextStep;
+    }
+
+}

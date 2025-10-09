@@ -1,0 +1,107 @@
+﻿@using BlazorDownloadFile
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Policy Information
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-height: 800px; overflow-y: scroll">
+            <MudTextField Variant="Variant.Outlined" T="string" Text="@Policy" Label="Policy" Lines="12" ReadOnly="true" />
+            <MudTextField Variant="Variant.Outlined" T="string" Text="@PolicyId" Label="Policy Id" Lines="1" ReadOnly="true" Class="mt-3" />
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Color="Color.Secondary" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Ok">Close</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="ExportKey">Export Policy Keys</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" Href="@link">View Policy ID on Cardanoscan</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<TwoFactorCheck Message="The Code to download the policy key is:" @ref="_twoFactorCheck" />
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string Policy { get; set; }
+    [Parameter]
+    public string PolicyId { get; set; }
+    [Parameter]
+    public Customer customer { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+
+    private string link { get; set; }
+    private bool isSubmitting;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+    protected override void OnParametersSet()
+    {
+        link = "https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/tokenPolicy/" + PolicyId;
+    }
+
+    private void Ok()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task ExportKey()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        bool ok = true;
+
+
+        if (!IsAdmin)
+        {
+            ok = await _twoFactorCheck.CheckTwoFactor(customer.Id,TwoFactorCases.ExportKeys);
+            
+            if (!ok)
+            {
+                isSubmitting = false;
+                return;
+            }
+        }
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname);
+
+
+        string polskey = Encryption.DecryptString(project.Policyskey, project.Password);
+        string polvkey = Encryption.DecryptString(project.Policyvkey, project.Password);
+
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".skey", polskey);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".vkey", polvkey);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".script", Policy);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".policyid", PolicyId);
+
+        string filename = GeneralConfigurationClass.TempFilePath + "" + filteredfilename + "_keys.zip";
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteOldFiles(GeneralConfigurationClass.TempFilePath + "", 1);
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".skey", Path.GetFileName(filteredfilename + ".skey"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".vkey", Path.GetFileName(filteredfilename + ".vkey"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".script", Path.GetFileName(filteredfilename + ".script"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".policyid", Path.GetFileName(filteredfilename + ".policyid"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".skey");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".vkey");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".script");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".policyid");
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + "_keys.zip", AsBase64String, "application/octet-stream");
+
+
+        isSubmitting = false;
+    }
+}

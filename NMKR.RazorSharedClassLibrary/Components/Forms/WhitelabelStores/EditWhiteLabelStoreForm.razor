@@ -1,0 +1,91 @@
+﻿@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+@if (WhiteLabelStoreId.HasValue)
+{
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Edit store</MudText>
+}
+else
+{
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Create new store</MudText>
+}
+<MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+
+@if (PageId == 1)
+{
+    <EditWhiteLabelStoreFormFirstPage CustomerId="CustomerId" PageId="PageId" @bind-WhiteLabelStoreId="WhiteLabelStoreId" Model="model" OnNextButtonClicked="NextButtonClicked" ></EditWhiteLabelStoreFormFirstPage>
+}
+else if (PageId>=LastPageId)
+{
+    <EditWhiteLabelStoreFormLastPage CustomerId="CustomerId" PageId="PageId" WhiteLabelStoreId="WhiteLabelStoreId" Model="model" OnNextButtonClicked="NextButtonClicked"></EditWhiteLabelStoreFormLastPage>
+}
+else
+{
+    <EditWhiteLabelStoreFormOtherPages CustomerId="CustomerId" PageId="PageId" WhiteLabelStoreId="WhiteLabelStoreId" Model="model" OnNextButtonClicked="NextButtonClicked"></EditWhiteLabelStoreFormOtherPages>
+}
+</MudCard>
+<MudText Class="mr-10 mb-10" Align="Align.End" Typo="Typo.body2">@PageId of @LastPageId</MudText>
+
+
+@code {
+
+    [Parameter]
+    public int? WhiteLabelStoreId { get; set; }
+    [Parameter]
+    public int PageId { get; set; } = 1;
+    [Parameter]
+    public int CustomerId { get; set; }
+
+    private CreateNewWhitelabelClass model { get; set; } = new CreateNewWhitelabelClass();
+    private MudForm form1 = null!;
+    private bool success1 = false;
+    private int LastPageId = 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        if (WhiteLabelStoreId != null)
+        {
+            var wss = await (from a in db.Whitelabelstoresettings
+                .Include(a => a.Storesettings)
+                .ThenInclude(a => a.Whitelabelstorecollections)
+                where a.Id == WhiteLabelStoreId
+                select a).ToArrayAsync();
+
+            model = await (from a in db.Nftprojects
+                           where a.Id == WhiteLabelStoreId && a.CustomerId == CustomerId
+                           select a).Select(a => new CreateNewWhitelabelClass
+                               {
+                                   Projectname = a.Projectname,
+                                   Description = a.Description,
+                                   Twitterhandle = a.Twitterhandle,
+                                   MarketplaceWhitelabelFee = a.Marketplacewhitelabelfee ?? 0,
+                                   WalletId = a.CustomerwalletId ?? 0,
+                                   ProjectLogo = a.Projectlogo,
+                                   Projecturl = a.Projecturl,
+                                   
+                               }).FirstOrDefaultAsync() ?? new CreateNewWhitelabelClass();
+
+            model.whitelabelstoresettings = wss;
+            StateHasChanged();
+        }
+        LastPageId = await (from a in db.Storesettings
+            orderby a.Page descending
+            select a.Page).FirstOrDefaultAsync();
+
+    }
+
+    private void NextButtonClicked(int id)
+    {
+        PageId++;
+        if (PageId > LastPageId)
+            NavigationManager.NavigateTo("/managewhitelabelstores");
+        else
+            NavigationManager.NavigateTo("/editwhitelabelstore/" + id + "/" + PageId);
+        
+        StateHasChanged();
+    }
+
+}

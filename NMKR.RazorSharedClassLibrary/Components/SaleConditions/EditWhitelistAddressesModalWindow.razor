@@ -1,0 +1,81 @@
+﻿@inject ISnackbar Snackbar
+
+
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3" />Edit whitelist address
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Class="mb-3">
+            <MudItem xs="10">
+                <MudTextField Variant="Variant.Outlined" Label="Address"  @bind-Value="address.Address" Lines="1" Required="true" Class="mb-3"/>
+            </MudItem>
+            <MudItem xs="2">
+                <MudNumericField Label="max. NFTs" @bind-Value="address.Maxcount" T="long" Min="1"></MudNumericField>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Countedwhitelist address { get; set; }
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (string.IsNullOrEmpty(address.Address))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Address is not a valid cardano address", Severity.Error);
+            return;
+        }
+
+
+        if (!ConsoleCommand.CheckIfAddressIsValid(db, address.Address, GlobalFunctions.IsMainnet(), out string outaddess, out Blockchain blockchain, false))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Address is not a valid cardano address", Severity.Error);
+            return;
+        }
+
+
+        if (address.Id == 0)
+        {
+            address.Created=DateTime.Now;
+            address.Stakeaddress = Bech32Engine.GetStakeFromAddress(address.Address);
+            await db.Countedwhitelists.AddAsync(address);
+        }
+        else
+        {
+            var adr = await (from a in db.Countedwhitelists
+                where a.Id == address.Id
+                select a).FirstOrDefaultAsync();
+            if (adr != null)
+            {
+                adr.Address = address.Address;
+                adr.Maxcount = address.Maxcount;
+            }
+        }
+
+
+        await db.SaveChangesAsync();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Changes saved", Severity.Success);
+
+
+        MudDialog.Close(DialogResult.Ok(address));
+    }
+}

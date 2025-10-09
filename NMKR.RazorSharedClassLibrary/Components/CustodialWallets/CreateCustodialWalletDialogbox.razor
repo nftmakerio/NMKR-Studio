@@ -1,0 +1,89 @@
+﻿@using NMKR.Shared.Functions.Api
+@inject ISnackbar Snackbar
+
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Create Managed Wallet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" Label="Walletname" @bind-Value="wallet.Walletname" Lines="1" Immediate="true" Class="mb-3" />
+        <MudTextField Variant="Variant.Outlined" Label="Password" @bind-Value="wallet.Pincode" Lines="1" Immediate="true" Class="mb-3" HelperText="Don't loose the password. Without password, all your assets are lost. We can not recover your wallet without password" />
+
+        <MudSelect Margin="Margin.Dense" T="string" Label="Address Type" Variant="Variant.Outlined" @bind-Value="wallet.Wallettype">
+            <MudSelectItem Value="@("base")">Base</MudSelectItem>
+            <MudSelectItem Value="@("enterprise")">Enterprise</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public int customerid { get; set; }
+
+    private Custodialwallet wallet { get; set; } = new Custodialwallet() {Wallettype = "base", Created = DateTime.Now};
+    private bool isSubmitting;
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        if (string.IsNullOrEmpty(wallet.Walletname))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Walletname can not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(wallet.Pincode))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Password can not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        // Check if Password is strong enough
+        if (wallet.Pincode.Length < 8)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Password must be at least 8 characters long", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var res=await ApiFunctions.CreateCustodialWalletAsync(customerid,wallet.Pincode, wallet.Wallettype=="enterprise", wallet.Walletname);
+
+        if (res != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Wallet successfully created", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Wallet could not be created", Severity.Error);
+        }
+
+        await db.SaveChangesAsync();
+        MudDialog.Close(DialogResult.Ok(res));
+        isSubmitting = false;
+    }
+
+}

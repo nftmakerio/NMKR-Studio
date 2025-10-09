@@ -1,0 +1,149 @@
+﻿@inject ISnackbar Snackbar
+
+    <MudOverlay Visible="isSubmitting" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+    </MudOverlay>
+
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Solana Verfied Collection
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (Project.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+            {
+                <MudItem xs="12">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@IntegrateCardanoPolicyIdInMetadata" Label="Add Cardano Policy ID to Solana Collection Token Metadata"/>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <UploadProjectImage @bind-Image="@SolanaCollectionImage" DescriptionText="Preview Image of the Solana Collection" FileSize="@(new System.Drawing.Size(0, 0))" PreviewMaxWidth="300"/>
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="SellerFeeBasisPoints" Label="Seller Fee Basis Points (in %)" Variant="Variant.Text" Min="0" Max="100"/>
+            </MudItem>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Secondary" Variant="Variant.Outlined" OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="MintTokens" Disabled="isSubmitting">Create collection</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Nftproject Project { get; set; }
+
+    private bool isSubmitting;
+
+
+    private bool IntegrateCardanoPolicyIdInMetadata { get; set; }
+    public IpfsWebUploadFilesClass SolanaCollectionImage { get; set; }
+    public int? SellerFeeBasisPoints { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+
+
+    private async Task MintTokens()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (Project.Customer.Newpurchasedmints < 1)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You need at least one Mint Coupon to create a verified collection", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        // Check if already pending
+        if (Project.Solanacollectiontransaction=="<PENDING>")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Collection already in pending state", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (!string.IsNullOrEmpty(Project.Solanacollectiontransaction))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Collection already created", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        var projectsave = await (from a in db.Nftprojects
+            .Include(a => a.Customer)
+            where a.Id == Project.Id
+            select a).FirstOrDefaultAsync();
+        projectsave.Solanacollectiontransaction = "<PENDING>";
+        projectsave.Solanacollectionimage = SolanaCollectionImage?.UriWithGateway;
+        projectsave.Solanacollectionimagemimetype = SolanaCollectionImage?.MimeType;
+        projectsave.IntegratecardanopolicyIdinmetadata = IntegrateCardanoPolicyIdInMetadata;
+        await db.SaveChangesAsync();
+        isSubmitting = true;
+        StateHasChanged();
+        MudDialog.Close();
+
+        /*
+        var paywallet = await GlobalFunctions.GetNmkrPaywalletAndBlockAsync(db, 0, Coin.SOL.ToString());
+        if (paywallet == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("All Wallets are currently in use. Please try again later", Severity.Error);
+            isSubmitting = false;
+            StateHasChanged();
+            return;
+        }
+        var wallet=SolanaFunctions.GetWallet(Project.Customer);
+        SolanaKeysClass updateAuthority = new() { Address = Project.Solanapublickey, PublicKey = Project.Solanapublickey, SecretKey = wallet.Account.PrivateKey.Key };
+        var col = new SolanaCollectionClass
+        {
+                Name = Project.Projectname,
+                Uri = await SolanaFunctions.CreateSolanaCollectionMetadataUri(Project.Description, SolanaCollectionImage, Project.Projectname, SellerFeeBasisPoints ?? 0, Project.Solanasymbol, Project.Projecturl),
+                Symbol = Project.Solanasymbol,
+            UpdateAuthority = updateAuthority,
+            Payer = SolanaFunctions.ConvertToSolanaKeysClass(paywallet),
+        };
+
+        var solanaCollectionAddress = await SolanaFunctions.CreateVerifiedCollectionAsync(col);
+        if (solanaCollectionAddress == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error while creating Solana Collection. Please try again later or inform the support", Severity.Error);
+            isSubmitting = false;
+            await GlobalFunctions.UnlockPaywalletAsync(db, paywallet);
+            StateHasChanged();
+            return;
+        }
+        var projectsave = await (from a in db.Nftprojects
+            .Include(a => a.Customer)
+                                 where a.Id == Project.Id
+            select a).FirstOrDefaultAsync();
+        projectsave.Solanacollectioncreated = DateTime.Now;
+        projectsave.Solanacollectiontransaction = solanaCollectionAddress?.Result;
+        projectsave.Solanacollectionimage = SolanaCollectionImage?.UriWithGateway;
+        projectsave.IntegratecardanopolicyIdinmetadata = IntegrateCardanoPolicyIdInMetadata;
+        await db.SaveChangesAsync();
+        isSubmitting = true;
+        StateHasChanged();
+        MudDialog.Close();*/
+    }
+
+}

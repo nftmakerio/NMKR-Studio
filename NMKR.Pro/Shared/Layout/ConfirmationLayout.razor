@@ -1,0 +1,53 @@
+﻿@inherits LayoutComponentBase
+
+<HeadContent>
+    <meta charset="utf-8">
+    <title>NMKR Studio – Create and Sell NFTs on Your Own Website</title>
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." name="description">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="og:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="og:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="og:image">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="twitter:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="twitter:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="twitter:image">
+    <meta property="og:type" content="website">
+    <meta content="summary_large_image" name="twitter:card">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442936ea6f91301effc0_nmkr-favicon.png" rel="shortcut icon" type="image/x-icon">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442cff6ad54237cc81e4_nmkr-webclip.png" rel="apple-touch-icon">
+    <meta name="theme-color" content="#11f250">
+</HeadContent>
+
+<div style="height: 100vh; width:100%;display: flex;flex-wrap: wrap; overflow-y: hidden;">
+    <div style="height: 100%; width:50%;background-color: white; display:inline-block;flex: 1 0 50%;white-space: nowrap;">
+        <MudLayout>
+            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center pb-10 pt-10" Style="height: 100%">
+                <div class="d-flex flex-column mud-width-full">
+                    <MudPaper Elevation="0" Class="pa-8" Width="100%" MaxWidth="500px" Style="border-color:#E0E0E0">
+                        @if (!GlobalFunctions.IsMainnet())
+                        {
+                            <MudText Color="Color.Error">@GeneralConfigurationClass.EnvironmentName</MudText>
+                        }
+                        @Body
+                    </MudPaper>
+                </div>
+            </MudContainer>
+        </MudLayout>
+    </div>
+    <div Class="d-none d-lg-flex d-xl-flex d-xxl-flex" style="justify-content: center;align-items: center;height: 100%; width:50%;background-color: #11F250;flex: 1 0 50%;white-space: nowrap;">
+        <MudImage Class="object-center" Src="images/nmkr-studio-logo.svg" Alt="MKR Studio Logo" ObjectFit="ObjectFit.Cover" />
+    </div>
+</div>
+
+<MudThemeProvider Theme="MyCustomTheme.Theme" />
+<div Style="margin: 0px;height: 100%;">
+    <MudContainer Fixed="true" Class="mud-theme-primary">
+    </MudContainer>
+</div>
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+@code {
+    readonly MudblazorTheme MyCustomTheme = new MudblazorTheme();
+}

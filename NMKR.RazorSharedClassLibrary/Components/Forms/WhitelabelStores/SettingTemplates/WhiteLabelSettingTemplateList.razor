@@ -1,0 +1,66 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%">
+            <MudSelect HelperText="@(Setting.Mandantory ? "" : "(optional)")" T="string" Label="@Setting.Humanreadablesettingsname" Variant="Variant.Text" @bind-Value="SelectValue">
+                @foreach(var item in _listEntries)
+                {
+                    <MudSelectItem Value="@item.Value">@item.Key</MudSelectItem>
+                }
+            </MudSelect>
+        </td>
+        <td>
+            <div class="ml-10">
+                <MudText Typo="Typo.body1">
+                    @Setting.Description
+                </MudText>
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+    [Parameter] 
+    public string SelectValue
+    {
+        get => _selectValue;
+        set
+        {
+            if (value != _selectValue)
+            {
+                _selectValue = value;
+                SelectValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> SelectValueChanged { get; set; }
+    private string _selectValue="";
+
+    private List<KeyValueClass> _listEntries = new List<KeyValueClass>();
+    
+    protected override void OnParametersSet()
+    //protected override async Task OnParametersSetAsync()
+    {
+        if (_listEntries.Any())
+            return;
+
+        string[] strLines = Setting.Listvalues.Split("\n");
+        foreach (var line in strLines)
+        {
+            if (string.IsNullOrEmpty(line))
+                continue;
+
+            string[] strLine = line.Split(",");
+            if (strLine.Length >= 2)
+                _listEntries.Add(new KeyValueClass(0, strLine[0], strLine[1]));
+        }
+        if (_selectValue == "" && _listEntries.Any())
+        {
+            _selectValue = _listEntries[0].Value;
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,22 @@
+﻿@using NMKR.Shared.Classes.Projects
+<MudItem xs="12">
+    <MudTextField Variant="Variant.Outlined" Label="Aptos Collection Name" HelperText="@GlobalFunctions.CharHelper("max. 64 characters", Value?.AptosCollectionName ?? "")"
+                  @bind-Value="Value.AptosCollectionName" For="@(() => Value.AptosCollectionName)" Immediate="true" />
+</MudItem>
+<MudItem xs="12">
+    <UploadProjectImage @bind-Image="@Value.AptosCollectionImage" DescriptionText="Preview Image of the Aptos Collection" FileSize="@(new System.Drawing.Size(0, 0))" PreviewMaxWidth="300" />
+</MudItem>
+<MudItem xs="12" Class="mt-10">
+    <SelectWallet @bind-Value="Value.AptosWalletId" Coin="Coin.APT" Blockchain="Blockchain.Aptos" IsAdmin="@IsAdmin" CustomerId="@CustomerId"></SelectWallet>
+</MudItem>
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [Parameter]
+    public CreateProjectFromTemplateClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateProjectFromTemplateClass> ValueChanged { get; set; }
+}

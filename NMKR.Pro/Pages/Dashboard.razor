@@ -1,0 +1,538 @@
+﻿@page "/dashboard"
+@page "/"
+@inject AppSettings settings
+@inject IDialogService DialogService
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject IConnectionMultiplexer _redis
+@inject IJSRuntime JS
+@inject TimerServices Timer
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+@inject IStringLocalizer _loc
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Extensions
+@using NMKR.RazorSharedClassLibrary.Components.Projects.ProjectAssistant
+@implements IDisposable
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+                <!--<div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:100%" >
+                    <MudImage Width="100" Height="100" Src="/images/star_thing.svg" Alt="Checkmark Icon" Elevation="0" Class="rounded-lg" />
+                </div>-->
+
+                <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full" Typo="Typo.h1">@_loc["Welcome to NMKR"], @FirstName.</MudText>
+                    <MudText Class="d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Every journey starts with a single step. Let's take that step together."]</MudText>
+                </div>
+
+                <div Width="100%" Class="border-t pl-5 pr-5 mud-width-full d-flex justify-space-between" Style="border-color:#E0E0E0;">
+                    <div Class="d-flex align-center justify-left flex-wrap">
+                        <div Style="border-color:#E0E0E0; height:250px">
+                            <MudImage Height="250" Src="/images/no-code.png" Alt="ADA Icon" Elevation="0" Class="rounded-lg" />
+                        </div>
+                        <div Class="pl-5 pr-5 pt-6 pb-6 align-self-end" Style="border-color:#E0E0E0; width: 250px;">
+                            <MudText Class="align-left d-flex mud-text-secondary" Typo="Typo.subtitle1">@_loc["No-Code"]</MudText>
+                            <MudText Class="d-flex" Typo="Typo.h5">@_loc["Get Started by creating your first NFT project"]</MudText>
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 mt-6" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" Href="/createnewproject">@_loc["Create Project"]</MudButton>
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 mt-6" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" OnClick="CreateNewTemplatedProject">@_loc["Create templated Project"]</MudButton>
+                        </div>
+                    </div>
+                    <div Class="d-flex align-center justify-left flex-wrap">
+                        <div Style="border-color:#E0E0E0; height:250px">
+                            <MudImage Height="250" Src="/images/api-preview.png" Alt="ADA Icon" Elevation="0" Class="rounded-lg" />
+                        </div>
+                        <div Class="pl-5 pr-5 pt-6 pb-6 align-self-end" Style="border-color:#E0E0E0; width: 250px;">
+                            <MudText Class="align-left d-flex mud-text-secondary" Typo="Typo.subtitle1">@_loc["API"]</MudText>
+                            <MudText Class="d-flex" Typo="Typo.h5">
+                            @_loc["Learn how to integrate the NMKR API into your products"]
+                            </MudText>
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 mt-6" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" Href="https://docs.nmkr.io/nmkr-studio-api/introduction-nmkr-studio-api">@_loc["Discover the API"]</MudButton>
+                        </div>
+                    </div>
+                </div>
+
+                <!--<div Width="100%" Class="border-t pl-5 pr-5 pt-6 pb-6 mud-width-full align-right" Style="border-color:#E0E0E0; text-align: right;">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" Href="/createnewproject">Create New Project</MudButton>
+                </div>-->
+
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="6">
+            <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+                <div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:100px">
+                    <MudImage Width="60" Height="60" Src="/images/ada_icon.svg" Alt="ADA Icon" Elevation="0" Class="rounded-lg" />
+                </div>
+                <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Total Tokens Sold"]</MudText>
+                    <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@dashboardSales.totalsold</MudText>
+                </div>
+                <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full mud-text-secondary " Typo="Typo.subtitle1">@_loc["Total Income"]</MudText>
+                    <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@dashboardSales.totalAda ADA</MudText>
+                </div>
+                <div Width="100%" Class="d-block border-t pl-5 pr-5 pt-6 pb-6 mud-width-full align-right" Style="border-color:#E0E0E0; text-align: right">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="/invoices">@_loc["Download Invoices"]</MudButton>
+                </div>
+
+            </MudPaper>
+        </MudItem>
+        
+
+        <MudItem xs="6">
+            <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0;">
+                @if (settings.ShowKycAlert)
+                {
+                    @if (settings.KycState == "GREEN")
+                    {
+                        <div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:100px" >
+                            <MudImage Width="60" Height="60" Src="/images/checkmark.svg" Alt="Checkmark Icon" Elevation="0" Class="rounded-lg" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0 ; height:100px" >
+                            <MudImage Width="60" Height="60" Src="/images/cross.svg" Alt="Checkmark Icon" Elevation="0" Class="rounded-lg" />
+                        </div>
+                    }
+                }
+                <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["User ID"]</MudText>
+                    <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@settings.UserId</MudText>
+                </div>
+                <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Mint Coupons"]</MudText>
+                    <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@Newpurchasedmints.ToString("F2")</MudText>
+                </div>
+                <div Width="100%" Class="d-block border-t pl-5 pr-5 pt-6 pb-6 mud-width-full align-right" Style="border-color:#E0E0E0; text-align: right;">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" OnClick="ShowBuyMintsPopUp">@_loc["Buy Mint Coupons"]</MudButton>
+                </div>
+
+            </MudPaper>
+        </MudItem>
+
+
+
+            @if (enablevestingtokens)
+            {
+                <MudItem xs="12">
+                    <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+
+                        <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Total Storage used"]</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@settings.LockedCustomerAssetsCheck.GetTotalStorageUsedString()</MudText>
+                        </div>
+                        <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary " Typo="Typo.subtitle1">@_loc["Total Projects"]</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@settings.LockedCustomerAssetsCheck.GetTotalProjectsString()</MudText>
+                        </div>
+                        <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary " Typo="Typo.subtitle1">@_loc["Total NFTs/Tokens"]</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@settings.LockedCustomerAssetsCheck.GetTotalNftsString()</MudText>
+                        </div>
+                        <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="height: 100px; border-color:#E0E0E0 ">
+                            <MudText Class="align-left d-flex mud-width-full mud-text-secondary " Typo="Typo.subtitle1">@_loc["Max Filesize"]</MudText>
+                            <MudText Class="d-flex mud-width-full" Typo="Typo.h5">@settings.LockedCustomerAssetsCheck.GetMaxfilesizeString()</MudText>
+                        </div>
+                        <div Width="100%" Class="d-block border-t pl-5 pr-5 pt-6 pb-6 mud-width-full align-right" Style="border-color:#E0E0E0; text-align: right">
+                            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="/vestedtokens">@_loc["Increase Limits"]</MudButton>
+                        </div>
+
+                    </MudPaper>
+                </MudItem>
+
+            }
+        <MudItem xs="12">
+            <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0; background-color: #11F250">
+                <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" >
+                    <MudText Class="d-flex mud-width-full" Typo="Typo.subtitle1">@_loc["Learn how to create your own NFT / Token project with NMKR Studio easily & quickly."]</MudText>
+                </div>
+                <div Class="flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="text-align: right;">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://docs.nmkr.io/">@_loc["Open Docs"]</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="6">
+            <MudPaper Height="332px" Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap pa-6" Style="border-color:#E0E0E0 ">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/cCRmehE6M7g?si=5NNTWEcDyXFfvyeO" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="6">
+            <MudPaper Elevation="0" Class="border d-flex align-center justify-left mud-width-full flex-wrap" Style="border-color:#E0E0E0 ">
+                <div Class="mud-width-full border-b flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0 ">
+                    <MudText Class="align-left d-flex mud-width-full" Typo="Typo.h2">@_loc["We're here to help!"]</MudText>
+                    <MudText Class="d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Reach out to us directly."]</MudText>
+                </div>
+                
+                <div Class="mud-width-full d-flex align-center justify-left mud-width-full flex-wrap">
+                    <div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:108px;">
+                        <MudImage Width="60" Height="60" Src="/images/phil.png" Alt="Checkmark Icon" Elevation="0" Class="rounded-lg" />
+                    </div>
+
+                    <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style=" border-color:#E0E0E0;height:108px;">
+                        <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Customer Support"]</MudText>
+                        <MudText Class="d-flex mud-width-full" Typo="Typo.h5">Phil Isenmann</MudText>
+                    </div>
+                    <div Width="100%" Class="pl-5 pr-5 pt-6 pb-4 align-right" Style="border-color:#E0E0E0; text-align: right; height:108px;">
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://calendly.com/phil_nmkr">@_loc["Schedule Call"]</MudButton>
+                    </div>
+                </div>
+                
+                <div  Class="mud-width-full d-flex align-center justify-left mud-width-full flex-wrap border-t" Style="height:108px; border-color:#E0E0E0">
+                    <div Class="border-r pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:108px;">
+                        <MudImage Width="60" Height="60" Src="/images/patrick.png" Alt="Checkmark Icon" Elevation="0" Class="rounded-lg" />
+                    </div>
+
+                    <div Class="border-r flex-grow-1 pl-5 pr-5 pt-6 pb-6" Style="border-color:#E0E0E0; height:108px;">
+                        <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@_loc["Business Development"]</MudText>
+                        <MudText Class="d-flex mud-width-full" Typo="Typo.h5">Patrick Tobler</MudText>
+                    </div>
+                    <div Width="100%" Class="pl-5 pr-5 pt-6 pb-4 align-right" Style="border-color:#E0E0E0; text-align: right; height:108px;">
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" Href="https://calendly.com/phil_nmkr">@_loc["Schedule Call"]</MudButton>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+
+        <DashboardCharts/>
+
+        <MudItem xs="12">
+            <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0;">
+                <MudCardContent Class="px-0">
+
+                    <MudTable Items="@dashboardSales.transactions" Hover="true" Bordered="true" Striped="false" Elevation="0" HorizontalScrollbar="true">
+                        <HeaderContent>
+                            <MudTh>@_loc["Date/Time (UTC)"]</MudTh>
+                            <MudTh>@_loc["Project"]</MudTh>
+                            <MudTh>@_loc["Paid"]</MudTh>
+                            <MudTh>@_loc["Total Costs"]</MudTh>
+                            <MudTh>@_loc["Income"]</MudTh>
+                            <MudTh>@_loc["Tx-Id"]</MudTh>
+                            <MudTh>@_loc["Payout Wallet"]</MudTh>
+                        </HeaderContent>
+
+                        <RowTemplate>
+                            <MudTd DataLabel="">@(context.Created.ToShortDateString() + " " + context.Created.ToLongTimeString())</MudTd>
+                            <MudTd DataLabel="">@context.Nftproject?.Projectname</MudTd>
+                            <MudTd DataLabel="">@(GlobalFunctions.FormatCurrency((context.Projectada ?? 0) + (context.Fee ?? 0) + (context.Mintingcostsada ?? 0) + context.Ada, 5))</MudTd>
+                            <MudTd DataLabel="">@(GlobalFunctions.FormatCurrency((context.Fee ?? 0) + (context.Mintingcostsada ?? 0) + context.Ada, 5))</MudTd>
+                            <MudTd DataLabel="">@(GlobalFunctions.FormatCurrency((context.Projectada ?? 0), 5))</MudTd>
+                            <MudTd DataLabel="">
+                                <ShowTransactionHash TxId="@context.Transactionid" Blockchain="@((context.Coin.ToEnum<Coin>()).ToBlockchain())"></ShowTransactionHash>
+                            </MudTd>
+                            <MudTd DataLabel="">@(context.WalletId == null ? @_loc["internal Wallet"] : context.Wallet.Comment)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+
+
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+    </MudGrid>
+</MudContainer>
+
+    @code {
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Style { get; set; }
+
+    private string Name { get; set; }
+    private string FirstName { get; set; }
+
+    public float Newpurchasedmints { get; set; } = 0;
+    private string tier = "";
+    private bool isVerified { get; set; } = false;
+    private Customer customer { get; set; }
+    private Websitesetting websitesettings;
+    private string RemainingTime { get; set; }
+    private bool enablevestingtokens = false;
+
+    protected override void OnInitialized()
+    {
+        settings.OnChange += StateHasChanged;
+        Timer.SetTimer(1000);
+        Timer.OnElapsed += TimerElapsedHandler;
+        Timer.Start();
+    }
+    public void Dispose()
+    {
+        Timer.Stop();
+        settings.OnChange -= StateHasChanged;
+        Timer.OnElapsed -= TimerElapsedHandler;
+    }
+
+    private async Task CheckAccess(EasynftprojectsContext db)
+    {
+        var h = await (from a in db.Loggedinhashes
+                       where a.CustomerId == (int)settings.UserId && a.Hash == settings.hash
+                       select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (h == null || h.Validuntil < DateTime.Now)
+        {
+            navigationManager.NavigateTo("/login/", true);
+            return;
+        }
+        await settings.ExtendLoginTime();
+    }
+
+    private void TimerElapsedHandler()
+    {
+        this.InvokeAsync(() => CheckAmount());
+    }
+    
+    private async Task CreateNewTemplatedProject()
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = true, CloseButton = true, CloseOnEscapeKey = true};
+        var parameters = new DialogParameters { 
+            { nameof(CreateNewProjectAssistantModalWindow.CustomerId), (int)settings.UserId },
+            { nameof(CreateNewProjectAssistantModalWindow.IsAdmin), false } };
+        var dialog = await DialogService.ShowAsync<CreateNewProjectAssistantModalWindow>("",parameters, maxWidth);
+        var result = await dialog.Result;
+    }
+
+
+    private async Task CheckAmount()
+    {
+        //  RemainingTime = settings.GetRemainingTime();
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        try
+        {
+            Timer.Stop();
+
+            await CheckAccess(db);
+            //  await CheckKycState(db);
+
+            customer = await (from a in db.Customers
+                              where a.Id == (int)settings.UserId
+                              select a).AsNoTracking().FirstOrDefaultAsync();
+
+            if (customer != null)
+            {
+                Newpurchasedmints = customer.Newpurchasedmints;
+            }
+            // Check for Notifications
+
+            var noti = await (from a in db.Onlinenotifications
+                              where a.CustomerId == (int)settings.UserId && a.State == "new"
+                              select a).FirstOrDefaultAsync();
+
+            if (noti != null)
+            {
+                noti.State = "hasread";
+                await db.SaveChangesAsync();
+
+
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                switch (noti.Color)
+                {
+                    case "error":
+                        Snackbar.Add(noti.Notificationmessage, Severity.Error);
+                        break;
+
+                    case "success":
+                        Snackbar.Add(noti.Notificationmessage, Severity.Success);
+                        break;
+
+                    default:
+                        Snackbar.Add(noti.Notificationmessage, Severity.Info);
+                        break;
+                }
+            }
+            StateHasChanged();
+
+        }
+        catch (Exception)
+        {
+
+        }
+        finally
+        {
+            Timer.Start();
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+
+    //
+
+    private DashboardSalesClass dashboardSales = new();
+
+        private readonly List<BreadcrumbItem> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        enablevestingtokens = GlobalFunctions.GetWebsiteSettingsBool(db, "enablevestingtokens");
+
+        string redisKey1 = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_Pro_Dashboard_Transactions_{settings.UserId}";
+        var dashboardSales1 = RedisFunctions.GetData<DashboardSalesClass>(_redis, redisKey1);
+        if (dashboardSales1 != null)
+        {
+            dashboardSales = dashboardSales1;
+        }
+        else
+        {
+            dashboardSales.transactions = await (from a in db.Transactions
+                .Include(a => a.Nftproject).AsSplitQuery()
+                .Include(a => a.Wallet).AsSplitQuery()
+                                                 where a.CustomerId == (int) settings.UserId &&
+                                                       (a.Transactiontype == nameof(TransactionTypes.paidonftaddress) || a.Transactiontype == nameof(TransactionTypes.mintfromcustomeraddress)
+                                                        || a.Transactiontype == nameof(TransactionTypes.paidtocustomeraddress) || a.Transactiontype == nameof(TransactionTypes.paidfromnftaddress)
+                                                        || a.Transactiontype == nameof(TransactionTypes.consolitecustomeraddress) || a.Transactiontype == nameof(TransactionTypes.paidonprojectaddress)
+                                                        || a.Transactiontype == nameof(TransactionTypes.burning) || a.Transactiontype == nameof(TransactionTypes.fiatpayment)
+                                                        || a.Transactiontype == nameof(TransactionTypes.decentralmintandsale) || a.Transactiontype == nameof(TransactionTypes.decentralmintandsend))
+
+                                                 orderby a.Id descending
+                                                 select a).Take(5).ToListAsync();
+
+
+            var ts0 = from a in db.Transactions
+                      where a.CustomerId == (int) settings.UserId && (a.Transactiontype == nameof(TransactionTypes.paidonftaddress) || a.Transactiontype == nameof(TransactionTypes.paidonprojectaddress) || a.Transactiontype == nameof(TransactionTypes.fiatpayment)
+                                                                      || a.Transactiontype == nameof(TransactionTypes.decentralmintandsale) || a.Transactiontype == nameof(TransactionTypes.decentralmintandsend))
+                      select new {a.Projectada};
+            var sum = ts0.ToList().Select(c => c.Projectada).Sum();
+            dashboardSales.totalAda = GlobalFunctions.FormatCurrency(sum, 0);
+
+            var ts = await (from a in db.Nfts
+                .Include(a => a.Nftproject).AsSplitQuery()
+                            where a.Nftproject.CustomerId == (int) settings.UserId && a.MainnftId == null && a.State == "sold"
+                            select a).CountAsync();
+            dashboardSales.totalsold = ts.ToString("N0");
+
+            var ts1 = await (from a in db.Nfts
+                .Include(a => a.Nftproject).AsSplitQuery()
+                             where a.Nftproject.CustomerId == (int) settings.UserId && a.MainnftId == null && a.State == "sold" && a.Selldate > DateTime.Now.AddDays(-1)
+                             select a).CountAsync();
+            dashboardSales.saleslast24h = ts1.ToString("N0");
+
+
+
+            var totsa = await (from a in db.Transactions
+                               where a.CustomerId == (int) settings.UserId && (a.Transactiontype == nameof(TransactionTypes.paidonftaddress) || a.Transactiontype == nameof(TransactionTypes.paidonprojectaddress) || a.Transactiontype == nameof(TransactionTypes.fiatpayment)
+                                                                               || a.Transactiontype == nameof(TransactionTypes.decentralmintandsale) || a.Transactiontype == nameof(TransactionTypes.decentralmintandsend))
+                               select a).CountAsync();
+            dashboardSales.totalsales = totsa.ToString("N0");
+
+            var ts4 = from a in db.Transactions
+                      where a.CustomerId == (int) settings.UserId && (a.Transactiontype == nameof(TransactionTypes.paidonftaddress) || a.Transactiontype == nameof(TransactionTypes.paidonprojectaddress) || a.Transactiontype == nameof(TransactionTypes.fiatpayment)
+                                                                      || a.Transactiontype == nameof(TransactionTypes.decentralmintandsale) || a.Transactiontype == nameof(TransactionTypes.decentralmintandsend)) && a.Created > DateTime.Now.AddDays(-1)
+                      select new {a.Projectada};
+            var sum1 = ts4.ToList().Select(c => c.Projectada).Sum();
+            dashboardSales.last24h = GlobalFunctions.FormatCurrency(sum1, 0);
+
+
+            RedisFunctions.SetData<DashboardSalesClass>(_redis, redisKey1, dashboardSales, 30);
+
+            var t = await localStorage.GetItemAsync<DateTime?>("InformationWindowShowed");
+
+
+            if (t != null && t.Value > DateTime.Now.AddDays(-1))
+                settings.InformationWindowShowed = true;
+
+            if (settings.InformationWindowShowed == false)
+            {
+                settings.InformationWindowShowed = true;
+                await localStorage.SetItemAsync("InformationWindowShowed", DateTime.Now);
+
+                var informations = await (from a in db.Informationtexts
+                                          where a.State == "active"
+                                          orderby a.Created descending
+                                          select a).AsNoTracking().ToListAsync();
+
+                if (informations.Any())
+                {
+                    string st = "";
+                    foreach (var information in informations)
+                    {
+                        st += information.Created.ToShortDateString() + " - " + information.Created.ToShortTimeString() + Environment.NewLine + Environment.NewLine;
+                        st += information.Informationtext1 + Environment.NewLine + Environment.NewLine;
+                    }
+
+                    DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+                    var parameters = new DialogParameters {{nameof(ShowInformationsModalWindow.Informationtext), st}};
+                    var dialog = await DialogService.ShowAsync<ShowInformationsModalWindow>(@_loc["Information"], parameters, maxWidth);
+                    var result = await dialog.Result;
+                }
+            }
+        }
+        customer = await (from a in db.Customers
+                          where a.Id == (int) settings.UserId
+                          select a).AsNoTracking().FirstOrDefaultAsync();
+
+       
+        var p = (from a in db.Settings
+    .Include(a => a.InverseMastersettings).AsSplitQuery()
+                 where a.Id == customer.DefaultsettingsId
+                 select a).FirstOrDefault();
+
+        if (p == null)
+            return;
+
+        Newpurchasedmints = customer.Newpurchasedmints;
+        Name = customer.Firstname + " " + customer.Lastname;
+        FirstName = customer.Firstname;
+        tier = p.Description;
+
+    }
+
+    private bool isSubmitting;
+
+    private async Task ShowBuyMintsPopUp()
+    {
+
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var cust = await (from a in db.Customers
+            .Include(a=>a.Defaultsettings)
+                          where a.Id == (int)settings.UserId && a.State == "active"
+                          select a).FirstOrDefaultAsync();
+
+        if (cust == null)
+            return;
+
+        // If there is not Solana Address, we create one
+        if (string.IsNullOrEmpty(cust.Solanapublickey))
+        {
+            IBlockchainFunctions solanaBlockchainFunctions = new SolanaBlockchainFunctions();
+            var wallet = solanaBlockchainFunctions.CreateNewWallet();
+            cust.Solanapublickey = wallet.Address;
+            cust.Solanaseedphrase = Encryption.EncryptString(wallet.SeedPhrase, customer.Salt);
+        }
+
+        // and if there is no Aptos Address, we create one
+        if (string.IsNullOrEmpty(cust.Aptosaddress))
+        {
+            IBlockchainFunctions aptosBlockchainFunctions = new AptosBlockchainFunctions();
+            var wallet = aptosBlockchainFunctions.CreateNewWallet();
+            cust.Aptosaddress = wallet.Address;
+            cust.Aptosseed = Encryption.EncryptString(wallet.SeedPhrase, customer.Salt);
+            cust.Aptosprivatekey = Encryption.EncryptString(wallet.privateskey, customer.Salt);
+        }
+
+        cust.Checkaddresscount = 500;
+        await db.SaveChangesAsync();
+
+        var parameters = new DialogParameters { { nameof(ShowPaymentAddressModalWindow.customer), cust } };
+        DialogOptions maxWidth = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+
+        var dialog = await DialogService.ShowAsync<ShowPaymentAddressModalWindow>( @_loc["Buy mint credits"], parameters, maxWidth);
+        var result = await dialog.Result;
+        isSubmitting = false;
+    }
+}

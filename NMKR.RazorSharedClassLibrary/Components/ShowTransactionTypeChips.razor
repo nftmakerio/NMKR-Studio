@@ -1,0 +1,75 @@
+﻿@switch (TransactionType)
+{
+    case nameof(TransactionTypes.buymints):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Mint purchases @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.paidonprojectaddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Sale (Pay-In Address) @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.paidonftaddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Sale (Api/Payment Gateway) @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.mintfromcustomeraddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Mint & send @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.paidtocustomeraddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Payout @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.consolitecustomeraddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Consolidate Account @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.paidfromnftaddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Paid from Address @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.burning):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Burn @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.fiatpayment):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">FIAT Payment @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.decentralmintandsale):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Multi-sig Sale (Payment Gateway) @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.decentralmintandsend):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Multi-sig Mint & send @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.auction):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Auction @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.directsale):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Direct sale @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.royaltsplit):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Royalty split @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.unknown):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Unknown @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.doublepaymentsendbacktobuyer):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Refund @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.mintfromnftmakeraddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Mint from NMKR Account @GetCounty()</NMKRChip>
+        break;
+    case nameof(TransactionTypes.paidfailedtransactiontocustomeraddress):
+        <NMKRChip Size="Size.Small" Variant="Variant.Filled">Paid failed TX @GetCounty()</NMKRChip>
+        break;
+}
+
+@code {
+
+    [Parameter]
+    public string TransactionType { get; set; }
+
+    [Parameter]
+    public string Country { get; set; }
+
+    [Parameter]
+    public string Coin { get; set; }
+        private string GetCounty()
+    {
+        if (string.IsNullOrEmpty(Country))
+        return Coin;
+        return Country +" - "+ Coin;
+    }
+}

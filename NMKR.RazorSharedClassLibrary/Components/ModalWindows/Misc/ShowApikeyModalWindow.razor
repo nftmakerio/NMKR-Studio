@@ -1,0 +1,30 @@
+﻿@inject IStringLocalizer _loc
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-3" />Apikey
+            <h5 class="mt-2">@_loc["Copy and save the api key NOW, it cannot be displayed again"]</h5>
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" ReadOnly="true" T="string" Label="@_loc["Apikey"]"  Text="@ShowApikey" Class="mb-5" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">@_loc["Close"]</MudButton>
+        <CopyToClipboardButton Name="Apikey" Content="@ShowApikey"></CopyToClipboardButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+
+    [Parameter]
+    public string ShowApikey {get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+
+    void Cancel() => MudDialog.Cancel();
+
+
+}

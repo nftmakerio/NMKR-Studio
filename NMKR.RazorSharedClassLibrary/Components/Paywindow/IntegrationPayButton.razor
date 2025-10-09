@@ -1,0 +1,72 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ClipboardService ClipboardService
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer redis
+
+@if (Value != null)
+{
+    <MudGrid Class="mb-3">
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Paybutton style" @bind-Value="Value.Style">
+                <MudSelectItem Value="1">Style 1</MudSelectItem>
+                <MudSelectItem Value="2">Style 2</MudSelectItem>
+                <MudSelectItem Value="3">Style 3</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Paybutton color" @bind-Value="Value.Color">
+                <MudSelectItem Value="1">Green</MudSelectItem>
+                <MudSelectItem Value="2">White</MudSelectItem>
+                <MudSelectItem Value="3">Black</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <BlockchainSelector @bind-Value="Value.BlockchainString" Variant="Variant.Text" project="@Project" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <GetPriceListSelect @bind-Value="Value.Pricelist" ProjectId="@Project.Id" Blockchain="@(Value.BlockchainString.ToEnum<Blockchain>())" />
+        </MudItem>
+
+        <MudItem xs="12" Class="mb-5">
+            <img src="@Value.Buttonlink" onclick="javascript: openPaymentWindow('@Value.PaywindowLink');">
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Label="Payment Gateway" @bind-Value="Value.PaywindowLink" ReadOnly="true" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Label="Button Link" @bind-Value="Value.Buttonlink" ReadOnly="true" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Lines="20" Label="Payment Gateway" @bind-Value="Value.PaywindowCode" ReadOnly="true" Immediate="true" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" StartIcon="@Icons.Material.Filled.ContentCopy" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="CopyToClipboard">Copy code to clipboard</MudButton>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter]
+    public PaybuttonClass? Value { get; set; }
+    [Parameter]
+    public EventCallback<PaybuttonClass?> ValueChanged { get; set; }
+    [Parameter]
+    public Nftproject Project { get; set; }
+
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await ClipboardService.WriteTextAsync(Value.PaywindowCode);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Code copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+        }
+    }
+}

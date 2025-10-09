@@ -1,0 +1,73 @@
+﻿@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.BITCOIN
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Metadata
+@inject ISnackbar Snackbar
+ @inject IConnectionMultiplexer _redis;
+
+ @if (ShowTextButton)
+ {
+     <MudNavLink @onclick="(() => Metadata(NftId))" Disabled="@isSubmitting">
+        @if (isSubmitting)
+        {
+            <MudProgressCircular Class="ms-n1" Style="height:15px;width:15px;" Indeterminate="true" />
+        }
+         Show Metadata
+
+     </MudNavLink>
+ } 
+ else {
+     <MudTooltip Color="Color.Dark" Text="Show Metadata" Placement="Placement.Start">
+        <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Small" @onclick="(() => Metadata(NftId))"></MudIconButton>
+     </MudTooltip>
+ }
+
+@code {
+    [Parameter]
+    public int NftId { get; set; }
+    [Parameter]
+    public Nftproject Project { get; set; }
+    [Parameter]
+    public bool ShowTextButton { get; set; } = false;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private bool isSubmitting = false;
+    private async Task Metadata(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        GetMetadataClass md = new(id, "",true);
+        var metadata = await md.MetadataResultAsync();
+
+        if (Project.Enabledcoins.Contains(Coin.SOL.ToString()))
+        {
+            IBlockchainFunctions solana = new SolanaBlockchainFunctions();
+            metadata.MetadataSolana = solana.GetMetadataFromCip25Metadata(metadata.Metadata, Project);
+        }
+        if (Project.Enabledcoins.Contains(Coin.APT.ToString()))
+        {
+            IBlockchainFunctions aptos = new AptosBlockchainFunctions();
+            metadata.MetadataAptos = aptos.GetMetadataFromCip25Metadata(metadata.Metadata, Project);
+        }
+        if (Project.Enabledcoins.Contains(Coin.BTC.ToString()))
+        {
+            IBlockchainFunctions aptos = new BitcoinBlockchainFunctions();
+            metadata.MetadataBitcoin = aptos.GetMetadataFromCip25Metadata(metadata.Metadata, Project);
+        }
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { 
+            { nameof(ShowMetadataModalWindow.Metadata), metadata }, 
+            { nameof(ShowMetadataModalWindow.Cip68), Project.Cip68 }, 
+            { nameof(ShowMetadataModalWindow.EnabledCoins),Project.Enabledcoins}
+        };
+        isSubmitting = false;
+        StateHasChanged();
+
+        var dialog = await DialogService.ShowAsync<ShowMetadataModalWindow>("Metadata", parameters, maxWidth);
+    }
+}

@@ -1,0 +1,33 @@
+﻿@if (!string.IsNullOrEmpty(Collection))
+{
+    <span style="white-space: nowrap;">
+        <MudLink Typo="Typo.body2" Href="@ExplorerLink" Target="_blank">
+            @GlobalFunctions.GetStartAndEnd(Collection, 6)
+        </MudLink>
+        <CopyToClipboard name="Collection" content="@Collection"></CopyToClipboard>
+    </span>
+
+}
+
+
+@code {
+    [Parameter]
+    public string Collection { get; set; }
+    [Parameter]
+    public Blockchain Blockchain { get; set; }
+    private string ExplorerLink { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var activeblockchain = await db.Activeblockchains.Where(x=>x.Enabled && x.Name==Blockchain.ToString()).AsNoTracking().FirstOrDefaultAsync();
+        if (activeblockchain != null)
+        {
+            string ext = "";
+          
+            ExplorerLink = String.Format(activeblockchain.Explorerurlcollection, Collection, ext);
+        }
+
+    }
+
+}

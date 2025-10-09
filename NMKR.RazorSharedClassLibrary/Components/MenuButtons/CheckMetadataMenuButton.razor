@@ -1,0 +1,180 @@
+﻿@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Metadata
+ @inject ISnackbar Snackbar
+ @inject IConnectionMultiplexer _redis;
+ 
+ @if (ShowTextButton)
+ {
+     <MudNavLink @onclick="(CheckMetadata)" Disabled="@isSubmitting">
+        @if (isSubmitting)
+        {
+            <MudProgressCircular Class="ms-n1" Style="height:15px;width:15px;" Indeterminate="true" />
+        }
+         Check Metadata
+     </MudNavLink>
+ } 
+ else {
+ <MudTooltip Color="Color.Dark" Text="Check Metadata" Placement="Placement.Start">
+     <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.FactCheck" Size="Size.Small" @onclick="(CheckMetadata)"></MudIconButton>
+ </MudTooltip>
+ }
+
+ @code {
+[Parameter]
+    public int NftId { get; set; }
+[Parameter]
+public bool ShowTextButton { get; set; } = false;
+
+    private bool isSubmitting = false;
+
+    private async Task CheckMetadata()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var nft = await (from a in db.Nfts
+                .Include(a => a.Nftproject)
+                .ThenInclude(a => a.Customer).AsSplitQuery()
+                .Include(a => a.Instockpremintedaddress).AsSplitQuery()
+                .Include(a => a.Nftproject)
+                .ThenInclude(a => a.Settings).AsSplitQuery()
+                .Include(a => a.InverseMainnft)
+                .ThenInclude(a => a.Metadata).AsSplitQuery()
+                .Include(a => a.Metadata).AsSplitQuery()
+            where a.Id == NftId && a.Nftproject != null && a.Nftproject.Customer != null
+            select a).FirstOrDefaultAsync();
+
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT not found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (nft.Nftproject.Enabledcoins.Contains(Coin.ADA.ToString()))
+        {
+            await CheckMetadataForCardanoBlockchain(db,nft);
+        }
+        if (nft.Nftproject.Enabledcoins.Contains(Coin.SOL.ToString()))
+        {
+            await CheckMetadataForSolanaBlockchain(db,nft);
+        }
+        if (nft.Nftproject.Enabledcoins.Contains(Coin.APT.ToString()))
+        {
+            await CheckMetadataForAptosBlockchain(db,nft);
+        }
+       
+        isSubmitting = false;
+    }
+
+    private async Task CheckMetadataForAptosBlockchain(EasynftprojectsContext db, Nft nft)
+    {
+        GetMetadataClass md = new(nft.Id, "",true);
+        var metadata = await md.MetadataResultAsync();
+
+        IBlockchainFunctions aptos = new AptosBlockchainFunctions();
+        metadata.MetadataAptos = aptos.GetMetadataFromCip25Metadata(metadata.Metadata, nft.Nftproject);
+        if (string.IsNullOrEmpty(metadata.MetadataAptos))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The metadata for the Aptos blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters.", Severity.Error);
+            return;
+        }
+        // Check Json for neccessary aptos fields
+        // Check for Image
+        if (!metadata.MetadataAptos.Contains("image"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The metadata for the Aptos blockchain could not be created. The field 'image' is missing.", Severity.Error);
+            return;
+        }
+
+        // Successful return
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Great - The metadata for the Aptos blockchain looks good", Severity.Success);
+    }
+
+    private async Task CheckMetadataForSolanaBlockchain(EasynftprojectsContext db, Nft nft)
+    {
+        GetMetadataClass md = new(nft.Id, "", true);
+        var metadata = await md.MetadataResultAsync();
+
+            IBlockchainFunctions solana = new SolanaBlockchainFunctions();
+            metadata.MetadataSolana = solana.GetMetadataFromCip25Metadata(metadata.Metadata, nft.Nftproject);
+
+            if (string.IsNullOrEmpty(metadata.MetadataSolana))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The metadata for the Solana blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters.", Severity.Error);
+            return;
+        }
+        // Check Json for neccessary aptos fields
+        // Check for Image
+        if (!metadata.MetadataSolana.Contains("image"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The metadata for the Aptos blockchain could not be created. The field 'image' is missing. ", Severity.Error);
+            return;
+        }
+        // Check for Symbol
+        if (!metadata.MetadataSolana.Contains("symbol"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The metadata for the Aptos blockchain could not be created. The field 'symbol' is missing.", Severity.Error);
+            return;
+        }
+        // Successfull return
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Great - The metadata for the Solana blockchain looks good", Severity.Success);
+    }
+
+    private async Task CheckMetadataForCardanoBlockchain(EasynftprojectsContext db, Nft nft)
+    {
+        // Just 2 Test addresses
+        string recevieraddress = "addr1q9xr9tdw7e6zpj0sltqf4wj6ae7avr5wcgy3wt67ffp575l8xh6xlg9a5vuem3r4eg3qljvjpt0g9r0p9w7fgg5k6gss92cy8r";
+        if (!GlobalFunctions.IsMainnet())
+            recevieraddress = "addr_test1qqrmtwl66uvj6gd4hfw6h964q7y0xcjdsnjnwjwctxfru7dycwrylu0nqy3f7ue8akrzc96zlk3x3t86ec6fckn3ualq9ql6yu";
+
+
+        var paywallet = await GlobalFunctions.GetNmkrPaywalletAndBlockAsync(db, 0, "CheckMetadata", "", Coin.ADA);
+
+        if (paywallet == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("All Testwallets (Cardano Blockchain) are currently in use. Please try again later", Severity.Error);
+            isSubmitting = false;
+        }
+
+        // we take a senderaddress from NFT-Maker - not the customer. This is because if we dont know if the customer has ada in his account. If not, the tx-in is missing
+        var senderaddress = paywallet.Address; // first admin mit and send address
+
+
+
+        BuildTransactionClass buildtransaction = new();
+        var s = nft.Nftproject.Cip68
+            ? ConsoleCommand.CheckMetadataCip68(db, _redis, nft, senderaddress, recevieraddress, null, "", GlobalFunctions.IsMainnet(), out buildtransaction)
+            : ConsoleCommand.CheckMetadata(db, _redis, nft, senderaddress, recevieraddress, null, "", GlobalFunctions.IsMainnet(), out buildtransaction);
+        if (s.Contains("OK"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Great - The metadata for the Cardano blockchain looks good", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"The metadata for the Cardano blockchain contains errors and is not accepted by the network {Environment.NewLine}{Environment.NewLine}{buildtransaction.ErrorMessage}", Severity.Error);
+        }
+        await GlobalFunctions.UnlockPaywalletAsync(db, paywallet);
+    }
+
+ }

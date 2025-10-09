@@ -1,0 +1,60 @@
+﻿@layout ConfirmationLayout
+@page "/confirm/wallet/{userid:int}/{confirmationcode}"
+@inject IStringLocalizer _loc
+
+
+<MudText Typo="Typo.h4" GutterBottom="true">@_loc["Confirm wallet address"]</MudText>
+<MudText Color="@Color.Error" Class="mt-3">
+    @errormessage
+</MudText>
+<MudText Color="@Color.Primary" Class="mt-3">
+    @message
+</MudText>
+
+
+@code { [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+    [Parameter]
+    public int UserId { get; set; }
+    [Parameter]
+    public int CoinId { get; set; }
+    [Parameter]
+    public string ConfirmationCode { get; set; }
+
+    private string message { get; set; }
+    private string errormessage { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var pending = await (from a in db.Customerwallets
+                             where a.Confirmationcode == ConfirmationCode && a.CustomerId == UserId && (a.State=="notactive" || a.State=="active")
+                             select a).FirstOrDefaultAsync();
+
+        if (pending == null)
+        {
+            errormessage = @_loc["The confirmation code is not correct."];
+            return;
+        }
+
+
+        if (pending.Confirmationvalid < DateTime.Now)
+        {
+            errormessage = @_loc["The activation time is over. Please resend the confirmation code."];
+            return;
+        }
+
+        if (pending.State == "notactive")
+        {
+            CryptographyProcessor cp = new();
+            pending.State = "active";
+            pending.Confirmationdate=DateTime.Now;
+            pending.Hash = cp.GenerateHash(pending.Walletaddress, pending.Confirmationdate.Value.ToLongTimeString());
+        }
+
+
+        await db.SaveChangesAsync();
+        message = @_loc["Your wallet address is now confirmed."];
+        StateHasChanged();
+    } }

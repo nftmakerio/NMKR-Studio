@@ -1,0 +1,160 @@
+﻿@using NMKR.Shared.NotificationClasses
+@inject ISnackbar Snackbar
+
+  <MudTable Items="@Notifications.Where(x=>x.Deleted==false)" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="EditNotificationsClass" >
+        <HeaderContent>
+            <MudTh>Type</MudTh>
+            <MudTh>Address</MudTh>
+        <MudTh>State</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+                @nameof(context.Notificationtype)
+            </MudTd>
+            <MudTd>
+                @context.Address
+            </MudTd>
+            <MudTd>
+                @switch (context.State)
+                {
+                    case true:
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                        break;
+                    case false:
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                        break;
+                }
+            </MudTd>
+
+            <MudTd Style="text-align: right">
+                <MudTooltip Color="Color.Dark" Text="Edit" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" @onclick="(() => Edit(context.Uid))"></MudIconButton>
+                </MudTooltip>
+                <MudTooltip Color="Color.Dark" Text="Delete" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" @onclick="(() => Delete(context.Uid))"></MudIconButton>
+                </MudTooltip>
+
+                <MudTooltip Color="Color.Dark" Text="Test webhook" Placement="Placement.Start">
+                <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Api" Size="Size.Medium" @onclick="(() => Testwebhook(context.Uid))" Disabled="@(context.Notificationtype!=PaymentTransactionNotificationTypes.webhook)"></MudIconButton>
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false" 
+        Class="mt-5 mb-5 rounded-xl px-6 py-3"
+        Variant="Variant.Filled"
+        Color="Color.Tertiary"
+        StartIcon="@Icons.Material.Filled.Notifications"
+        OnClick="AddNotification">
+        Create new notification
+    </MudButton>
+
+@code {
+
+    [Parameter]
+    public List<EditNotificationsClass> Notifications { get; set; }
+    [Parameter]
+    public Nftproject Project { get; set; }
+    private bool isSubmitting;
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private async Task AddNotification()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        EditNotificationsClass n = new() {Id = null, Notificationtype = PaymentTransactionNotificationTypes.webhook};
+        var parameters = new DialogParameters {{nameof(EditNotificationsModalWindow.Notification), n},{nameof(EditNotificationsModalWindow.Project),Project}};
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditNotificationsModalWindow>("Notification", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Notifications.Add(n);
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit(string uid)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        string apikey = GlobalFunctions.GetGuid();
+        HashClass.GetHash(SHA256.Create(), apikey);
+
+        var n = new EditNotificationsClass(Notifications.Find(x => x.Uid == uid));
+        var parameters = new DialogParameters {{nameof(EditNotificationsModalWindow.Notification), n},{nameof(EditNotificationsModalWindow.Project),Project}};
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditNotificationsModalWindow>("Notification", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var n1 = Notifications.FirstOrDefault(x => x.Uid == uid);
+            if (n1 != null)
+            {
+                n1.Address = n.Address;
+                n1.State = n.State;
+                n1.Notificationtype = n.Notificationtype;
+                n1.Secret = n.Secret;
+            }
+
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Delete(string uid)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Deleting can not be undone!",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            var n1 = Notifications.FirstOrDefault(x => x.Uid == uid);
+            if (n1 != null)
+            {
+                n1.Deleted=true;
+            }
+        }
+    }
+
+    private async Task Testwebhook(string uid)
+    {
+        var n1 = Notifications.FirstOrDefault(x => x.Uid == uid);
+        if (n1 != null)
+        {
+            TestWebhookNotificationClass twnc = new(Project);
+            var b = await twnc.TestWebhook(n1.Address, n1.Secret);
+            if (!b)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Webhook does not respond or does not answer with Statuscode 200", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Webhook is working", Severity.Success);
+            }
+        }
+    }
+
+}

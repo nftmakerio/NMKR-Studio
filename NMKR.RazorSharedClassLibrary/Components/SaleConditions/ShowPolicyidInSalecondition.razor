@@ -1,0 +1,15 @@
+﻿@if (!string.IsNullOrEmpty(PolicyId))
+{
+    <br />
+
+    <span>OR</span>
+
+    <br />
+
+    @PolicyId
+}
+
+@code {
+    [Parameter]
+    public string PolicyId { get; set; }
+}

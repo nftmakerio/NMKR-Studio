@@ -1,0 +1,123 @@
+﻿
+<MudDialog Style="Width:600px">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.SendToMobile" Class="mr-3" />Confirm by mobile phone
+            <hr/>
+            <h5 class="mb-3 mt-2">We have sent an sms to your cell phone</h5>
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+        <MudGrid>
+           
+            <MudItem xs="3" sm="3" md="3">
+                <MudTextField Variant="Variant.Outlined" @bind-Value="code1" Immediate="true" @ref="c1" MaxLength="1"></MudTextField>
+            </MudItem>
+            <MudItem xs="3" sm="3" md="3">
+                <MudTextField Variant="Variant.Outlined" @bind-Value="code2" Immediate="true" @ref="c2" MaxLength="1"></MudTextField>
+            </MudItem>
+            <MudItem xs="3" sm="3" md="3">
+                    <MudTextField Variant="Variant.Outlined" @bind-Value="code3" Immediate="true" @ref="c3" MaxLength="1"></MudTextField>
+            </MudItem>
+            <MudItem xs="3" sm="3" md="3">
+                    <MudTextField Variant="Variant.Outlined" @bind-Value="code4" Immediate="true" @ref="c4" MaxLength="1"></MudTextField>
+            </MudItem>
+        </MudGrid>
+        </MudFocusTrap>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    private MudTextField<string> c1;
+    private MudTextField<string> c2;
+    private MudTextField<string> c3;
+    private MudTextField<string> c4;
+
+    private string _code1;
+    private string _code2;
+    private string _code3;
+    private string _code4;
+
+    void Cancel() => MudDialog.Cancel();
+
+    public string code1
+    {
+        get { return _code1; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                _code1 = "";
+                return;
+            }
+            if (value.Length == 4)
+            {
+                _code1 = value.Substring(0, 1);
+                _code2=value.Substring(1, 1);
+                _code3=value.Substring(2, 1);
+                _code4=value.Substring(3, 1);
+                
+                string smscode = _code1 + _code2 + _code3 + _code4;
+                MudDialog.Close(DialogResult.Ok(smscode));
+            }
+            _code1 = value.Substring(0, 1);
+            if (_code1.Length == 1)
+                c2.FocusAsync();
+        }
+    }
+    public string code2
+    {
+        get { return _code2; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                _code2 = "";
+                return;
+            }
+            _code2 = value.Substring(0, 1);
+            if (_code2.Length == 1)
+                c3.FocusAsync();
+        }
+    }
+    public string code3
+    {
+        get { return _code3; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                _code3 = "";
+                return;
+            }
+            _code3 = value.Substring(0, 1);
+            if (_code3.Length == 1)
+                c4.FocusAsync();
+        }
+    }
+    public string code4
+    {
+        get { return _code4; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                _code4 = "";
+                return;
+            }
+            _code4 = value.Substring(0, 1);
+            if (_code1.Length == 1 && _code2.Length==1 && _code3.Length==1 && _code4.Length==1)
+            {
+                string smscode = _code1 + _code2 + _code3 + _code4;
+                MudDialog.Close(DialogResult.Ok(smscode));
+            }
+        }
+    }
+
+    
+}

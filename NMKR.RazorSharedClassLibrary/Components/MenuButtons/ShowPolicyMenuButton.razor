@@ -1,0 +1,47 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.Projects
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@if (NftProject.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+{
+    <MudNavLink @onclick="(() => ShowPolicy(NftProject.Id))">Cardano Policy</MudNavLink>
+}
+
+@code {
+    [Parameter] public Nftproject NftProject { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+    private async Task ShowPolicy(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var nftproject = await (from ax in db.Nftprojects
+            .Include(a => a.Customer).AsSplitQuery()
+            where ax.Id == id
+            select ax).FirstOrDefaultAsync();
+
+        if (nftproject == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(ShowPolicyModalWindow.Policy), nftproject.Policyscript },
+            { nameof(ShowPolicyModalWindow.PolicyId), nftproject.Policyid },
+            { nameof(ShowPolicyModalWindow.customer),nftproject.Customer},
+            { nameof(ShowPolicyModalWindow.IsAdmin),IsAdmin},
+            { nameof(ShowPolicyModalWindow.project), nftproject},
+        };
+        var dialog = await DialogService.ShowAsync<ShowPolicyModalWindow>("Show policy", parameters, maxWidth);
+        await dialog.Result;
+        isSubmitting = false;
+    }
+}

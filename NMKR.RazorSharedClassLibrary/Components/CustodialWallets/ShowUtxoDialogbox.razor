@@ -1,0 +1,56 @@
+﻿
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h5">
+            Show Balance for Address: <ShowAddress Address="@Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-5" Typo="Typo.h4">ADA: <DisplayComaNumbers Number="@(((float)utxo.LovelaceSummary/1000000f).ToString())"></DisplayComaNumbers></MudText>
+        <MudText Class="mb-5" Typo="Typo.h4">Tokens</MudText>
+        <MudTable Elevation="0" Items="@utxo.GetAllTokens()" Class="border" Style="border-color:#E0E0E0 " Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="TxInTokensClass" >
+            <HeaderContent>
+                <MudTh>Quantity</MudTh>
+                <MudTh>PolicyId</MudTh>
+                <MudTh>Tokenname</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd>
+                    @context.Quantity
+                </MudTd>
+                <MudTd>
+                    <ShowPolicyId PolicyId="@context.PolicyId"></ShowPolicyId>
+                </MudTd>
+                <MudTd>
+                   @context.Tokenname
+                   <br/>
+                   Fingerprint: <ShowFingerprint Fingerprint="@context.Fingerprint"></ShowFingerprint> 
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager HideRowsPerPage="true" />
+            </PagerContent>
+        </MudTable>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+   public TxInAddressesClass utxo { get; set; }
+    [Parameter]
+    public string Address { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+}

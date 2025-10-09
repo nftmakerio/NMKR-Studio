@@ -1,0 +1,323 @@
+﻿@using BlazorMonaco.Editor
+@using NMKR.Shared.Functions.Metadata
+@inject ISnackbar Snackbar
+@inject ClipboardService ClipboardService
+@inject IJSRuntime JS
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Metadata 
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-2" Outlined="true" @ref="tab">
+            @if (EnabledCoins.Contains(Coin.ADA.ToString()))
+            {
+                @if (Cip68)
+                {
+                    <MudTabPanel Text="Cardano CIP68">
+                        <MudGrid Class="mb-3">
+                            <MudItem xs="12">
+                                <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip68" @ref="editorcip68" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+
+                <MudTabPanel Text="Cardano CIP25">
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip25" @ref="editorcip25"/>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            }
+            @if (EnabledCoins.Contains(Coin.SOL.ToString()))
+            {
+                <MudTabPanel Text="Solana">
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsSolana" @ref="editorsolana"/>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>                
+            }
+            @if (EnabledCoins.Contains(Coin.APT.ToString()))
+            {
+                <MudTabPanel Text="Aptos">
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsAptos" @ref="editoraptos"/>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>                
+            }
+            @if (EnabledCoins.Contains(Coin.BTC.ToString()))
+            {
+                <MudTabPanel Text="Bitcoin">
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsBitcoin" @ref="editorbitcoin"/>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>                
+            }
+        </MudTabs>
+        
+        @*
+
+        <MudContainer Style="max-height: 300px; overflow-y: scroll">
+            <MudText Style="white-space: pre-wrap;" Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">@(Cip68 ? Metadata.MetadataCip68 : Metadata.MetadataCip25)</MudText>
+        </MudContainer>
+        
+        *@
+
+    </DialogContent>
+    <DialogActions >
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" Color="Color.Secondary"  OnClick="Ok">Close</MudButton>
+        @if (!Cip68 && EnabledCoins.Contains(Coin.ADA.ToString()))
+        {
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" StartIcon="@Icons.Material.Filled.Verified" Variant="Variant.Filled" OnClick="GoToPoolPm" Target="_blank" Color="Color.Tertiary" Disabled="@(string.IsNullOrEmpty(Metadata.MetadataCip25))">Show on Pool.pm</MudButton>
+        }
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" StartIcon="@Icons.Material.Filled.ContentCopy" Variant="Variant.Filled" OnClick="CopyToClipboard" Color="Color.Tertiary">Copy to Clipboard</MudButton>
+
+   
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public MetadataResultClass Metadata { get; set; }
+
+    [Parameter]
+    public bool Cip68 { get; set; } = false;
+    [Parameter]
+    public string EnabledCoins { get; set; }
+
+    private MudTabs tab { get; set; }
+    private StandaloneCodeEditor? editorcip68;
+    private StandaloneCodeEditor? editorcip25;
+    private StandaloneCodeEditor? editorsolana;
+    private StandaloneCodeEditor? editoraptos;
+    private StandaloneCodeEditor? editorbitcoin;
+
+    private void Ok()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task GoToPoolPm()
+    {
+    await ClipboardService.WriteTextAsync(Metadata.MetadataCip25);
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add($"Metadata copied to clipboard. Paste it on pool.pm", Severity.Success);
+        await Task.Delay(500);
+        await JS.InvokeAsync<string>("openWindow",  "https://pool.pm/test/metadata", 700, 500, "Pool.pm" );
+    }
+
+    private async Task CopyToClipboard()
+    {
+        string Content = "";
+        string Name = "";
+
+        if (tab.ActivePanel != null)
+        {
+            switch (tab.ActivePanel.Text)
+            {
+                case "Cardano CIP68":
+                    Content = Metadata.MetadataCip68;
+                    Name = "Cardano CIP68 Metadata";
+                    break;
+                case "Cardano CIP25":
+                    Content = Metadata.MetadataCip25;
+                    Name = "Cardano CIP25 Metadata";
+                    break;
+                case "Solana":
+                    Content = Metadata.MetadataSolana;
+                    Name = "Solana Metadata";
+                    break;
+                case "Aptos":
+                    Content = Metadata.MetadataAptos;
+                    Name = "Aptos Metadata";
+                    break;
+                case "Bitcoin":
+                    Content = Metadata.MetadataBitcoin;
+                    Name = "Bitcoin Metadata";
+                    break;
+            }
+
+
+            try
+            {
+                await ClipboardService.WriteTextAsync(Content);
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"{Name} copied to clipboard", Severity.Success);
+            }
+            catch
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+            }
+        }
+    }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsCip25(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata.MetadataCip25,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsSolana(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata.MetadataSolana,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsAptos(StandaloneCodeEditor editor)
+    {
+     
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata.MetadataAptos,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsBitcoin(StandaloneCodeEditor editor)
+    {
+     
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata.MetadataBitcoin,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsCip68(StandaloneCodeEditor editor)
+    {
+     
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata.MetadataCip68,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (editorcip25 != null)
+        {
+            await editorcip25.SetValue("");
+        }
+        if (editorcip68 != null)
+        {
+            await editorcip68.SetValue("");
+        }
+        if (editorsolana != null)
+        {
+            await editorsolana.SetValue("");
+        }
+        if (editoraptos != null)
+        {
+            await editoraptos.SetValue("");
+        }
+        if (editorbitcoin != null)
+        {
+            await editorbitcoin.SetValue("");
+        }
+        if (EnabledCoins.Contains(Coin.ADA.ToString()))
+        {
+            if (string.IsNullOrEmpty(Cip68 ? Metadata.MetadataCip68 : Metadata.MetadataCip25))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The metadata for the Cardano blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters. Errormessage: " + Metadata.Error, Severity.Error);
+                return;
+            }
+        }
+        if (EnabledCoins.Contains(Coin.SOL.ToString()))
+        {
+            if (string.IsNullOrEmpty(Metadata.MetadataSolana))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The metadata for the Solana blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters. Errormessage: " + Metadata.Error, Severity.Error);
+                return;
+            }
+        }
+        if (EnabledCoins.Contains(Coin.APT.ToString()))
+        {
+            if (string.IsNullOrEmpty(Metadata.MetadataAptos))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The metadata for the Aptos blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters. Errormessage: " + Metadata.Error, Severity.Error);
+                return;
+            }
+        }
+        if (EnabledCoins.Contains(Coin.BTC.ToString()))
+        {
+            if (string.IsNullOrEmpty(Metadata.MetadataBitcoin))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The metadata for the Bitcoin blockchain could not be created. Check all fields like token name, placeholder, etc. for invalid characters. Errormessage: " + Metadata.Error, Severity.Error);
+                return;
+            }
+        }
+    }
+ 
+}

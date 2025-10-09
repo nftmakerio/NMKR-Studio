@@ -1,0 +1,184 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudGrid>
+                <MudItem xs="12">
+                    <BlockchainSelector isAdmin="false" project="@project" @bind-Value="@blockchainselector" />
+                </MudItem>
+                
+                @if (blockchainselector != null)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="int" Label="@_loc["Payout wallet"]" @bind-Value="additionalpayout.WalletId">
+                            <MudSelectItem Value="0">@_loc["*** Select a payout wallet ***"]</MudSelectItem>
+                            @foreach (var w in wallets.Where(x => x.Cointype == GlobalFunctions.ConvertToCoin(blockchainselector.ToEnum<Blockchain>()).ToString()))
+                            {
+                                <MudSelectItem Value="@w.Id">@(w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+
+                    <MudItem xs="6" md="6">
+                        <MudNumericField @bind-Value="additionalpayout.Valuepercent" HelperText="@_loc["Split payout in percent"]" Format="F2"/>
+                        @if (blockchainselector == Blockchain.Cardano.ToString())
+                        {
+                            <small>@_loc["The minimum amount is always 1 ADA (Byron addresses = 2 ADA)"]</small>
+                        }
+                    </MudItem>
+                    <MudItem xs="6" md="6">
+                        <MudNumericField @bind-Value="additionalpayout.Valuetotal" HelperText="@(@_loc["Fix payout in "] + GlobalFunctions.GetCoinUnit(blockchainselector.ToEnum<Blockchain>()))"/>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="additionalpayout.Custompropertycondition" HelperText="@_loc["Optional condition - Wallet will only used when this custom property is set"]"></MudTextField>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">@_loc["Cancel"]</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="Save" Disabled="isSubmitting">@_loc["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Nftprojectsadditionalpayout additionalpayout { get; set; }
+    [Parameter]
+    public int customerid { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Parameter]
+   public string blockchainselector { get; set; }
+
+    private bool isSubmitting;
+    private List<Customerwallet> wallets = new();
+    bool success;
+    string[] errors = { };
+    MudForm form;
+
+    void Cancel() => MudDialog.Cancel();
+
+    protected override void OnInitialized()
+    {
+        using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        wallets = (from a in db.Customerwallets
+                   where a.CustomerId == customerid && a.State == "active" 
+                   select a).ToList();
+    }
+
+
+    private async Task Save()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (additionalpayout.WalletId == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Select a payout wallet"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (additionalpayout.Valuepercent != null && additionalpayout.Valuetotal != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["You can set up either a split in percent or total.But not both"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (additionalpayout.Valuepercent != null && additionalpayout.Valuepercent > 80)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["You can not setup a split with more than 80 % "], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (additionalpayout.Valuetotal != null && additionalpayout.Valuetotal < 1000000 && blockchainselector==Blockchain.Cardano.ToString())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["The minimum of split is 1 ADA(1000000 lovelace).Is it not possible to send less than 1 ADA."], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (additionalpayout.Id == 0 && additionalpayout.Valuepercent != null)
+        {
+            double tot = (double)additionalpayout.Valuepercent;
+            var z = await (from a in db.Nftprojectsadditionalpayouts
+                           where a.NftprojectId == additionalpayout.NftprojectId && 
+                                 a.Coin == GlobalFunctions.ConvertToCoin(blockchainselector.ToEnum<Blockchain>()).ToString() && 
+                                 (a.Custompropertycondition==null || a.Custompropertycondition=="")
+                           select a).ToListAsync();
+            foreach (var nftprojectsadditionalpayout in z)
+            {
+                if (nftprojectsadditionalpayout.Valuepercent != null)
+                    tot += (double)nftprojectsadditionalpayout.Valuepercent;
+            }
+            if (tot > 80)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["You can not setup a split with more than 80 % in total"], Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            additionalpayout.Coin = GlobalFunctions.ConvertToCoin(blockchainselector.ToEnum<Blockchain>()).ToString();
+            await db.Nftprojectsadditionalpayouts.AddAsync(additionalpayout);
+            await db.SaveChangesAsync();
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(""));
+            return;
+        }
+
+        if (additionalpayout.Id == 0 && additionalpayout.Valuetotal != null)
+        {
+            double tot = (double)additionalpayout.Valuetotal;
+            var z = await (from a in db.Nftprojectsadditionalpayouts
+                           where a.NftprojectId == additionalpayout.NftprojectId
+                           select a).ToListAsync();
+
+            await db.Nftprojectsadditionalpayouts.AddAsync(additionalpayout);
+            await db.SaveChangesAsync();
+            isSubmitting = false;
+            MudDialog.Close(DialogResult.Ok(""));
+            return;
+        }
+
+
+        var ap = await (from a in db.Nftprojectsadditionalpayouts
+                        where a.Id == additionalpayout.Id
+                        select a).FirstOrDefaultAsync();
+        if (ap != null)
+        {
+            ap.WalletId = additionalpayout.WalletId;
+            ap.Valuetotal = additionalpayout.Valuetotal;
+            ap.Valuepercent = additionalpayout.Valuepercent;
+            ap.Custompropertycondition= additionalpayout.Custompropertycondition;
+            ap.Coin=GlobalFunctions.ConvertToCoin(blockchainselector.ToEnum<Blockchain>()).ToString();
+            await db.SaveChangesAsync();
+        }
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+}

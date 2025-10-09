@@ -1,0 +1,96 @@
+﻿@using NMKR.Shared.NotificationClasses
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="mr-3" />Notification
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudSelect T="PaymentTransactionNotificationTypes" Label="Type" @bind-Value="Notification.Notificationtype">
+            <MudSelectItem Value="@(PaymentTransactionNotificationTypes.webhook)">Webhook</MudSelectItem>
+            <MudSelectItem Value="@(PaymentTransactionNotificationTypes.email)">E-Mail</MudSelectItem>
+        </MudSelect>
+        <MudTextField Variant="Variant.Outlined" Label="@(Notification.Notificationtype==PaymentTransactionNotificationTypes.email?"E-Mail Address" : "Api Url Address (POST Request)")" @bind-Value="Notification.Address" Lines="1" Class="mb-3" Immediate="true" />
+        @if (Notification.Notificationtype == PaymentTransactionNotificationTypes.webhook)
+        {
+            <MudText Typo="Typo.body2">We will call (POST) the address @(Notification.Address+(Notification.Address.Contains("?") ? "&" : "?")+"payloadHash=HMAC") and the NotificationSaleClass as JSON Body Content"></MudText>
+            <br/>
+            <MudTextField Variant="Variant.Outlined" Label="HMAC Secret"  @bind-Value="Notification.Secret" Lines="1" Class="mb-3"/>
+        }
+        <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="Notification.State" Color="Color.Primary">Notification activated</MudSwitch>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Close</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Save">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public EditNotificationsClass Notification { get; set; }
+
+    [Parameter]
+    public Nftproject Project { get; set; }
+
+    private bool isSubmitting;
+
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+       
+        if (Notification.Notificationtype == PaymentTransactionNotificationTypes.email)
+        {
+            if (string.IsNullOrEmpty(Notification.Address))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Enter an email address", Severity.Error);
+                return;
+            }
+
+            if (!Notification.Address.IsValidEmail())
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Address ist not a valid email address", Severity.Error);
+                return;
+            }
+
+        }
+        if (Notification.Notificationtype == PaymentTransactionNotificationTypes.webhook)
+        {
+            if (string.IsNullOrEmpty(Notification.Secret))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The secret for the HMAC can not be empty", Severity.Error);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(Notification.Address))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Enter an api url address", Severity.Error);
+                return;
+            }
+            if (!Notification.Address.IsValidUrl())
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Address ist not a valid url", Severity.Error);
+                return;
+            }
+            TestWebhookNotificationClass twnc = new(Project);
+            if (!await twnc.TestWebhook(Notification.Address, Notification.Secret))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Webhook does not respond or does not answer with Statuscode 200", Severity.Error);
+                return;
+            }
+        }
+        MudDialog.Close();
+    }
+
+}

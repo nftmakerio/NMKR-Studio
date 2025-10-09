@@ -1,0 +1,555 @@
+﻿@using BlazorDownloadFile
+@using NMKR.Shared.Functions.Api
+@using CsvHelper.Configuration
+
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IConnectionMultiplexer _redis;
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Color="Color.Success" Indeterminate="true" />
+    <MudText Typo="Typo.h6">Sending @progressValue of @countAddresses - Please wait</MudText>
+</MudOverlay>
+<MudOverlay Visible="isVisible2" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Color="Color.Success" Indeterminate="true" />
+</MudOverlay>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.PinDrop" Class="mr-3" />Create Airdrop
+                <hr />
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+
+            <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+                <MudGrid Class="mb-3">
+                    <MudItem xs="12">
+                        <MudRadioGroup @bind-Value="@distribution" T="int">
+                        <MudRadio Color="Color.Dark" Value="0">Random distribution</MudRadio>
+                        <MudRadio Color="Color.Dark" Value="1">Specific distribution</MudRadio>
+                        </MudRadioGroup>
+
+                    </MudItem>
+
+                    <MudItem xs="5">
+                        <InputFile id="fileInput112" OnChange="StartUpload" hidden accept="@(distribution==0?".txt,.csv":".csv")"/>
+
+                        <MudTooltip Color="Color.Dark" Delay="500">
+                            <ChildContent>
+                            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" HtmlTag="label" Color="Color.Surface" Variant="Variant.Filled" Disabled="isSubmitting" for="fileInput112">Upload Addresses</MudButton>
+                            </ChildContent>
+                            <TooltipContent>
+                                @if (distribution == 0)
+                                {
+                                    <MudText Typo="Typo.h6">What does this mean?</MudText>
+                                    <MudText Typo="Typo.body2"><br/>
+                                        Uploaded addresses should be in .txt file with each address on a new line.<br/><br/>
+                                        We filter out empty lines. But there should be no spaces <br/>
+                                        in the addresses or apostrophes or other special characters.<br/><br/>
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.h6">What does this mean?</MudText>
+                                    <MudText Typo="Typo.body2"><br/>
+                                        Uploaded addresses must be a .csv file with the following structure<br/><br/>
+                                        Address,Tokenname,Tokencount<br/>
+                                        addr1.....,Token1,1<br/>
+                                        H8cKe.....,Token1,1<br />
+                                        0x34354.....,Token2,1<br/><br/>
+                                        The CSV File must be coma separated and the first row must be the header information.<br/>
+                                        The Tokenname is the name of the NFT incl. a prefix (if the project has one)<br/><br/>
+                                    </MudText>
+                                }
+                            </TooltipContent>
+                        </MudTooltip>
+
+
+                    </MudItem>
+
+                    <MudItem xs="7">
+                        @if (project.Enabledcoins.Contains(Coin.ADA.ToString()))
+                        {
+                            <MudTooltip Color="Color.Dark" Delay="500">
+                                <ChildContent>
+                                    <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Surface" Variant="Variant.Filled" Disabled="isSubmitting || distribution == 1" OnClick="SearchForAddresses">Use addresses with a specific policy id (Cardano only)</MudButton>
+                                </ChildContent>
+                                <TooltipContent>
+                                    <MudText Typo="Typo.h6">What does this mean?</MudText>
+                                    <MudText Typo="Typo.body2"><br/>
+                                        You can enter a policy-id here and we will search<br/>
+                                        for all addresses that currently hold one or more<br/>
+                                        nfts/tokens with this policy-id.<br/><br/>
+                                    </MudText>
+                                </TooltipContent>
+                            </MudTooltip>
+                        }
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudText>@countAddresses addresses found
+                            @if (showExportButton)
+                            {
+                                <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Surface" Variant="Variant.Text" Disabled="isSubmitting || distribution==1" OnClick="ExportAddresses">Export addresses</MudButton>
+                            }
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudNumericField Label="Count NFT/Tokens each drop" @bind-Value="counttokens" For="(() => counttokens)" Min="1" Max="@(project.Maxsupply == 1 ? 20 : 1000000)"/>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudRadioGroup @bind-Value="onlyonedrop" T="bool">
+                            <MudRadio Value="true" Disabled="distribution==1" Color="Color.Tertiary">Only one drop per Wallet (check addresses for duplicates and stake address)</MudRadio>
+                            <TooltipHelper Description="Only one drop per Wallet (check addresses for duplicates and stake address)" />
+                            <MudRadio Value="false" Color="Color.Secondary">Send drop to ALL addresses (regardless of whether they are present several times in the list)</MudRadio>
+                            <TooltipHelper Description="Send drop to ALL addresses (regardless of whether they are present several times in the list)" />
+                        </MudRadioGroup>
+                    </MudItem>
+
+
+                </MudGrid>
+
+
+            </MudContainer>
+        </DialogContent>
+        <DialogActions>
+             <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+            @if (showprotocolbutton)
+            {
+                <MudButton DropShadow="false"  Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Secondary" OnClick="ShowProtocol">Show protocol</MudButton>
+            }
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="CreateAirdrop" Color="Color.Tertiary" Disabled="isSubmitting || showprotocolbutton">Start Airdrop</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    private bool isSubmitting;
+    private bool isVisible { get; set; }
+    private bool isVisible2 { get; set; }
+    private string[] addresses { get; set; }
+    private readonly HashSet<string> alreadyUsed = new();
+    private int counttokens { get; set; } = 1;
+    private bool onlyonedrop { get; set; } = true;
+    private int countAddresses { get; set; } = 0;
+    private int progressValue { get; set; } = 0;
+    private bool showprotocolbutton { get; set; } = false;
+    private bool showExportButton { get; set; }
+    private int _distribution = 0;
+
+    private int distribution
+    {
+        get { return _distribution; }
+        set
+        {
+            _distribution = value;
+            if (value==1)
+                onlyonedrop = false;
+        }
+    }
+
+    private List<SpecificAirdropClass> specificAirdrop = new();
+
+    private readonly string guid = GlobalFunctions.GetGuid();
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task CreateAirdrop()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+       
+        if (countAddresses == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("No addresses found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Start Airdrop? This can not be undone.",
+            yesText: "Yes, start!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var customer = await (from a in db.Customers
+                where a.Id == project.CustomerId
+                select a).FirstOrDefaultAsync();
+
+            if (customer == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error. Please restart application", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            int c1 = 0;
+            int c2 = 1;
+            if (distribution == 0)
+            {
+                c1 = project.Maxsupply == 1 ? counttokens : 1;
+                c2 = project.Settings.Mintandsendcoupons;
+
+                if (project.Maxsupply == 1)
+                {
+                    if (project.Free1 < countAddresses * c1)
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add($"You may not have enough free nfts for execute this airdrop in your project. You need at least {countAddresses * c1} free nfts", Severity.Error);
+                        isSubmitting = false;
+                        return;
+                    }
+                }
+                else
+                {
+                    if (project.Totaltokens1 - project.Tokenssold1 - project.Tokensreserved1 < countAddresses * c1)
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add($"You may not have enough tokens available for execute this airdrop in your project. You need at least {countAddresses * c1} free tokens", Severity.Error);
+                        isSubmitting = false;
+                        return;
+                    }
+                }
+            }
+            if (distribution == 1)
+            {
+                c1 = 1;
+            }
+
+           
+            if (customer.Newpurchasedmints < countAddresses*c2 * c1)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"You do not have enough mint credit in your account.", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            isVisible = true;
+            StateHasChanged();
+
+
+            if (distribution == 0)
+            {
+                await StartRandomAirdrop(db);
+            }
+            if (distribution == 1)
+            {
+                await StartSpecificAirdrop(db);
+            }
+        }
+        isVisible = false;
+        isSubmitting = false;
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Airdrop was successfully queued. Please watch the mint & send queue for further errors", Severity.Success);
+        showprotocolbutton = true;
+        StateHasChanged();
+      //  MudDialog.Close();
+    }
+
+    private async Task StartSpecificAirdrop(EasynftprojectsContext db)
+    {
+        // Then check the address and call the webapi function
+        for (int i = 0; i < specificAirdrop.Count; i++)
+        {
+            progressValue = i;
+            StateHasChanged();
+          
+           
+
+            var prefix = project.Tokennameprefix ?? "";
+            string tokenname = specificAirdrop[i].Tokenname;
+            string address = specificAirdrop[i].Address.Replace(" ", "");
+            long tokencount = specificAirdrop[i].Tokencount ?? 1;
+         //   Blockchain blockchain1 = specificAirdrop[i].Blockchain;
+
+
+            if (!ConsoleCommand.CheckIfAddressIsValid(db, address, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true, true))
+            {
+                await SaveAirdropResult(db, address, $"Address {address} is not valid ({tokenname}) (1)", project.Id, null);
+                continue;
+            }
+       /*     if (blockchain != blockchain1)
+            {
+                await SaveAirdropResult(db, address, $"Specified Blockchain is not valid for this address {address} ({tokenname})", project.Id, null);
+                continue;
+            }
+            */
+
+            if (blockchain == Blockchain.Unknown)
+            {
+                await SaveAirdropResult(db, address, $"Address {address} is not valid ({tokenname}) (2)", project.Id, null);
+                continue;
+            }
+
+            if (!project.Enabledcoins.Contains(Coin.ADA.ToString()) && blockchain == Blockchain.Cardano)
+            {
+                await SaveAirdropResult(db, address, $"Cardano is not enabled in this project ({tokenname})", project.Id, null);
+                continue;
+            }
+
+            if (!project.Enabledcoins.Contains(Coin.SOL.ToString()) && blockchain == Blockchain.Solana)
+            {
+                await SaveAirdropResult(db, address, $"Solana is not enabled in this project ({tokenname})", project.Id, null);
+                continue;
+            }
+
+            if (!project.Enabledcoins.Contains(Coin.APT.ToString()) && blockchain == Blockchain.Aptos)
+            {
+                await SaveAirdropResult(db, address, $"Aptos is not enabled in this project ({tokenname})", project.Id, null);
+                continue;
+            }
+
+            address = outaddress;
+
+            var nft = await (from a in db.Nfts
+                where a.NftprojectId == project.Id && (prefix + a.Name) == tokenname
+                select a).FirstOrDefaultAsync();
+
+            if (nft == null)
+            {
+                await SaveAirdropResult(db, address, $"Tokenname not found ({tokenname})", project.Id, null);
+                continue;
+            }
+            if (nft.State != "free")
+            {
+                await SaveAirdropResult(db, address, $"NFT State is not free ({tokenname})", project.Id, null);
+                continue;
+            }
+            if (project.Maxsupply == 1 && tokencount>1)
+            {
+                await SaveAirdropResult(db, address, $"You can not specify a token count larger than 1 ({tokenname})", project.Id, null);
+                continue;
+            }
+
+            try
+            {
+                var masres = await ApiFunctions.MintAndSendSpecificAsync(db,project.Uid, nft.Uid, tokencount, address,blockchain);
+                if (masres == null)
+                {
+                    await SaveAirdropResult(db, address, "Error while minting - API reported an error", project.Id, null);
+                    continue;
+                }
+                await SaveAirdropResult(db, address, "Queued for minting", project.Id, masres.MintAndSendId);
+            }
+            catch (Exception e)
+            {
+                await SaveAirdropResult(db, address, e.Message, project.Id, null);
+            }
+        }
+    }
+
+    private async Task StartRandomAirdrop(EasynftprojectsContext db)
+    {
+        for (int i = 0; i < addresses.Length; i++)
+        {
+            addresses[i] = addresses[i].Replace(" ", "");
+        }
+
+
+        for (int i = 0; i < addresses.Length; i++)
+        {
+            progressValue = i;
+            StateHasChanged();
+
+
+            if (!ConsoleCommand.CheckIfAddressIsValid(db, addresses[i], GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true, true))
+            {
+                await SaveAirdropResult(db, addresses[i], "Not a valid cardano address", project.Id, null);
+
+                continue;
+            }
+            addresses[i] = outaddress;
+
+            if (onlyonedrop && FoundDuplicate(addresses, i))
+            {
+                await SaveAirdropResult(db, addresses[i], "Found duplicate or same stake address", project.Id, null);
+                continue;
+            }
+
+            try
+            {
+                var masres = await ApiFunctions.MintAndSendRandomAsync(db, project.Uid, counttokens, addresses[i], blockchain);
+                if (masres == null)
+                {
+                    await SaveAirdropResult(db, addresses[i], "Error while minting", project.Id, null);
+                    continue;
+                }
+                await SaveAirdropResult(db, addresses[i], "Queued for minting", project.Id, masres.MintAndSendId);
+            }
+            catch (Exception e)
+            {
+                await SaveAirdropResult(db, addresses[i], e.Message, project.Id, null);
+            }
+        }
+    }
+
+    private void ShowProtocol()
+    {
+        NavigationManager.NavigateTo($"/showairdropprotocol/{project.Id}/{guid}");
+        MudDialog.Close();
+    }
+
+    private async Task ExportAddresses()
+    {
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filename = path + "airdrop_" + project.Id + "_addresses.txt";
+
+        await File.WriteAllTextAsync(filename,string.Join(Environment.NewLine, addresses));
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filename, AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(filename);
+    }
+
+    private async Task SearchForAddresses()
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<AskForPolicyIdModalWindow>("Enter policy id", maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            isVisible2 = true;
+            StateHasChanged();
+            var policyid = result.Data.ToString();
+
+            var snap = new GetPolicySnapshotClass();
+
+            var assetaddresses = await snap.GetAllAddressesForSpecificPolicyIdAsync(_redis, policyid, true, false, Blockchain.Cardano);
+            addresses = (from a in assetaddresses
+                select a.Address).ToArray();
+            countAddresses = addresses.Length;
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"{countAddresses} Addresses for airdrop found", Severity.Info);
+
+            showExportButton = (addresses.Length > 0);
+        }
+        isVisible2 = false;
+        isSubmitting = false;
+    }
+
+
+    private async Task SaveAirdropResult(EasynftprojectsContext db, string receiveraddress, string message, int nftprojectid, int? mintandsendid)
+    {
+        var airdrop = new Airdrop() {Created = DateTime.Now, Message = message, Recevieraddress = receiveraddress, NftprojectId = nftprojectid, MintandsendId = mintandsendid, Uid = guid};
+        await db.Airdrops.AddAsync(airdrop);
+        await db.SaveChangesAsync();
+    }
+
+    private bool FoundDuplicate(string[] addresses, int i)
+    {
+        var address = addresses[i];
+        if (!alreadyUsed.Add(address))
+            return true;
+
+        string stakeaddress=Bech32Engine.GetStakeFromAddress(address);
+        if (!string.IsNullOrEmpty(stakeaddress))
+        {
+            if (!alreadyUsed.Add(stakeaddress))
+                return true;
+        }
+      
+        return false;
+    }
+
+   
+    private async void StartUpload(InputFileChangeEventArgs e)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var entries = e.GetMultipleFiles(1);
+
+        var path = GeneralConfigurationClass.TempFilePath;
+
+        System.IO.Directory.CreateDirectory(path);
+
+        var addresses1 = await UploadAddresses(entries.FirstOrDefault());
+
+        if (distribution == 0)
+        {
+            if (!string.IsNullOrEmpty(addresses1))
+            {
+                addresses1 = addresses1.Replace("\r", "");
+                addresses = addresses1.Split(new string[] {"\n"}, StringSplitOptions.RemoveEmptyEntries);
+
+                countAddresses = addresses.Length;
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"{countAddresses} Addresses for airdrop found", Severity.Info);
+            }
+            showExportButton = false;
+        }
+        if (distribution == 1)
+        {
+            FillCsvAddresses(addresses1);
+        }
+        isSubmitting = false;
+        StateHasChanged();
+
+    }
+    private void FillCsvAddresses(string addresses, bool hasHeader = true)
+    {
+        try
+        {
+            char d= CsvSeperatorDetector.DetectSeparator(addresses.Split(Environment.NewLine));
+            var config = new CsvConfiguration(CultureInfo.CurrentCulture)
+            {Delimiter = d.ToString(), Encoding = Encoding.UTF8, HasHeaderRecord = hasHeader};
+            using var reader = new StringReader(addresses);
+            using var csv = new CsvReader(reader, config);
+            specificAirdrop = csv.GetRecords<SpecificAirdropClass>().ToList();
+            countAddresses = specificAirdrop.Count;
+        }
+        catch (Exception)
+        {
+            if (hasHeader == false)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Wrong CSV Format. Please check the info text about the csv structure", Severity.Error);
+                return;
+            }
+            FillCsvAddresses(addresses, false);
+        }
+    }
+
+    private async Task<string> UploadAddresses(IBrowserFile a)
+    {
+        try
+        {
+            Stream stream = a.OpenReadStream(51200000);
+            string path1 = GeneralConfigurationClass.TempFilePath + a.Name;
+            FileStream fs = File.Create(path1);
+            await stream.CopyToAsync(fs);
+            stream.Close();
+            fs.Close();
+
+            return await File.ReadAllTextAsync(path1);
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error while uploading " + a.Name + "(" + ex.Message + ")", Severity.Error);
+            return "";
+        }
+
+    }
+}

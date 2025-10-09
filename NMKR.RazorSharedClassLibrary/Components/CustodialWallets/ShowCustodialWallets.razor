@@ -1,0 +1,184 @@
+﻿@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudTable Elevation="0" Items="@wallets" Class="border" Style="border-color:#E0E0E0 " Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Custodialwallet" Loading="@progressIsVisible">
+    <HeaderContent>
+        <MudTh>Walletname</MudTh>
+        <MudTh>Wallettype</MudTh>
+        <MudTh>Address</MudTh>
+        <MudTh>State</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>
+            @context.Walletname
+        </MudTd>
+        <MudTd>
+            @switch (context.Wallettype)
+            {
+                case "base":
+                    <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Base</NMKRChip>
+                    break;
+                case "enterprise":
+                    <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Enterprise</NMKRChip>
+                    break;
+            }
+        </MudTd>
+        <MudTd>
+            <ShowAddress Address="@context.Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+        </MudTd>
+
+        <MudTd>
+            @switch (context.State)
+            {
+                case "active":
+                    <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                    break;
+                case "notactive":
+                    <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                    break;
+                case "blocked":
+                    <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Blocked</NMKRChip>
+                    break;
+            }
+        </MudTd>
+
+        <MudTd Style="text-align: right">
+            <MudNavMenu Class="mud-width-full">
+                <MudNavLink @onclick="() => ShowBalance(context.Id)" Icon="@Icons.Material.Filled.Wallet">Show Balance</MudNavLink>
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">Edit</MudNavLink>
+                <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete">Delete</MudNavLink>
+            </MudNavMenu>
+        </MudTd>
+    </RowTemplate>
+
+    <PagerContent>
+        <MudTablePager HideRowsPerPage="true" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Parameter]
+    public int customerid { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private bool progressIsVisible { get; set; } = false;
+    private bool isSubmitting;
+    private List<Custodialwallet> wallets = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+    }
+
+
+    private async Task ShowBalance(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        var p = await (from a in db.Custodialwallets
+            where a.Id == id && a.CustomerId == customerid
+            select a).FirstOrDefaultAsync();
+        if (p != null)
+        {
+            var utxo = await ConsoleCommand.GetNewUtxoAsync(p.Address);
+            if (utxo == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error - Please contact support", Severity.Error);
+            }
+            var parameters = new DialogParameters {{nameof(ShowUtxoDialogbox.utxo), utxo}, {nameof(ShowUtxoDialogbox.Address), p.Address}};
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<ShowUtxoDialogbox>("Balance", parameters, maxWidth);
+            var result = await dialog.Result;
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var apk = await (from a in db.Custodialwallets
+            where a.Id == id
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false};
+        var parameters = new DialogParameters { { nameof(EditCustodialWalletDialogbox.wallet),apk } };
+        var dialog = await DialogService.ShowAsync<EditCustodialWalletDialogbox>("Edit Managed Wallet", parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await ReloadData();
+        }
+        isSubmitting = false;
+    }
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Are you sure you want to delete the wallet?",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+
+            await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+            var p = await (from a in db.Custodialwallets
+                where a.Id == id && a.CustomerId == customerid
+                select a).FirstOrDefaultAsync();
+            if (p != null)
+            {
+                var utxo = await ConsoleCommand.GetNewUtxoAsync(p.Address);
+                if (utxo.LovelaceSummary > 0)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Wallet contains ADA. Deletion not possible", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+
+                p.State = "deleted";
+                await db.SaveChangesAsync();
+                await ReloadData();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Wallet deleted", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error - Please contact support", Severity.Error);
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+    public async Task ReloadData()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        progressIsVisible = true;
+        StateHasChanged();
+
+        wallets = await (from a in db.Custodialwallets
+                           where a.CustomerId == customerid && a.State!="deleted"
+                           select a).AsNoTracking().ToListAsync();
+
+        progressIsVisible = false;
+        StateHasChanged();
+    }
+}

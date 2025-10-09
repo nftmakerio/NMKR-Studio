@@ -1,0 +1,50 @@
+﻿@page
+@model NMKR.Pro.Pages.ErrorModel
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <base href="~/" />
+
+    <meta charset="utf-8">
+    <title>NMKR Studio - Build your own NFT Projects on the Cardano Blockchain</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="EasyNftProject - Create your own NFT Project on Cardano">
+    <!-- Main styles for this application-->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body class="c-app flex-row align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="clearfix">
+                    <h1 class="float-left display-3 mr-4">500</h1>
+                    <p class="text-muted">Internal Error. Please contact the support.</p>
+
+                       <p>
+                    <strong>Server IP:</strong> <code>@Model.ServerIp</code>
+                </p>    
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- CoreUI and necessary plugins-->
+    <script src="vendors/coreui/coreui-pro/js/coreui.bundle.min.js"></script>
+    <!--[if IE]><!-->
+    <script>
+      document.addEventListener("DOMContentLoaded", function(event) {
+        setTimeout(function() {
+          document.body.classList.remove('c-no-layout-transition')
+        }, 2000);
+      });
+    </script>
+
+</body>
+</html>

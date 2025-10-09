@@ -1,0 +1,31 @@
+﻿@inject ISnackbar Snackbar   
+@inject ClipboardService ClipboardService
+@inject IStringLocalizer _loc
+
+<MudTooltip Text="@("Copy "+ name + " to clipboard")" Placement="Placement.Start">
+       <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" @onclick='(() => CopyToClipboardx(name, content))'></MudIconButton>
+   </MudTooltip>
+@code {
+   [Parameter]
+   public string name { get; set; }
+
+    [Parameter]
+    public string content { get; set; }
+
+
+    private async Task CopyToClipboardx(string name, string st)
+    {
+        try
+        {
+            await ClipboardService.WriteTextAsync(st);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(name + @_loc[" copied to clipboard"], Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Copy to clipboard was denied"], Severity.Error);
+        }
+    }
+
+}

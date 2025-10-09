@@ -1,0 +1,647 @@
+﻿@using BlazorDownloadFile
+@using CsvHelper.Configuration
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.BITCOIN
+@using NMKR.Shared.Blockchains.Cardano
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Add/Edit Sale Condition
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudGrid>
+                <MudItem xs="12" md="12">
+                    <BlockchainSelector @bind-Value="salecondition.Blockchain" project="@project"></BlockchainSelector>
+                </MudItem>
+
+                <MudItem xs="12" md="12">
+                    <MudSelect MaxHeight="500" T="string" Label="Condition" @bind-Value="salecondition.Condition">
+
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.walletcontainspolicyid))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.walletcontainspolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.walletdoesnotcontainpolicyid))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.walletdoesnotcontainpolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.walletdoescontainmaxpolicyid))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.walletdoescontainmaxpolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.walletcontainsminpolicyid))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.walletcontainsminpolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.walletmustcontainminofpolicyid))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.walletmustcontainminofpolicyid)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.countedwhitelistedaddresses))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.countedwhitelistedaddresses)</MudSelectItem>
+                        @if (salecondition.Blockchain == Blockchain.Cardano.ToString())
+                        {
+                            <MudSelectItem Value="@(nameof(SaleConditionsTypes.stakeonpool))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.stakeonpool)</MudSelectItem>
+                        }
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.blacklistedaddresses))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.blacklistedaddresses)</MudSelectItem>
+                        <MudSelectItem Value="@(nameof(SaleConditionsTypes.onlyonesale))">@GlobalFunctions.GetEnumDescription(SaleConditionsTypes.onlyonesale)</MudSelectItem>
+
+                    </MudSelect>
+                </MudItem>
+
+                @if (salecondition.Condition != nameof(SaleConditionsTypes.whitlistedaddresses) &&
+                     salecondition.Condition != nameof(SaleConditionsTypes.blacklistedaddresses) &&
+                     salecondition.Condition != nameof(SaleConditionsTypes.countedwhitelistedaddresses) &&
+                     salecondition.Condition != nameof(SaleConditionsTypes.onlyonesale))
+                {
+                    @for (int i = 0; i < salecondition.AddPolicyid.Count; i++)
+                    {
+                        var i1 = i;
+                        var b = 12;
+                        if (i == salecondition.AddPolicyid.Count - 1 && salecondition.AddPolicyid.Count < 15)
+                            b = 11;
+
+                        <MudItem xs="@b" md="@b">
+                            @if (salecondition.Condition == nameof(SaleConditionsTypes.stakeonpool))
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label=@((i1 == 0) ? "BECH32 Stake Pool ID" : "or BECH32 Stake Pool ID") @bind-Value="salecondition.AddPolicyid[i1]" Lines="1" Immediate="true"/>
+                            }
+                            else
+                            {
+                                <MudTextField Variant="Variant.Outlined" Label=@((i1 == 0) ? "Policy ID/Collection" : "or Policy ID/Collection") @bind-Value="salecondition.AddPolicyid[i1]" Lines="1" Immediate="true"/>
+                            }
+                        </MudItem>
+                        if (b == 11)
+                        {
+                            <MudItem xs="1" md="1">
+                                <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small" @onclick="AddPolicyId"></MudIconButton>
+                            </MudItem>
+                        }
+                    }
+                }
+                @if (salecondition.Condition == nameof(SaleConditionsTypes.whitlistedaddresses) || salecondition.Condition == nameof(SaleConditionsTypes.blacklistedaddresses))
+                {
+                    <MudItem xs="12" md="12">
+                        <MudText Typo="Typo.body2">@GlobalFunctions.CountLines(salecondition.Condition == nameof(SaleConditionsTypes.whitlistedaddresses) ? salecondition.WhitelistedAddresses : salecondition.BlacklistedAddresses) entries</MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <InputFile id="fileInput112" OnChange="StartUpload" hidden accept=".txt, .whitelistedaddresses"/>
+
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" HtmlTag="label" Color="Color.Surface" Variant="Variant.Filled" Disabled="isSubmitting" for="fileInput112">Upload addresses (.txt file)</MudButton>
+                    </MudItem>
+
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="DownloadAddresses" Disabled="isSubmitting">Download addresses (.txt file)</MudButton>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="ClearAddresses" Disabled="isSubmitting">Clear addresses</MudButton>
+                    </MudItem>
+                }
+
+                @if (salecondition.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+                {
+                    <MudItem xs="12" md="12">
+                        <MudText Typo="Typo.body2">@countedWhitelistAddresses.Count entries</MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <InputFile id="fileInput112a" OnChange="StartUpload" hidden accept=".csv"/>
+
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" HtmlTag="label" Color="Color.Surface" Variant="Variant.Filled" Disabled="isSubmitting" for="fileInput112a">Upload addresses (.csv file)</MudButton>
+                        <TooltipHelper Description="CSV Structure Saleconditions"></TooltipHelper>
+                    </MudItem>
+
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="DownloadAddresses2" Disabled="(isSubmitting)">Download addresses (.csv file)</MudButton>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudButton DropShadow="false" Color="Color.Surface" Class="ml-3 rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="ClearAddresses" Disabled="isSubmitting">Clear addresses</MudButton>
+                    </MudItem>
+                }
+
+
+                <MudItem xs="12" md="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Policy Projectname (optional - can be shown on the Payment Gateway if the transaction fails)" @bind-Value="salecondition.Projectname" Lines="1" Immediate="true" Class="mb-1"/>
+                </MudItem>
+                <MudItem xs="6" md="6">
+                    <MudNumericField Label="Max./Min. NFT" T="long?" @bind-Value="salecondition.Maxvalue" For="(() => salecondition.Maxvalue)" Min="0" Max="100000" Disabled="@(salecondition.Condition != nameof(SaleConditionsTypes.walletdoescontainmaxpolicyid) && salecondition.Condition != nameof(SaleConditionsTypes.walletmustcontainminofpolicyid))"/>
+                </MudItem>
+                <MudItem xs="6" md="6">
+                    <MudTextField Variant="Variant.Outlined" Label="Description (optional)" @bind-Value="salecondition.Description" Lines="1" Immediate="true" Class="mb-1"/>
+                </MudItem>
+                @if (salecondition.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+                {
+                    <MudItem xs="12" md="12">
+                        <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="salecondition.CumulateMaxCountPerStakeAddress" Color="Color.Primary">Cumulate max count per stake address</MudSwitch>
+                    </MudItem>
+                }
+                <MudItem xs="12" md="12">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="salecondition.Activated" Color="Color.Primary">Condition activated</MudSwitch>
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Disabled="@(_saving || isSubmitting)" OnClick="SaveCondition" Variant="Variant.Filled" Color="Color.Tertiary">
+            @if (_saving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+            }
+            <MudText>Save</MudText>
+        </MudButton>
+
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public AddSaleCondtionClass salecondition { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    private bool isSubmitting;
+    private long multiplier = 1;
+    private bool _saving { get; set; }
+    private string _savetext { get; set; }
+
+    bool success;
+    string[] errors = { };
+    MudForm form;
+
+    void Cancel() => MudDialog.Cancel();
+
+    private List<CountedWhitelistAddressesClass> countedWhitelistAddresses = new();
+
+   
+    protected override async Task OnParametersSetAsync()
+    {
+        if (salecondition !=null && salecondition.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            countedWhitelistAddresses = await (from a in db.Countedwhitelists
+                where a.SaleconditionsId == salecondition.Id
+                select new CountedWhitelistAddressesClass() {Address = a.Address, MaxCount = a.Maxcount}).AsNoTracking().ToListAsync();
+        }
+        if (project != null)
+            multiplier =Math.Max(1,project.Multiplier);
+    }
+
+    private async Task AddPolicyId()
+    {
+        if (salecondition.AddPolicyid.Count < 15)
+        {
+            salecondition.AddPolicyid.Add("");
+        }
+
+    }
+
+    private async void StartUpload(InputFileChangeEventArgs e)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var entries = e.GetMultipleFiles(1);
+
+        var path = GeneralConfigurationClass.TempFilePath;
+
+        Directory.CreateDirectory(path);
+
+        string addresses = await UploadAddresses(entries.FirstOrDefault());
+        if (!string.IsNullOrEmpty(addresses))
+        {
+            if (salecondition.Condition==nameof(SaleConditionsTypes.whitlistedaddresses))
+                salecondition.WhitelistedAddresses = addresses;
+            if (salecondition.Condition==nameof(SaleConditionsTypes.blacklistedaddresses))
+                salecondition.BlacklistedAddresses = addresses;
+
+            if (salecondition.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+                FillCountedWhitelist(addresses);
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private void FillCountedWhitelist(string addresses, bool hasHeader = true)
+    {
+        try
+        {
+            char d= CsvSeperatorDetector.DetectSeparator(addresses.Split(Environment.NewLine));
+            var config = new CsvConfiguration(CultureInfo.CurrentCulture)
+            {Delimiter = d.ToString(), Encoding = Encoding.UTF8, HasHeaderRecord = hasHeader};
+            using var reader = new StringReader(addresses);
+            using var csv = new CsvReader(reader, config);
+            var adr = csv.GetRecords<CountedWhitelistAddressesClass>();
+
+
+            foreach (var adr1  in adr)
+            {
+                if (countedWhitelistAddresses.FirstOrDefault(x => x.Address == adr1.Address) == null)
+                {
+                    countedWhitelistAddresses.Add(adr1);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            if (hasHeader == false)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Wrong CSV Format. Please check the info text about the csv structure", Severity.Error);
+                return;
+            }
+            FillCountedWhitelist(addresses, false);
+        }
+    }
+
+    private async Task<string> UploadAddresses(IBrowserFile a)
+    {
+        try
+        {
+            Stream stream = a.OpenReadStream(51200000);
+            string path1 = GeneralConfigurationClass.TempFilePath + a.Name;
+            FileStream fs = File.Create(path1);
+            await stream.CopyToAsync(fs);
+            stream.Close();
+            fs.Close();
+
+            return await File.ReadAllTextAsync(path1);
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Error while uploading " + a.Name + "(" + ex.Message + ")", Severity.Error);
+            return "";
+        }
+
+    }
+
+    private async Task DownloadAddresses()
+    {
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname)+ (salecondition.Condition==nameof(SaleConditionsTypes.whitlistedaddresses) ? ".whitelistedaddresses" : ".blacklistedaddresses");
+        byte[] AsBytes =  Encoding.UTF8.GetBytes(salecondition.Condition==nameof(SaleConditionsTypes.whitlistedaddresses) ? salecondition.WhitelistedAddresses : salecondition.BlacklistedAddresses);  
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+        await BlazorDownloadFileService.DownloadFile(filteredfilename, AsBase64String, "application/octet-stream");
+    }
+    private async Task DownloadAddresses2()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = false;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var wl = await (from a in db.Countedwhitelists
+                             where a.SaleconditionsId == (salecondition.Id??0)
+                             select new CountedWhitelistAddressesClass(){Address = a.Address, MaxCount = a.Maxcount}).AsNoTracking().ToListAsync();
+
+
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = GlobalFunctions.FilterTokenname("whitelist");
+        string csvfilename = path + filteredfilename + ".csv";
+        System.IO.Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+        await using (var writer = new StreamWriter(csvfilename))
+        await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            await csv.WriteRecordsAsync(wl);
+        }
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(csvfilename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".csv", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        isSubmitting = false;
+    }
+
+    private async Task ClearAddresses()
+    {
+        salecondition.WhitelistedAddresses = "";
+        salecondition.BlacklistedAddresses = "";
+
+        countedWhitelistAddresses.Clear();
+
+            if (salecondition.Id != null)
+            {
+                await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+                string sql = $"delete from countedwhitelist where saleconditions_id={(int) salecondition.Id}";
+                await GlobalFunctions.ExecuteSqlWithFallbackAsync(db, sql);
+            }
+    }
+
+    private async Task SaveCondition()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(salecondition.Condition))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have to select a condition", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (salecondition.Condition != nameof(SaleConditionsTypes.whitlistedaddresses) && 
+            salecondition.Condition !=nameof(SaleConditionsTypes.blacklistedaddresses) && 
+            salecondition.Condition != nameof(SaleConditionsTypes.countedwhitelistedaddresses) && 
+            salecondition.Condition !=nameof(SaleConditionsTypes.onlyonesale))
+        {
+            string stakepolicy = salecondition.Condition == nameof(SaleConditionsTypes.stakeonpool) ? "Stake" : "Policy";
+
+            IBlockchainFunctions blockchainFunctions = null;
+            switch (salecondition.Blockchain.ToEnum<Blockchain>())
+            {
+                case Blockchain.Cardano:
+                    blockchainFunctions = new CardanoBlockchainFunctions();
+                    break;
+                case Blockchain.Solana:
+                    blockchainFunctions = new SolanaBlockchainFunctions();
+                    break;
+                case Blockchain.Aptos:
+                    blockchainFunctions = new AptosBlockchainFunctions();
+                    break;
+                case Blockchain.Bitcoin:
+                    blockchainFunctions = new BitcoinBlockchainFunctions();
+                    break;
+            }
+
+
+            var i1 = 0;
+            foreach (var policyid in salecondition.AddPolicyid)
+            {
+                i1++;
+                if (string.IsNullOrEmpty(policyid) && i1 == 1)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("You have to specify a "+ stakepolicy+" ID", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+                if (blockchainFunctions==null)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Blockchain not supported", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+
+                var checkPolicy = blockchainFunctions.CheckPolicyId(policyid);
+                if (!string.IsNullOrEmpty(checkPolicy))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add(stakepolicy+" ID " + i1 + " is not valid."+checkPolicy, Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+        }
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (salecondition.Id == null)
+        {
+            Nftprojectsalecondition pl = new()
+            {
+                NftprojectId = salecondition.NftProjectId,
+                Condition = salecondition.Condition,
+                Description = salecondition.Description,
+                Maxvalue = salecondition.Maxvalue * Math.Max(1,project.Multiplier),
+                Policyid = salecondition.AddPolicyid.Any() ? salecondition.AddPolicyid.First() : "",
+                State = salecondition.Activated ? "active" : "notactive",
+                Policyprojectname = salecondition.Projectname,
+                Whitlistaddresses = salecondition.WhitelistedAddresses,
+                    Onlyonesaleperwhitlistaddress = !salecondition.CumulateMaxCountPerStakeAddress,
+                Blacklistedaddresses = salecondition.BlacklistedAddresses,
+                    Blockchain = salecondition.Blockchain
+            };
+
+            int i2 = 0;
+            for (int i = 1; i < salecondition.AddPolicyid.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(salecondition.AddPolicyid[i]))
+                    i2++;
+
+                switch (i2)
+                {
+                    case 1:
+                        pl.Policyid2 = salecondition.AddPolicyid[i];
+                        break;
+                    case 2:
+                        pl.Policyid3 = salecondition.AddPolicyid[i];
+                        break;
+                    case 3:
+                        pl.Policyid4 = salecondition.AddPolicyid[i];
+                        break;
+                    case 4:
+                        pl.Policyid5 = salecondition.AddPolicyid[i];
+                        break;
+                    case 5:
+                        pl.Policyid6 = salecondition.AddPolicyid[i];
+                        break;
+                    case 6:
+                        pl.Policyid7 = salecondition.AddPolicyid[i];
+                        break;
+                    case 7:
+                        pl.Policyid8 = salecondition.AddPolicyid[i];
+                        break;
+                    case 8:
+                        pl.Policyid9 = salecondition.AddPolicyid[i];
+                        break;
+                    case 9:
+                        pl.Policyid10 = salecondition.AddPolicyid[i];
+                        break;
+                    case 10:
+                        pl.Policyid11 = salecondition.AddPolicyid[i];
+                        break;
+                    case 11:
+                        pl.Policyid12 = salecondition.AddPolicyid[i];
+                        break;
+                    case 12:
+                        pl.Policyid13 = salecondition.AddPolicyid[i];
+                        break;
+                    case 13:
+                        pl.Policyid14 = salecondition.AddPolicyid[i];
+                        break;
+                    case 14:
+                        pl.Policyid15 = salecondition.AddPolicyid[i];
+                        break;
+                }
+            }
+
+            if ((salecondition.Condition == nameof(SaleConditionsTypes.walletdoescontainmaxpolicyid) || salecondition.Condition == nameof(SaleConditionsTypes.walletmustcontainminofpolicyid)) && (salecondition.Maxvalue == null || salecondition.Maxvalue == 0))
+            {
+                pl.Maxvalue = 1;
+            }
+
+            await db.Nftprojectsaleconditions.AddAsync(pl);
+            await db.SaveChangesAsync();
+
+            salecondition.Id = pl.Id;
+        }
+        else
+        {
+            var pl = await (from a in db.Nftprojectsaleconditions
+                            where a.Id == salecondition.Id && a.NftprojectId == salecondition.NftProjectId
+                            select a).FirstOrDefaultAsync();
+            if (pl != null)
+            {
+                pl.Description = salecondition.Description;
+                pl.Condition = salecondition.Condition;
+                pl.Maxvalue = salecondition.Maxvalue;
+                pl.Policyid = salecondition.AddPolicyid.Any() ? salecondition.AddPolicyid.First() : "";
+                pl.State = salecondition.Activated ? "active" : "notactive";
+                pl.Policyprojectname = salecondition.Projectname;
+                pl.Policyid2 = "";
+                pl.Policyid3 = "";
+                pl.Policyid4 = "";
+                pl.Policyid5 = "";
+                pl.Policyid6 = "";
+                pl.Policyid7 = "";
+                pl.Policyid8 = "";
+                pl.Policyid9 = "";
+                pl.Policyid10 = "";
+                pl.Policyid11 = "";
+                pl.Policyid12 = "";
+                pl.Policyid13 = "";
+                pl.Policyid14 = "";
+                pl.Policyid15 = "";
+                pl.Whitlistaddresses = salecondition.WhitelistedAddresses;
+                pl.Onlyonesaleperwhitlistaddress = !salecondition.CumulateMaxCountPerStakeAddress;
+                pl.Blacklistedaddresses = salecondition.BlacklistedAddresses;
+                pl.Blockchain = salecondition.Blockchain;
+
+                int i2 = 0;
+                for (int i = 1; i < salecondition.AddPolicyid.Count; i++)
+                {
+                    if (!string.IsNullOrEmpty(salecondition.AddPolicyid[i]))
+                        i2++;
+
+                    switch (i2)
+                    {
+                        case 1:
+                            pl.Policyid2 = salecondition.AddPolicyid[i];
+                            break;
+                        case 2:
+                            pl.Policyid3 = salecondition.AddPolicyid[i];
+                            break;
+                        case 3:
+                            pl.Policyid4 = salecondition.AddPolicyid[i];
+                            break;
+                        case 4:
+                            pl.Policyid5 = salecondition.AddPolicyid[i];
+                            break;
+                        case 5:
+                            pl.Policyid6 = salecondition.AddPolicyid[i];
+                            break;
+                        case 6:
+                            pl.Policyid7 = salecondition.AddPolicyid[i];
+                            break;
+                        case 7:
+                            pl.Policyid8 = salecondition.AddPolicyid[i];
+                            break;
+                        case 8:
+                            pl.Policyid9 = salecondition.AddPolicyid[i];
+                            break;
+                        case 9:
+                            pl.Policyid10 = salecondition.AddPolicyid[i];
+                            break;
+                        case 10:
+                            pl.Policyid11 = salecondition.AddPolicyid[i];
+                            break;
+                        case 11:
+                            pl.Policyid12 = salecondition.AddPolicyid[i];
+                            break;
+                        case 12:
+                            pl.Policyid13 = salecondition.AddPolicyid[i];
+                            break;
+                        case 13:
+                            pl.Policyid14 = salecondition.AddPolicyid[i];
+                            break;
+                        case 14:
+                            pl.Policyid15 = salecondition.AddPolicyid[i];
+                            break;
+                    }
+                }
+                if ((salecondition.Condition == nameof(SaleConditionsTypes.walletdoescontainmaxpolicyid) || salecondition.Condition == nameof(SaleConditionsTypes.walletmustcontainminofpolicyid)) && (salecondition.Maxvalue == null || salecondition.Maxvalue == 0))
+                {
+                    pl.Maxvalue = 1;
+                }
+            }
+        }
+        await db.SaveChangesAsync();
+
+        if (salecondition.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+            await SaveCountedWhitelistAddresses(db);
+
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+    private async Task SaveCountedWhitelistAddresses(EasynftprojectsContext db)
+    {
+        string sql="delete from countedwhitelist where saleconditions_id=" + salecondition.Id;
+
+        await db.Database.ExecuteSqlRawAsync(sql);
+        _saving = true;
+        _savetext = "";
+        int i = 0;
+        foreach (var countedWhitelistAddr in countedWhitelistAddresses)
+        {
+            i++;
+            _savetext = i + " of " + countedWhitelistAddresses.Count;
+            StateHasChanged();
+
+            if (!ConsoleCommand.CheckIfAddressIsValid(db, countedWhitelistAddr.Address, GlobalFunctions.IsMainnet(), out string adaaddress, out Blockchain blockchain, true, true)) continue;
+            
+            var stake = Bech32Engine.GetStakeFromAddress(adaaddress);
+            var z = await (from a in db.Countedwhitelists
+                where (a.Address == adaaddress || (a.Stakeaddress == stake && string.IsNullOrEmpty(stake))) &&
+                      a.SaleconditionsId == (int) salecondition.Id
+                select a).FirstOrDefaultAsync();
+
+            if (z == null)
+            {
+                Countedwhitelist cl = new()
+                {
+                    Address = adaaddress,
+                    Maxcount = countedWhitelistAddr.MaxCount * multiplier,
+                    SaleconditionsId = (int) salecondition.Id,
+                    Created = DateTime.Now,
+                    Stakeaddress = stake
+                };
+                await db.AddAsync(cl);
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+              //  if (z.Address == adaaddress)
+                {
+                    if (salecondition.CumulateMaxCountPerStakeAddress)
+                        z.Maxcount += countedWhitelistAddr.MaxCount * multiplier;
+                    else
+                    {
+                        if ((countedWhitelistAddr.MaxCount * multiplier) > z.Maxcount)
+                            z.Maxcount = countedWhitelistAddr.MaxCount * multiplier;
+                    }
+                    await db.SaveChangesAsync();
+                }
+            }
+        }
+        _saving = false;
+        _savetext = "";
+    }
+}

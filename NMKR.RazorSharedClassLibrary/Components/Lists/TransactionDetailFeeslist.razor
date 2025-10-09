@@ -1,0 +1,48 @@
+﻿@using NMKR.Shared.Functions.Extensions
+<MudText Typo="Typo.inherit">Network Fees:</MudText>
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Fee ?? 0), 5, context.Coin.ToEnum<Coin>()))" />
+<br />
+<MudText Typo="Typo.inherit">Minting Fees:</MudText>
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Mintingcostsada ?? 0), 5, context.Coin.ToEnum<Coin>()))" />
+<br />
+<MudText Typo="Typo.inherit">Add.Payout Wallets:</MudText>
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.TransactionsAdditionalpayouts?.Sum(x => x.Lovelace)), 5, context.Coin.ToEnum<Coin>()))" />
+@*<MudText Typo="Typo.inherit">Send to seller:</Mudtext>
+
+@if (context.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress))
+{
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Projectada ?? 0), 5,context.Coin.ToString()))"></DisplayComaNumbers>
+}
+else
+{
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency(0, 5,context.Coin.ToString()))"></DisplayComaNumbers>
+}
+@if (context.Priceintokensquantity != null)
+{
+    <br/>
+    <MudText Typo="Typo.body2">@(context.Priceintokensquantity + " x " + GlobalFunctions.GetStartAndEnd(context.Priceintokenspolicyid) + "." + context.Priceintokenstokennamehex.FromHex())</MudText>
+}
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Mintingcostsada ?? 0), 5, context.Coin.ToString()))" /><br />
+<MudText Typo="Typo.inherit">Discounts:</Mudtext>
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Discount ?? 0), 5, context.Coin.ToString()))" /> *@
+@if (IsAdmin)
+{
+    <br/>
+    <MudText Typo="Typo.inherit">NMKR Costs:</MudText>
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency(context.Nmkrcosts, 5, context.Coin.ToEnum<Coin>()))" />
+}
+
+@if (context.Metadatastandard=="cip68")
+{
+    <br />
+    <MudText Typo="Typo.inherit">CIP68 Reference Token Costs:</MudText>
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency(context.Cip68referencetokenminutxo, 5, context.Coin.ToEnum<Coin>()))" />
+}
+
+
+@code {
+    [Parameter]
+    public Transaction context { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; } = false;
+}

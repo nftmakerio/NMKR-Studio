@@ -1,0 +1,31 @@
+﻿<MudDialog Gutters="false">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />Important Informations
+            <hr/>
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+       <MudContainer Style="height: 450px; overflow-y: scroll">
+   @*         <iframe width="560" height="315" src="https://www.youtube.com/embed/JwrISjY3frQ
+" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> *@
+            <MudText Style="white-space: pre-wrap;">@Informationtext</MudText>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Ok">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string Informationtext { get; set; }
+
+    private void Ok()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

@@ -1,0 +1,27 @@
+﻿@switch (Blockchain)
+  {
+      case Blockchain.Cardano:
+        @:
+        <img style="vertical-align:middle" src="/images/crypto/ada.svg" alt="Cardano" width="15">
+          break;
+      case Blockchain.Solana:
+        @:
+        <img style="vertical-align:middle" src="/images/crypto/sol.svg" alt="Solana" width="15">
+          break;
+      case Blockchain.Aptos:
+        @:
+        <img style="vertical-align:middle" src="/images/crypto/apt.svg" alt="Aptos" width="15">
+          break;
+  }
+  @if (ShowText)
+  {
+    <span class="ml-5">@Blockchain.ToString()</span>
+  }
+@code {
+    [Parameter]
+    public Blockchain Blockchain { get; set; }
+
+    [Parameter]
+    public bool ShowText { get; set; } = false;
+
+}

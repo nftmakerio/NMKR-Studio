@@ -1,0 +1,58 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%">
+            <MudText Typo="Typo.body1">@Setting.Description</MudText>
+            <br/>
+            <UploadImageHash @bind-ImageHash="@ImageValue" FileTypes="@Setting.Allowedfiletypes"
+                                DescriptionText="@GetDescriptionText(Setting)" FileSize="new System.Drawing.Size(Setting.Maxwidth??32, Setting.Maxheight??32)" />
+        </td>
+        <td>
+            <div class="ml-10">
+              
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+    [Parameter] 
+    public string ImageValue
+    {
+        get => _imageValue;
+        set
+        {
+            if (value != _imageValue)
+            {
+                _imageValue = value;
+                ImageValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> ImageValueChanged { get; set; }
+
+
+    private string _imageValue = "";
+    private string GetDescriptionText(Storesetting setting)
+    {
+        string res = "";
+        if ((setting.Maxheight == null || setting.Maxheight == 0) && setting.Maxwidth != null && setting.Maxwidth != 0)
+            res = $"Recommended width: {setting.Maxwidth} pixel";
+
+        if ((setting.Maxwidth == null || setting.Maxwidth == 0) && setting.Maxheight != null && setting.Maxheight != 0)
+            res = $"Recommended height: {setting.Maxheight} pixel";
+
+        if (string.IsNullOrEmpty(res))
+            res = $"Recommended size: {Setting.Maxwidth} x {Setting.Maxheight}";
+
+        if (!setting.Mandantory)
+            res += " (optional)";
+
+        res = setting.Allowedfiletypes + " - " + res;
+
+        return res;
+    }
+}

@@ -1,0 +1,198 @@
+﻿@inject ISnackbar Snackbar
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Add/Edit Auction
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudForm>
+            <MudGrid>
+                <MudItem xs="12" >
+                        <MudTextField Variant="Variant.Outlined" Label="Auctionname" @bind-Value="auction.AuctionName" Lines="1"  />
+                </MudItem>
+
+                <MudItem xs="12" >
+                    <MudSelect T="string" Label="Payout Wallet" @bind-Value="auction.SellerAddress">
+                        @foreach (var w in wallets)
+                        {
+                            <MudSelectItem Value="@w.Walletaddress">@(w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")")</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                    <MudItem xs="4">
+                    <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" Label="Auction runs until (date)" Color="Color.Tertiary" DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" @bind-Date="auction.RunsUntil" />
+                    </MudItem>
+                <MudItem xs="4">
+                    <MudTimePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" Label="Auction runs until (time)" Color="Color.Tertiary" @bind-Time="auction.RunsUntilTime" />
+                </MudItem>
+                <MudItem xs="4" >
+                    <MudNumericField T="double" @bind-Value="auction.MinBet"  Immediate="true" Label="Min. bet in ADA"  Min="3" Max="1000000" />
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="SaveCondition" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public EditAuctionClass auction { get; set; }
+
+    [Parameter]
+    public int CustomerId { get; set; }
+
+
+    private bool isSubmitting;
+
+    private List<Customerwallet> wallets = new();
+
+    void Cancel() => MudDialog.Cancel();
+    protected override async Task OnParametersSetAsync()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        wallets = await (from a in db.Customerwallets
+                         where a.CustomerId == CustomerId && a.State == "active"
+            select a).ToListAsync();
+    }
+
+    private async Task SaveCondition()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(auction.AuctionName))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter a name of the auction", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (string.IsNullOrEmpty(auction.SellerAddress))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must submit a payout address", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (auction.RunsUntil == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must submit an end date", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (auction.RunsUntilTime == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must submit an end time", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (auction.RunsUntil < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Auction end must be the future", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (auction.RunsUntil > DateTime.Now.AddDays(30))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Auction end can not be longer than 30 days in the future", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (auction.MinBet < 3)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Minimum bet must be 3 ADA", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (auction.Id != null)
+        {
+            var auc = await (from a in db.Legacyauctions
+                             where a.Id == auction.Id && a.CustomerId == CustomerId
+                select a).FirstOrDefaultAsync();
+            if (auc != null)
+            {
+                auc.Auctionname = auction.AuctionName;
+                auc.Selleraddress = auction.SellerAddress;
+                auc.Runsuntil = (((DateTime) auction.RunsUntil).Date) + (TimeSpan) auction.RunsUntilTime;
+                auc.Minbet = (long)(auction.MinBet * 1000000);
+                await db.SaveChangesAsync();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Auction changed", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error. Please contact the support", Severity.Error);
+                isSubmitting = false;
+                return; 
+            }
+        }
+        else
+        {
+            var newaddress=ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+            if (newaddress.ErrorCode != 0)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error. Please contact the support", Severity.Error);
+                isSubmitting = false;
+                return; 
+            }
+
+            var salt = GlobalFunctions.GetGuid();
+            Legacyauction la = new()
+            {
+                Actualbet = 0, 
+                Address = newaddress.Address, 
+                Created = DateTime.Now,
+                Minbet = (long)(auction.MinBet * 1000000),
+                Runsuntil = (((DateTime)auction.RunsUntil).Date) + (TimeSpan)auction.RunsUntilTime,
+                State = "waitforlock", 
+                Salt = salt,
+                Skey = Encryption.EncryptString(newaddress.privateskey, salt + GeneralConfigurationClass.Masterpassword),
+                Vkey = Encryption.EncryptString(newaddress.privatevkey, salt + GeneralConfigurationClass.Masterpassword),
+                Marketplacefeepercent = 2,
+                Royaltyaddress = "", 
+                Selleraddress = auction.SellerAddress,
+                Auctionname = auction.AuctionName,
+                    CustomerId = CustomerId,
+                Uid = GlobalFunctions.GetGuid(),
+            };
+
+            await db.Legacyauctions.AddAsync(la);
+            await db.SaveChangesAsync();
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("New Auction created", Severity.Success);
+        }
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+}

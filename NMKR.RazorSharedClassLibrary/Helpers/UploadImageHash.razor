@@ -1,0 +1,136 @@
+﻿@using Size = System.Drawing.Size
+@inject ISnackbar Snackbar
+
+@if (!string.IsNullOrEmpty(ImageHash))
+{
+    <MudBadge Color="Color.Tertiary" Icon="@Icons.Material.Filled.RemoveCircleOutline" OnClick="RemoveImage" Overlap="true" Dot="false" Bordered="true">
+        <img src="@(GeneralConfigurationClass.IPFSGateway + ImageHash)" style="max-width:@(PreviewMaxWidth)px;">
+    </MudBadge>
+}
+else
+{
+    <InputFile id="fileInput112" OnChange="StartUpload" hidden accept=".png" />
+
+    <MudButton DropShadow="false" HtmlTag="label" Class="rounded-xl px-6 py-3"
+               Size="MudBlazor.Size.Small"
+               Variant="Variant.Filled"
+               Color="Color.Dark"
+               StartIcon="@Icons.Material.Filled.CloudUpload"
+               for="fileInput112">
+        Upload image
+    </MudButton>
+}
+<br />
+<small style="color: #7A7A7A; font-size: 11px; font-weight: 500" class="mt-5">@((MarkupString)DescriptionText)</small>
+
+
+
+@code {
+    [Parameter]
+    public string ImageHash { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ImageHashChanged { get; set; }
+
+    [Parameter]
+    public string DescriptionText { get; set; } = "The project image will only be used at the payment gateway. Size: 300x100px - Allowed file types: PNG";
+
+    [Parameter]
+    public string FileTypes { get; set; } = ".png";
+    [Parameter]
+    public Size FileSize { get; set; } = new Size(300, 100);
+
+    [Parameter]
+    public int PreviewMaxWidth { get; set; } = 600;
+
+    private bool isSubmitting;
+
+
+    private async void StartUpload(InputFileChangeEventArgs e)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var entries = e.GetMultipleFiles(1);
+
+        var path = GeneralConfigurationClass.TempFilePath;
+
+        Directory.CreateDirectory(path);
+
+        uploadclass b = await UploadFilesToIpfsServer(entries.FirstOrDefault());
+        if (b.result)
+        {
+            ImageHash = b.ipfshash;
+            await ImageHashChanged.InvokeAsync(ImageHash);
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task RemoveImage()
+    {
+        ImageHash = null;
+        await ImageHashChanged.InvokeAsync(ImageHash);
+        StateHasChanged();
+    }
+
+    private async Task<uploadclass> UploadFilesToIpfsServer(IBrowserFile a)
+    {
+
+        if (a == null)
+            return new() { ipfshash = "", result = false };
+
+        try
+        {
+            Stream stream = a.OpenReadStream(51200000);
+
+            string[] filetypes = FileTypes.Split(',');
+
+            string nameextention = Path.GetExtension(a.Name).ToLower();
+
+            if (!filetypes.Contains(nameextention))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"Wrong filetype - only {FileTypes}", Severity.Error);
+                return new() { ipfshash = "", result = false };
+            }
+
+
+
+            string path1 = GeneralConfigurationClass.TempFilePath + a.Name;
+            string path2 = GeneralConfigurationClass.TempFilePath + "x" + a.Name;
+
+            FileStream fs = File.Create(path1);
+            await stream.CopyToAsync(fs);
+            stream.Close();
+            fs.Close();
+
+            if (FileSize.Width > 0 && FileSize.Height > 0)
+                ImageResize.Resize(path1, path2, FileSize.Width, FileSize.Height);
+            else
+                path2 = path1;
+
+            var u = await IpfsFunctions.AddFileAsync(path2);
+            if (string.IsNullOrEmpty(u))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error while uploading File. Please contact the support.", Severity.Error);
+                return new() { ipfshash = "", result = false };
+            }
+            Ipfsadd ia = Ipfsadd.FromJson(u);
+            GlobalFunctions.DeleteFile(path1);
+            GlobalFunctions.DeleteFile(path2);
+
+            return new() { ipfshash = ia.Hash, filename = path1, result = true };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error while uploading " + a.Name + "(" + ex.Message + ")", Severity.Error);
+            return new() { ipfshash = "", result = false };
+        }
+
+    }
+}

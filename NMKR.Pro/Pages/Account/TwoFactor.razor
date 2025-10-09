@@ -1,0 +1,510 @@
+﻿
+@using Position = MudBlazor.Position
+@using System.Text
+@inject AppSettings settings
+@inject TimerServices Timer
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IStringLocalizer _loc
+
+<MudCard Elevation="0" Class="border"  Style="border-color:#E0E0E0; border-top-right-radius: 0px; border-top-left-radius: 0px;">
+    <MudCardContent>
+        <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@isEnabled" Label="@_loc["2-Factor Authentication"]" Color="Color.Primary" />
+
+        @if (isEnabled)
+        {
+
+            <MudCard Class="mt-10">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@_loc["Set 2-Factor"]</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactorlogin" Label="@_loc["2-Factor on Login"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactorcreatewallet" Label="@_loc["2-Factor on add Wallet"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactorexportkeys" Label="@_loc["2-Factor on export keys"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactorpaymentsonmanagedwallets" Label="@_loc["2-Factor on payments managed wallets"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactordeleteprojects" Label="@_loc["2-Factor to delete projects"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@twofactorcreateapikeys" Label="@_loc["2-Factor to create/edit apikeys"]" Disabled="@(customer.Twofactor != "none" && customer.Twofactor != "")" Color="Color.Primary" />
+
+                </MudCardContent>
+            </MudCard>
+               
+
+            <MudTabs Outlined="true" Position="Position.Top" Rounded="true" Border="true"
+                     ApplyEffectsToContainer="true" Class="mt-8" PanelClass="pa-6" @ref="Tab">
+                <MudTabPanel Text="@_loc["Authenticator"]" Disabled="@(customer.Twofactor == "sms")">
+                    <MudGrid>
+                        @if ((customer.Twofactor == "none" || customer.Twofactor == ""))
+                        {
+                            <MudItem xs="12">
+                                <MudText>@_loc["Scan the QR Code in your Authenticator App and press 'Enable Authenticator Verification'"]</MudText>
+                            </MudItem>
+
+                            <MudItem xs="12" md="12">
+                                <img src="@qrCodeImageUrl"/>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="@EnableAuthenticator" Class="ml-auto rounded-xl px-6 py-3" Disabled="@(customer.Twofactor == "google")">@_loc["Enable Authenticator Verification"]</MudButton>
+                            </MudItem>
+                        }
+                        else
+                        {
+                            if (customer.Twofactor == "google")
+                            {
+                                <MudItem xs="12">
+                                    <MudText>@_loc["Authenticator Verification enabled"]</MudText>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="@DisableAuthenticatorButtonPressed" Class="ml-auto rounded-xl px-6 py-3" >@_loc["Disable Authenticator Verification"]</MudButton>
+                                </MudItem>
+                            }
+                            else
+                            {
+                                <MudItem xs="12">
+                                    <MudText>@_loc["SMS Verification enabled"]</MudText>
+                                </MudItem>
+                            }
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+                <MudTabPanel Text="SMS" Disabled="@(customer.Twofactor == "google")">
+                    <EditForm Model="@phoneNumber" OnValidSubmit="@HandleValidSubmitPhonenumber">
+                        <DataAnnotationsValidator />
+                        
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudText>@_loc["Enter your mobile number and click on 'Enable SMS Verification'"]</MudText>
+                            </MudItem>
+
+                            <MudItem xs="12" md="12">
+                                <MudTextField Variant="Variant.Outlined" T="string" Label="@_loc["Mobile number"]" @bind-Value="phoneNumber.MobileNumber" For="() => phoneNumber.MobileNumber"  ReadOnly="@disabled" />
+                            </MudItem>
+                            
+                            @if (customer.Twofactor != "sms")
+                            {
+                                <MudItem xs="12">
+                                    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" ButtonType="ButtonType.Submit" Class="ml-auto rounded-xl px-6 py-3" Disabled="@(customer.Twofactor == "sms")">@_loc["Enable SMS Verification"]</MudButton>
+                                </MudItem>
+                            }
+                            else
+                            {
+                                <MudItem xs="12">
+                                    <MudText>@_loc["SMS Verification enabled"]</MudText>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="@DisableSMSButtonPressed" Class="ml-auto rounded-xl px-6 py-3">@_loc["Disable SMS Verification"]</MudButton>
+                                </MudItem>
+                            }
+
+                        </MudGrid>
+                    </EditForm>
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </MudCardContent>
+</MudCard>
+
+
+
+
+@code {
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+
+    private bool isSubmitting;
+    private Customer customer { get; set; }
+    private PhoneNumberClass phoneNumber = new();
+    public string errormessage { get; set; }
+    private bool _isEnabled = false;
+    public bool disabled = false;
+    private MudTabs Tab { get; set; }
+    private bool isEnabled
+    {
+        get
+        {
+            return _isEnabled;
+        }
+        set
+        {
+            //   _isEnabled = value;
+            InvokeAsync(() => OnChange(value));
+        }
+    }
+
+    private bool twofactorlogin { get; set; } = true;
+    private bool twofactorcreatewallet { get; set; } = true;
+    private bool twofactorexportkeys { get; set; } = true;
+    private bool twofactorpaymentsonmanagedwallets { get; set; } = true;
+    private bool twofactordeleteprojects { get; set; } = true;
+    private bool twofactorcreateapikeys { get; set; } = true;
+
+
+
+    protected override void OnInitialized()
+    {
+        using var _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        disabled = false;
+        customer = (from a in _db.Customers
+                    where a.Id == (int)settings.UserId && a.State == "active"
+                    select a).FirstOrDefault();
+        if (customer == null)
+
+            return;
+        _isEnabled = customer.Twofactor != "none";
+        SetupGoogleAuthenticator();
+
+        if (customer.Twofactor == "sms")
+        {
+            disabled = true;
+            phoneNumber.MobileNumber = customer.Mobilenumber;
+        }
+        if (customer.Twofactor == "google")
+        {
+            disabled = true;
+        }
+
+        if (customer.Twofactor == "none")
+            SetupGoogleAuthenticator();
+        
+        if (customer.Twofactor != "none")
+        {
+            twofactorlogin = (customer.Two2falogin??false);
+            twofactorcreatewallet = (customer.Two2facreatewallet ?? false);
+            twofactorexportkeys = (customer.Two2faexportkeys ?? false);
+            twofactorpaymentsonmanagedwallets = (customer.Two2fapaymentsmanagedwallets ?? false);
+            twofactordeleteprojects = (customer.Two2fadeleteprojects ?? false);
+            twofactorcreateapikeys = (customer.Two2facreateapikey ?? false);
+        }
+    }
+
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (customer.Twofactor == "sms")
+        {
+            phoneNumber.MobileNumber = "+"+customer.Mobilenumber;
+            if (Tab!=null) Tab.ActivatePanel(1);
+        }
+        if (customer.Twofactor == "google")
+        {
+            if (Tab != null) Tab.ActivatePanel(0);
+        }
+    }
+
+
+    private async Task OnChange(bool value)
+    {
+        if (value == false)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            errormessage = "";
+            if (customer.Twofactor == "sms")
+            {
+                await DisableSMS(db,customer.Mobilenumber);
+            }
+
+            if (customer.Twofactor == "google")
+            {
+                await DisableAuthenticator(db);
+            }
+            if (customer.Twofactor == "none")
+            {
+                _isEnabled = value;
+            }
+        }
+        else
+        {
+            _isEnabled = value;
+        }
+        StateHasChanged();
+    }
+
+
+    private string qrCodeImageUrl { get; set; }
+    private string manualEntrySetupCode { get; set; }
+
+    private void SetupGoogleAuthenticator()
+    {
+        TwoFactorAuthenticator tfa = new();
+        var setupInfo = tfa.GenerateSetupCode(GeneralConfigurationClass.ProjectNameAuthenticator, customer.Email, Encoding.ASCII.GetBytes(GeneralConfigurationClass.AuthenticatorSecret + customer.Email));
+        
+        qrCodeImageUrl = setupInfo.QrCodeSetupImageUrl; //  assigning the Qr code information + URL to string
+        manualEntrySetupCode = setupInfo.ManualEntryKey; // show the Manual Entry Key for the users that don't have app or phone
+    }
+
+
+    private async Task HandleValidSubmitPhonenumber()
+    {
+        errormessage = "";
+
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        try
+        {
+            await EnableSMS(_db,GlobalFunctions.CheckMobilenumber(phoneNumber.MobileNumber));
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task EnableSMS(EasynftprojectsContext db,string mobilenumber)
+    {
+        var cu = await (from a in db.Customers
+                  where a.Id == (int)settings.UserId && a.State == "active"
+                  select a).FirstOrDefaultAsync();
+
+        if (cu == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Invalid"], Severity.Error);
+            return;
+        }
+
+        if (cu.Twofactorenabled != null && cu.Twofactorenabled > DateTime.Now.AddMinutes(-1))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Please wait 1 minute before sending another sms."], Severity.Error);
+            return;
+        }
+
+        // Spammer from Vietnam
+        if (mobilenumber.StartsWith("+8456") || mobilenumber.StartsWith("8456"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Not possible"], Severity.Error);
+            return;
+        }
+
+
+        Random rnd = new();
+        string code = (rnd.Next(1000, 9999)).ToString();
+        string messagex = @_loc["User - Id: "+settings.UserId + " - The Code to enable the SMS 2 - Factor Authentication is: "] + code;
+        long Msisdn = Convert.ToInt64(mobilenumber);
+
+
+
+        Client client = Client.CreateDefault(GeneralConfigurationClass.MessageBirdAccessKey, null);
+        try
+        {
+            client.SendMessage(GeneralConfigurationClass.ProjectNameShort, messagex, new[] { Msisdn });
+
+            cu.Twofactorenabled = DateTime.Now;
+            await db.SaveChangesAsync();
+
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<SendSMSModalWindow>(@_loc["Verify by mobile text message"], maxWidth);
+            var result = await dialog.Result;
+            if (result.Canceled)
+            {
+                return;
+            }
+
+
+            if (result.Data.ToString() == code)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["SMS Verification enabled"], Severity.Success);
+                customer.Twofactor = "sms";
+                customer.Mobilenumber = mobilenumber;
+                cu.Twofactor = "sms";
+                cu.Mobilenumber = mobilenumber;
+                cu.Twofactorenabled = DateTime.Now;
+                cu.Two2falogin = twofactorlogin;
+                cu.Two2facreatewallet = twofactorcreatewallet;
+                cu.Two2faexportkeys = twofactorexportkeys;
+                cu.Two2fapaymentsmanagedwallets = twofactorpaymentsonmanagedwallets;
+                cu.Two2fadeleteprojects = twofactordeleteprojects;
+                cu.Two2facreateapikey = twofactorcreateapikeys;
+
+                await db.SaveChangesAsync();
+
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["The entered code was wrong"], Severity.Error);
+            }
+
+        }
+        catch (Exception)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["There was an error, while sending the code to your mobile. Please contact the support"], Severity.Error);
+
+        }
+        StateHasChanged();
+    }
+
+
+    private async Task DisableSMS(EasynftprojectsContext _db,string handynummer)
+    {
+        var cu = await (from a in _db.Customers
+                  where a.Id == (int)settings.UserId && a.State == "active"
+                  select a).FirstOrDefaultAsync();
+        if (cu == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Invalid"], Severity.Error);
+            return;
+        }
+        if (cu.Twofactorenabled != null && cu.Twofactorenabled > DateTime.Now.AddMinutes(-1))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Please wait 1 minute before sending another sms."], Severity.Error);
+            return;
+        }
+
+        Random rnd = new();
+        string code = (rnd.Next(1000, 9999)).ToString();
+        string messagex = @_loc["User-Id: " + settings.UserId + "The Code to disable the SMS 2-Factor Authentication is: "] + code;
+        long Msisdn = Convert.ToInt64(handynummer);
+
+        IProxyConfigurationInjector proxyConfigurationInjector = null; // for no web proxies, or web proxies not requiring authentication
+
+        Client client = Client.CreateDefault(GeneralConfigurationClass.MessageBirdAccessKey, proxyConfigurationInjector);
+        try
+        {
+            client.SendMessage(GeneralConfigurationClass.ProjectNameShort, messagex, new[] { Msisdn });
+            cu.Twofactorenabled = DateTime.Now;
+            await _db.SaveChangesAsync();
+
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<SendSMSModalWindow>(@_loc["Verify by mobile text message"], maxWidth);
+            var result = await dialog.Result;
+            if (result.Canceled)
+            {
+                return;
+            }
+
+
+            if (result.Data.ToString() == code)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["SMS Verification disabled"], Severity.Success);
+                customer.Twofactor = "none";
+                customer.Mobilenumber = "";
+                cu.Twofactor = "none";
+                cu.Mobilenumber = "";
+                cu.Twofactorenabled = null;
+
+                await _db.SaveChangesAsync();
+                _isEnabled = false;
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["The entered code was wrong"], Severity.Error);
+            }
+
+        }
+        catch (Exception)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["There was an error, while sending the code to your mobile. Please contact the support"], Severity.Error);
+
+        }
+    }
+
+    private async Task DisableSMSButtonPressed()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await DisableSMS(db, customer.Mobilenumber);
+    }
+
+    private async Task DisableAuthenticatorButtonPressed()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await DisableAuthenticator(db);
+    }
+
+    private async Task EnableAuthenticator()
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<GoogleAuthenticatorModalWindow>("Authenticator", maxWidth);
+        var result = await dialog.Result;
+        if (result.Canceled)
+        {
+            return;
+        }
+
+        TwoFactorAuthenticator tfa = new();
+        var code = tfa.GetCurrentPIN(GeneralConfigurationClass.AuthenticatorSecret+customer.Email);
+
+        if (result.Data.ToString() == code)
+        {
+            await using var _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var cu = await (from a in _db.Customers
+                      where a.Id == (int)settings.UserId && a.State == "active"
+                      select a).FirstOrDefaultAsync();
+            if (cu != null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Authenticator Verification enabled"], Severity.Success);
+                customer.Twofactor = "google";
+                cu.Twofactor = "google";
+                cu.Twofactorenabled = DateTime.Now;
+                cu.Two2falogin = twofactorlogin;
+                cu.Two2facreatewallet = twofactorcreatewallet;
+                cu.Two2faexportkeys = twofactorexportkeys;
+                cu.Two2fapaymentsmanagedwallets = twofactorpaymentsonmanagedwallets;
+                cu.Two2fadeleteprojects = twofactordeleteprojects;
+                cu.Two2facreateapikey = twofactorcreateapikeys;
+
+
+                await _db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["The entered code was wrong"], Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+
+
+
+    private async Task DisableAuthenticator(EasynftprojectsContext _db)
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<GoogleAuthenticatorModalWindow>(@_loc["Authenticator"], maxWidth);
+        var result = await dialog.Result;
+        if (result.Canceled)
+        {
+            return;
+        }
+
+
+        TwoFactorAuthenticator tfa = new();
+        var code = tfa.GetCurrentPIN(GeneralConfigurationClass.AuthenticatorSecret+customer.Email);
+
+        if (result.Data.ToString() == code)
+        {
+            var cu = await (from a in _db.Customers
+                      where a.Id == (int)settings.UserId && a.State == "active"
+                      select a).FirstOrDefaultAsync();
+            if (cu != null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Authenticator Verification disabled"], Severity.Success);
+                customer.Twofactor = "none";
+                cu.Twofactor = "none";
+                cu.Twofactorenabled = null;
+                await _db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["The entered code was wrong"], Severity.Error);
+        }
+    }
+}

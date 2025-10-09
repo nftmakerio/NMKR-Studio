@@ -1,0 +1,334 @@
+﻿<MudGrid Class="mb-3">
+    <MudSimpleTable Style="width: 100%" Elevation="2">
+        <tbody>
+        <tr>
+            <td style="width: 200px">
+                Project/Collection Name:
+            </td>
+            <td>
+                <MudText>@model.Projectname </MudText>
+            </td>
+        </tr>
+        <tr>
+            <td>Blockchains:</td>
+            <td>
+                @if (model.cardano)
+                {
+                    <ShowBlockchainIcon Blockchain="Blockchain.Cardano" /> <span>Cardano</span>
+                }
+                &nbsp;
+                @if (model.solana)
+                {
+                    <ShowBlockchainIcon Blockchain="Blockchain.Solana"/>
+                    <span>Solana</span>
+                }
+                &nbsp;
+                @if (model.aptos)
+                {
+                    <ShowBlockchainIcon Blockchain="Blockchain.Aptos"/>
+                    <span>Aptos</span>
+                }
+                &nbsp;
+                @if (model.bitcoin)
+                {
+                    <ShowBlockchainIcon Blockchain="Blockchain.Bitcoin"/>
+                    <span>Bitcoin</span>
+                }
+            </td>
+        </tr>
+        
+        
+        <tr>
+            <td>Description:</td>
+            <td><MudText>
+                    @model.Description
+                </MudText>
+            </td>
+        </tr>
+        @if (model.ft_nonft_project != 2)
+        {
+            <tr>
+                <td>Tokenprefix:</td>
+                <td><MudText>
+                        @model.TokennamePrefix
+                    </MudText>
+                </td>
+            </tr>
+            <tr>
+                <td>Reservation time:</td>
+                <td><MudText>
+                        @model.ExpireTime Minutes
+                    </MudText>
+                </td>
+            </tr>
+          
+            @if (!string.IsNullOrEmpty(model.Projecturl))
+            {
+                <tr>
+                    <td>Url:</td>
+                    <td>
+                        <MudText>
+                            @model.Projecturl
+                        </MudText>
+                    </td>
+                </tr>
+            }
+            @if (!string.IsNullOrEmpty(model.Twitterhandle))
+            {
+                <tr>
+                    <td>X / Twitter :</td>
+                    <td>
+                        <MudText>
+                            @model.Twitterhandle
+                        </MudText>
+                    </td>
+                </tr>
+            }
+
+            <tr>
+                <td>Max NFT supply:</td>
+                <td><MudText>
+                        @model.MaxNftSupply
+                    </MudText>
+                </td>
+            </tr>
+        }
+
+        @if (model.ft_nonft_project == 2)
+        {
+            <tr>
+                <td>Marketplace Fee:</td>
+                <td><MudText>
+                        @(model.MarketplaceWhitelabelFee?.ToString("F2", CultureInfo.GetCultureInfo("en-US")))%
+                    </MudText>
+                </td>
+            </tr>
+        }
+
+        <tr>
+            <td>Storage provider:</td>
+            <td>
+                <MudText>@model.StorageProvider</MudText>
+            </td>
+        </tr>
+        
+        
+        
+
+        @if (model.solana)
+        {
+
+            <tr style="margin-top:20px;">
+                <td><b>SOLANA SETTINGS</b></td>
+                    <td></td>
+            </tr>
+
+
+            <tr>
+                <td>Solana Symbol:</td>
+                <td><MudText>
+                        @model2.SolanaSymbol
+                    </MudText>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Solana Collection Family:</td>
+                <td><MudText>
+                        @model2.Solanacollectionfamily
+                    </MudText>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Solana Verified Collection:</td>
+                <td><MudText>
+                            <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@model2.CreateSolanaVerifiedCollection" T="bool" ReadOnly="true"></MudCheckBox>
+                    </MudText>
+                </td>
+            </tr>
+            <tr>
+                <td>Seller Fee Basis Points:</td>
+                <td><MudText>
+                        @model2.SellerFeeBasisPoints
+                    </MudText>
+                </td>
+            </tr>
+            <tr>
+                <td>Solana Payout wallet:</td>
+                <td>
+                    <MudText>
+                        @(model2.SolanaWalletId == 0 ? "internal wallet" : model.wallets.Find(x => x.Id == model2.SolanaWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(model.wallets.Find(x => x.Id == model2.SolanaWalletId)?.Walletaddress, 6) + ")")
+                    </MudText>
+                </td>
+            </tr>
+        }
+
+       
+       
+        @if (model.aptos)
+        {
+                <tr style="margin-top:20px;">
+                <td><b>APTOS SETTINGS</b></td>
+                    <td></td>
+            </tr>
+            <tr>
+                <td>Aptos Payout wallet:</td>
+                <td>
+                    <MudText>
+                        @(model2.AptosWalletId == 0 ? "internal wallet" : model.wallets.Find(x => x.Id == model2.AptosWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(model.wallets.Find(x => x.Id == model2.AptosWalletId)?.Walletaddress, 6) + ")")
+                    </MudText>
+                </td>
+            </tr>
+            <tr>
+                <td>Aptos Collection Name:</td>
+                <td>
+                    <MudText>
+                            @model2.AptosCollectionName
+                        </MudText>
+                </td>
+            </tr>
+        }
+        @if (model.bitcoin)
+        {
+            <tr style="margin-top:20px;">
+                <td><b>BITCOIN SETTINGS</b></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Bitcoin Payout wallet:</td>
+                <td>
+                    <MudText>
+                        @(model2.BitcoinWalletId == 0 ? "internal wallet" : model.wallets.Find(x => x.Id == model2.BitcoinWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(model.wallets.Find(x => x.Id == model2.BitcoinWalletId)?.Walletaddress, 6) + ")")
+                    </MudText>
+                </td>
+            </tr>
+        }
+
+        @if (model.cardano)
+        {
+            <tr style="margin-top:20px;">
+                <td><b>CARDANO SETTINGS</b></td>
+                    <td></td>
+            </tr>
+
+            @if (model.ft_nonft_project != 2)
+            {
+                <tr>
+                    <td>New Policy:</td>
+                    <td>
+                        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@model2.NewPolicy1" T="bool" ReadOnly="true"></MudCheckBox>
+                    </td>
+                </tr>
+                @if (model2.NewPolicy1)
+                {
+                    <tr>
+                        <td>Policy will expire:</td>
+                        <td>
+                            @if (model2.PolicyExpires)
+                            {
+                                <MudText>Yes</MudText>
+                            }
+                            else
+                            {
+                                <MudText>No</MudText>
+                            }
+                            
+                        </td>
+                    </tr>
+                    @if (model2.PolicyExpires)
+                    {
+                        <tr>
+                            <td>Expiration date:</td>
+                            <td>
+                                @if (model2.PolicyExpiration != null)
+                                {
+                                <MudText>@model2.PolicyExpiration.Value.ToLongDateString()</MudText>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td>Policy id:</td>
+                        <td><MudText>@model2.PolicyId</MudText></td>
+                    </tr>
+                    <tr>
+                        <td>Policy script:</td>
+                        <td> <MudTextField Variant="Variant.Outlined" T="string" ReadOnly="true" Text="@model2.PolicyScript" Lines="5" /></td>
+                    </tr>
+                    <tr>
+                        <td>Signing key:</td>
+                        <td><MudText>*** HIDDEN ***</MudText></td>
+                    </tr>
+                }
+              
+                    <tr>
+                        <td>Cardano Metadata Type:</td>
+                        <td>
+                            @if (model2.CipStandard == 1)
+                            {
+                                <MudText>CIP68</MudText>
+                            }
+                            else
+                            {
+                                <MudText>CIP25</MudText>
+                            }
+                        </td>
+                    </tr>
+                    @if (model2 is {CipStandard: 1,Cip68ReferenceAddressType: -1})
+                    {
+                        <tr>
+                            <td>Managed Wallet Password (please notice):</td>
+                            <td>
+                                <MudText>@model.Password</MudText>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Cardano Metadata extra field:</td>
+                            <td>
+                                @switch (model2.Cip68ExtrafieldType)
+                                {
+                                    case 0:
+                                        <MudText>None</MudText>
+                                        break;
+                                    case 1:
+                                        <MudText>@model2.Cip68Extrafield</MudText>
+                                        break;
+                                    case 2:
+                                        <MudText>PKH Policy Address</MudText>
+                                        break;
+                                    case 3:
+                                        <MudText>The PKH of the address to which the user token is minted.</MudText>
+                                        break;
+                                }
+                            </td>
+                        </tr>
+                    }
+
+                }
+            <tr>
+                <td>Cardano Payout wallet:</td>
+                <td>
+                    <MudText>
+                        @(model2.CardanoWalletId == 0 ? "internal wallet" : model.wallets.Find(x => x.Id == model2.CardanoWalletId)?.Comment + " (" + GlobalFunctions.GetStartAndEnd(model.wallets.Find(x => x.Id == model2.CardanoWalletId)?.Walletaddress, 6) + ")")
+                    </MudText>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+
+</MudGrid>
+
+@code {
+    [Parameter]
+    public CreateNewProjectClass model { get; set; }
+    [Parameter]
+    public CreateNewProjectBlockchainsClass model2 { get; set; }
+    [Parameter]
+    public CreateNewProject3Class model3 { get; set; }
+}

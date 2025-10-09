@@ -1,0 +1,1761 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NMKR.Api</name>
+    </assembly>
+    <members>
+        <member name="M:NMKR.Api.Controllers.SharedClasses.StaticTransactionFunctions.GetAllNeededTxin(NMKR.Shared.Classes.AddressTxInClass[],System.Int64,System.Int64,System.String,System.String,System.String@)">
+            <summary>
+            This function selects the correct txin from a external wallet (eg Name, etc) where the token is located. And more tx-in if the moinimum of ada is not available on this single txin
+            </summary>
+            <param name="addresses"></param>
+            <param name="minlovelave"></param>
+            <param name="searchForTokenOrPolicyid"></param>
+            <param name="collateral"></param>
+            <param name="errormessage"></param>
+            <returns></returns>
+        </member>
+        <member name="M:NMKR.Api.Controllers.CancelAddressReservationController.Get(System.String,System.Int32,System.String)">
+            <summary>
+            Cancels a address reservation (project id)
+            </summary>
+            <remarks>
+            When you call this API, the reservation of all nfts dedicated to this address will released to free state. This function can be called, when a user closes his browser or when he hit on a "Cancel Reservation" Button
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="paymentaddress">The address which has to be canceled</param>
+            <response code="200">Cancellation was successful</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">Address not found</response>
+            <response code="406">Address is not in active state - eg. already paid or already released to free</response>            
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.CancelAddressReservationController.Get(System.String,System.String,System.String)">
+            <summary>
+            Cancels a address reservation (project uid)
+            </summary>
+            <remarks>
+            When you call this API, the reservation of all nfts dedicated to this address will released to free state. This function can be called, when a user closes his browser or when he hit on a "Cancel Reservation" Button
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <param Name="paymentaddress">The address which has to be canceled</param>
+            <response code="200">Cancellation was successful</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">Address not found</response>
+            <response code="406">Address is not in active state - eg. already paid or already released to free</response>            
+        </member>
+        <member name="T:NMKR.Api.Controllers.CheckAddressController">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.CheckAddressController.Get(System.String,System.Int32,System.String)">
+             <summary>
+             Checks an address for state changes (project id)
+             </summary>
+             <remarks>
+             You can call this api to check if a user has paid to this particular address or if the address has expired. The reserved/sold NFTs will only filled after the amount was fully paid. This is for security reasons. In the reserved state, only the nft ids and tokenamount are submitted 
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftprojectid">The id of your project</param>
+             <param Name="address">The address you want to check</param>
+             <response code="200">Returns the Apiresultclass with the information about the address incl. the assigned NFTs</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The address was not found in our database or not assiged to this project</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.CheckAddressController.Get(System.String,System.String,System.String)">
+             <summary>
+             Checks an address for state changes (project uid)
+             </summary>
+             <remarks>
+             You can call this api to check if a user has paid to this particular address or if the address has expired. The reserved/sold NFTs will only filled after the amount was fully paid. This is for security reasons. In the reserved state, only the nft ids and tokenamount are submitted 
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="projectuid">The uid of your project (not the id)</param>
+             <param Name="address">The address you want to check</param>
+             <response code="200">Returns the Apiresultclass with the information about the address incl. the assigned NFTs</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The address was not found in our database or not assiged to this project</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.CheckWalletValidationController.Get(System.String,System.String,System.Int64)">
+            <summary>
+            Returns the result of a wallet validation
+            </summary>
+            <remarks>
+            Here you can check the result of a wallet validation. The result are "notvalidated", "validated","expired"
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="validationuid">The validation id you got from GetWalletValidationAddress</param>
+            <param Name="lovelace">The lovelace you got from GetWalletValidationAddress</param>
+            <response code="200">Returns the CheckWalletValidationResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v1.CreateDIDTokenController.Post(System.String,System.String,System.String)">
+            <summary>
+            Creates a digital Identity
+            </summary>
+            <param Name="didJson">The UploadNft Class as Body Content</param>
+            <response code="200">Returns the UploadNftResult Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No Image Content was provided. Send a file either as Base64 or as Link or IPFS Hash</response>            
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="409">There is a conflict with the provided images. Send a file either as Base64 or as Link or IPFS Hash</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.CreateProjectController.Post(System.String,NMKR.Shared.Classes.CreateProjectClass)">
+            <summary>
+            Creates a new Project
+            </summary>
+            <remarks>
+            WIth this Controller you can create a new project
+            </remarks>
+            <param Name="apikey">The apikey you have created on studio.nmkr.io</param>
+            <response code="200">Returns the UploadNftResult Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No Image Content was provided. Send a file either as Base64 or as Link or IPFS Hash</response>            
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="409">There is a conflict with the provided images. Send a file either as Base64 or as Link or IPFS Hash</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.DeleteNftController.Get(System.String,System.Int32,System.Int32)">
+            <summary>
+            Deletes a nft from the database (nft and project id)
+            </summary>
+            <remarks>
+            You can delete a nft, if it is not in sold or reserved state
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the nft you want to delete</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.DeleteNftController.Get(System.String,System.String)">
+            <summary>
+            Deletes a nft from the database (nft uid)
+            </summary>
+            <remarks>
+            You can delete a nft, if it is not in sold or reserved state
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the nft you want to delete</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAccessTokenController.Get(System.String,System.String)">
+            <summary>
+            Creates an access token for the payment window (internal function)
+            </summary>
+            <param Name="secret">The secret</param>
+            <param Name="onetimepassword">The one time password of the secret</param>
+            <response code="200">Returns the GetAccessTokenResultClass with an valid access token</response>
+            <response code="401">The access was denied. (IP Address not allowed)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAdaRatesController.Get(System.String)">
+            <summary>
+            Returns the actual price in EUR and USD for ADA
+            </summary>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <response code="200">Returns the RatesClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="T:NMKR.Api.Controllers.GetAddressForRandomNftSaleController">
+            <summary>
+            GetAddressForRandomNftSale - Returns an payin address for a random nft sale
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForRandomNftSaleController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns an address for a random nft sale 
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForRandomNftSaleController.Get(System.String,System.Int32,System.Int32,System.Int64,System.String)">
+            <summary>
+            Returns an address for a random nft sale (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForRandomNftSaleController.Get(System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Returns an address for a random nft sale (price from pricelist) (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForRandomNftSaleController.Get(System.String,System.String,System.Int32,System.String)">
+            <summary>
+            Returns an address for a random nft sale (price from pricelist) (project uid)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForRandomNftSaleController.Get(System.String,System.String,System.Int32,System.Int64,System.String)">
+            <summary>
+            Returns an address for a random nft sale (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForSpecificNftSaleController.Get(System.String,System.Int32,System.Int32,System.Int64,System.Int64,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution) (project and nft id)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftprojectid">The id of your project</param>
+             <param Name="nftid">The id of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForSpecificNftSaleController.Get(System.String,System.String,System.Int64,System.Int64,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftuid">The uid of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForSpecificNftSaleController.Get(System.String,System.Int32,System.Int32,System.Int64,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution) - price from pricelist or specific nft price (project and nft id)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftprojectid">The id of your project</param>
+             <param Name="nftid">The id of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForSpecificNftSaleController.Get(System.String,System.String,System.Int64,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution) - price from pricelist or specific nft price (nft uid)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftprojectid">The id of your project</param>
+             <param Name="nftid">The id of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetAddressForSpecificNftSaleController.Post(System.String,System.Int32,NMKR.Shared.Classes.ReserveMultipleNftsClass,System.String)">
+            <summary>
+            Returns an address for a multiple specific nfts sale (no random distribution) (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The id of the nft is not found or not assigned to this project</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="T:NMKR.Api.Controllers.GetCountsController">
+            <summary>
+            Get counts controller description
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetCountsController.Get(System.String,System.Int32)">
+            <summary>
+            Returns the count of the sold, reserved and free nfts (project id)
+            </summary>
+            <remarks>
+            You will get the count of all sold, reserved and free nfts of a particular project
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns the NftCountsClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetCountsController.Get(System.String,System.String)">
+            <summary>
+            Returns the count of the sold, reserved and free nfts (project uid)
+            </summary>
+            <remarks>
+            You will get the count of all sold, reserved and free nfts of a particular project
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns the NftCountsClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftDetailsByIdController.Get(System.String,System.Int32,System.Int32)">
+            <summary>
+            Returns detail information about one nft specified by Id (project and nft id)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about one nfts with the submitted id
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the nft you want to receive the details</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftDetailsByIdController.Get(System.String,System.String)">
+            <summary>
+            Returns detail information about one nft specified by Id (nft uid)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about one nfts with the submitted id
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftuid">The uid of the nft</param>
+            <param Name="nftid">The ID of the nft you want to receive the details</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftDetailsController.Get(System.String,System.Int32,System.String)">
+            <summary>
+            Returns detail information about one nft specified by its name (nftproject id)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about one nft with the submitted name
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftname">The Name of the nft you want to receive the details</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftsController.Get(System.String,System.Int32,System.String)">
+            <summary>
+            Returns detail information about all nfts with a specific state. *** DEPRECATED - use the paged version ***
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about the nfts within a specific state.
+            IsActive "all" lists all available nft in this project. The other states are: "free", "reserved", "sold" and "error"
+            *** DEPRECATED - use the paged version ***
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="state">The state of the nfts you want to receive</param>
+            <response code="200">Returns a List of the NFT Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="406">The state was not known - possible states are: free, reserved, sold, error and all</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftsController.Get(System.String,System.Int32,System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Returns detail information about nfts with a specific state with Pagination support. (project id)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about the nfts within a specific state.
+            IsActive "all" lists all available nft in this project. The other states are: "free", "reserved", "sold" and "error"
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="state">The state of the nfts you want to receive</param>
+            <param Name="count">How may NFTs do you want. Max 50. Min 1</param>
+            <param Name="page">The page number. Starts with 1</param>
+            <param name="orderby">(Optional) The sort order of the result. Possible values are: id (default),id_desc (descending order), selldate (on sold nfts) and selldate_desc (descending order)</param>
+            <response code="200">Returns a List of the NFT Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="406">The state was not known - possible states are: free, reserved, sold, error and all</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetNftsController.Get(System.String,System.String,System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Returns detail information about nfts with a specific state with Pagination support. (project uid)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about the nfts within a specific state.
+            IsActive "all" lists all available nft in this project. The other states are: "free", "reserved", "sold" and "error"
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <param Name="state">The state of the nfts you want to receive</param>
+            <param Name="count">How may NFTs do you want. Max 50. Min 1</param>
+            <param Name="page">The page number. Starts with 1</param>
+            <param name="orderby">(Optional) The sort order of the result. Possible values are: id (default),id_desc (descending order), selldate (on sold nfts) and selldate_desc (descending order)</param>
+            <response code="200">Returns a List of the NFT Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="406">The state was not known - possible states are: free, reserved, sold, error and all</response>
+            <response code="406">The projectuid was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetPricelistController.Get(System.String,System.Int32)">
+            <summary>
+            Returns the actual valid pricelist for this project (project id)
+            </summary>
+            <remarks>
+            You will get the predefined prices for one or more nf
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns an array of the PricelistClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetPricelistController.Get(System.String,System.String)">
+            <summary>
+            Returns the actual valid pricelist for this project (project uid)
+            </summary>
+            <remarks>
+            You will get the predefined prices for one or more nf
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <response code="200">Returns an array of the PricelistClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetProjectDetailsController.Get(System.String,System.Int32,System.Int32)">
+            <summary>
+            Returns detail information about a project 
+            </summary>
+            <remarks>
+            You will receive all information about this project
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="customerid">Your customer id</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns the NftProjectsDetails Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetProjectDetailsController.Get(System.String,System.String)">
+            <summary>
+            Returns detail information about a project 
+            </summary>
+            <remarks>
+            You will receive all information about this project
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="uid">The uid of the project</param>
+            <response code="200">Returns the NftProjectsDetails Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="T:NMKR.Api.Controllers.GetSaleNumbersController">
+            <summary>
+            Returns the actual sold nfts - internal function
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetSaleNumbersController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns the actual sold nfts - internal function - Constructor
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetWalletValidationAddressController.Get(System.String,System.String)">
+            <summary>
+            Returns an address for wallet validation
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address for a wallet validation. The user can send any ada to this address and the ada (and tokens) will sent back to the sender. With the function CheckWalletValidation you can check the state of the address
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="validationname">An optional name for the validation - will returned in CheckWalletValidation</param>
+            <response code="200">Returns the GetWalletValidationAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.GetWalletValidationAddressController.Get(System.String)">
+            <summary>
+            Returns an address for wallet validation
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address for a wallet validation. The user can send any ada to this address and the ada (and tokens) will sent back to the sender. With the function CheckWalletValidation you can check the state of the address
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <response code="200">Returns the GetWalletValidationAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.ListProjectsController.Get(System.String)">
+             <summary>
+             Lists all your projects
+             </summary>
+             <remarks>
+             You will receive a list with all of your projects
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <response code="200">Returns the NftProjectsDetails Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+             <response code="404">The apikey or the projects where not found</response>
+             <response code="406">The provided informations are not valid for this request</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.ListProjectsController.Get(System.String,System.Int32,System.Int32)">
+             <summary>
+             Lists all your projects with pagination
+             </summary>
+             <remarks>
+             You will receive a list with all of your projects
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="count">How many projects do you want th get on one page´. Min. 1, Max 50</param>
+             <param Name="apikey">The Pagenumber. It starts with 1</param>
+             <response code="200">Returns the NftProjectsDetails Class</response>
+             <response code="404">The apikey or the projects where not found</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+             <response code="406">The provided informations are not valid for this request</response>    
+        </member>
+        <member name="M:NMKR.Api.Controllers.ListProjectsController.Get(System.String,System.Int32,System.Int32,System.Int32)">
+             <summary>
+             Lists all your projects with pagination
+             </summary>
+             <remarks>
+             You will receive a list with all of your projects
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="customerid">The customerid you want to receive the projects</param>
+             <param Name="count">How many projects do you want th get on one page´. Min. 1, Max 50</param>
+             <param Name="apikey">The Pagenumber. It starts with 1</param>
+             <response code="200">Returns the NftProjectsDetails Class</response>
+             <response code="404">The apikey or the projects where not found</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+             <response code="406">The provided informations are not valid for this request</response>    
+        </member>
+        <member name="M:NMKR.Api.Controllers.MintAndSendRandomController.Get(System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Mints random Nfts and sends it to an Address
+            </summary>
+            <remarks>
+            When you call this API, random NFTs will be selected, minted and send to an ada address. You will need ADA in your Account for the transaction and minting costs.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="countnft">The count of the nft you want to mint and send</param>
+            <param Name="receiveraddress">The address you want to send the nft</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="402">Too less ADA in your account. Fill up ADA first before try to mint and send</response>        
+            <response code="409">There are pending transactions on the sender address (your account address). Please wait a second</response>
+            <response code="406">The receiveraddress is not a valid cardano address</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.MintAndSendSpecificController.Get(System.String,System.Int32,System.Int32,System.Int32,System.String)">
+            <summary>
+            Mints a specific Nft and sends it to an Address
+            </summary>
+            <remarks>
+            When you call this API, a specific NFT will be minted and send to an ada address. You will need ADA in your Account for the transaction and minting costs.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the NFT</param>
+            <param Name="tokencount">How many tokens of the nft you want to mint and send</param>
+            <param Name="receiveraddress">The address you want to send the nft</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">NFT no more available (already sold)</response>            
+            <response code="402">Too less ADA in your account. Fill up ADA first before try to mint and send</response>        
+            <response code="409">There are pending transactions on the sender address (your account address). Please wait a second</response>
+            <response code="406">The receiveraddress is not a valid cardano address</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.UpdateMetadataController.Post(System.String,System.Int32,System.Int32,NMKR.Shared.Classes.UploadMetadataClass)">
+            <summary>
+            Updates the Metadata for one specific NFT
+            </summary>
+            <remarks>
+            With this API you can update the Metadata Override for one specific NFT
+            If you leave the field blank, the Metadata override will be deleted and the Metadata from the project will be used.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the NFT you want to change the metadata</param>
+            <param Name="metdata">The UploadMetadataClass as Body Content</param>
+            <response code="200">Returns the Nftdetails Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+            <response code="404">The NFT was not found</response>     
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.UploadNftController.Post(System.String,System.Int32,NMKR.Shared.Classes.UploadNftClass)">
+            <summary>
+            Upload a File to a project and pin it to IPFS
+            </summary>
+            <remarks>
+            With this API you can upload a file to IPFS and add it to a project. You can upload the file as BASE64 Content or as URL Link or as IPFS Hash.
+            If you submit Metadata, this Metadata will be used instead of the Metadatatemplate from the project. You can either submit Metadata or MetadataPlaceholder, but not both (because it makes no sense).
+            The Metadata field is optional and if you dont use it, it will use the Template from your project. It is poosible to mix both versions in one project. You can have one nft with own metadata and other nfts
+            with the template.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nft">The UploadNft Class as Body Content</param>
+            <response code="200">Returns the UploadNftResult Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No Image Content was provided. Send a file either as Base64 or as Link or IPFS Hash</response>            
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="409">There is a conflict with the provided images. Send a file either as Base64 or as Link or IPFS Hash</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.AddPayoutWallet.Get(System.String,System.String)">
+            <summary>
+            Adds a payout wallet to your account
+            </summary>
+            <remarks>
+            With this call you can add a payout wallet in your account. You have to confirm the wallet by clicking the link in the email
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="walletaddress">The address of the wallet you want to add</param>
+            <response code="200">Returns the Apiresultclass with the information about the address</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+            <response code="406">Some data are not correct - eg wrong wallet address</response>     
+            <response code="404">The project was not found in our database or not assiged to your account</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CancelAddressReservationController.Get(System.String,System.String,System.String)">
+            <summary>
+            Cancels a address reservation (project uid)
+            </summary>
+            <remarks>
+            When you call this API, the reservation of all nfts dedicated to this address will released to free state. This function can be called, when a user closes his browser or when he hit on a "Cancel Reservation" Button
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <param Name="paymentaddress">The address which has to be canceled</param>
+            <response code="200">Cancellation was successful</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">Address not found</response>
+            <response code="406">Address is not in active state - eg. already paid or already released to free</response>            
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.CheckAddressController">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CheckAddressController.Get(System.String,System.String,System.String)">
+             <summary>
+             Checks an address for state changes (project uid)
+             </summary>
+             <remarks>
+             You can call this api to check if a user has paid to this particular address or if the address has expired. The reserved/sold NFTs will only filled after the amount was fully paid. This is for security reasons. In the reserved state, only the nft ids and tokenamount are submitted 
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="authorization">The apikey you have created on NMKR Studio</param>
+             <param Name="projectuid">The uid of your project (not the id)</param>
+             <param Name="address">The address you want to check</param>
+             <response code="200">Returns the Apiresultclass with the information about the address incl. the assigned NFTs</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The address was not found in our database or not assiged to this project</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CheckMetadataController.Post(System.String,System.String,NMKR.Shared.Classes.UploadMetadataClass)">
+            <summary>
+            Checks if the metadata are valid
+            </summary>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="metdata">The UploadMetadataClass as Body Content</param>
+            <response code="200">Returns OK if the metadata are valid</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+            <response code="404">The NFT was not found</response>     
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CheckWalletValidationController.Get(System.String,System.String)">
+            <summary>
+            Returns the result of a wallet validation
+            </summary>
+            <remarks>
+            Here you can check the result of a wallet validation. The result are "notvalidated", "validated","expired"
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="validationuid">The validation uid you got from GetWalletValidationAddress</param>
+            <response code="200">Returns the CheckWalletValidationResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CreatePaymentTransaction.Post(System.String,NMKR.Shared.Classes.CreatePaymentTransactionClass)">
+            <summary>
+            Creates a payment transaction
+            </summary>
+            <remarks>
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="paymenttransaction">The CreatePaymentTransactionClass as Body Content</param>
+            <response code="200">Returns the PaymentTransactionResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.CreateProjectController.Post(System.String,NMKR.Shared.Classes.CreateProjectClassV2)">
+            <summary>
+            Creates a new Project
+            </summary>
+            <remarks>
+            WIth this Controller you can create a new project
+            </remarks>
+            <param Name="authorization">The apikey you have created on studio.nmkr.io</param>
+            <response code="200">Returns the UploadNftResult Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No Image Content was provided. Send a file either as Base64 or as Link or IPFS Hash</response>            
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="409">There is a conflict with the provided images. Send a file either as Base64 or as Link or IPFS Hash</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.DeleteNftController.Get(System.String,System.String)">
+            <summary>
+            Deletes a nft from the database (nft uid)
+            </summary>
+            <remarks>
+            You can delete a nft, if it is not in sold or reserved state
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the nft you want to delete</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.DeleteProjectController.Get(System.String,System.String)">
+            <summary>
+            Deletes a project
+            </summary>
+            <remarks>
+            With this call you can delete a project 
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <response code="200">Returns the Apiresultclass with the information about the address incl. the assigned NFTs</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The project was not found in our database or not assiged to your account</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetAccessTokenController.Get(System.String,System.String)">
+            <summary>
+            Creates an access token for the payment window (internal function)
+            </summary>
+            <param Name="secret">The secret</param>
+            <param Name="onetimepassword">The one time password of the secret</param>
+            <response code="200">Returns the GetAccessTokenResultClass with an valid access token</response>
+            <response code="401">The access was denied. (IP Address not allowed)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetAdaRatesController.Get(System.String)">
+            <summary>
+            Returns the actual price in EUR and USD for ADA
+            </summary>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <response code="200">Returns the RatesClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetAllNftsFromProjectController.Get(System.String,System.String,System.String)">
+            <summary>
+            Returns detail information about all nfts with a specific state. 
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about the nfts within a specific state.
+            IsActive "all" lists all available nft in this project. The other states are: "free", "reserved", "sold" and "error"
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="state">The state of the nfts you want to receive</param>
+            <response code="200">Returns a List of the NFT Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="406">The state was not known - possible states are: free, reserved, sold, error and all</response>            
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.GetAuctionStateController">
+            <summary>
+            Returns the state - and the last bids of a auction project 
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetAuctionStateController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns the state - and the last bids of a auction project 
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetAuctionStateController.Get(System.String,System.String)">
+            <summary>
+            Returns the state - and the last bids of a auction project 
+            </summary>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="auctionuid">The uid of your auction</param>
+            <response code="200">Returns an array of the GetAuctionStateResultClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.GetCountsController">
+            <summary>
+            Get counts controller description
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetCountsController.Get(System.String,System.String)">
+            <summary>
+            Returns the count of the sold, reserved and free nfts (project uid)
+            </summary>
+            <remarks>
+            You will get the count of all sold, reserved and free nfts of a particular project
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <response code="200">Returns the NftCountsClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetNftDetailsByIdController.Get(System.String,System.String)">
+            <summary>
+            Returns detail information about one nft specified by Id (nft uid)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about one nfts with the submitted id
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="nftuid">The uid of the nft</param>
+            <param Name="nftid">The ID of the nft you want to receive the details</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetNftDetailsByTokennameController.Get(System.String,System.String,System.String)">
+            <summary>
+            Returns detail information about one nft specified by its name
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about one nft with the submitted name
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="nftname">The Name of the nft you want to receive the details</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetNftsController.Get(System.String,System.String,System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Returns detail information about nfts with a specific state with Pagination support. (project uid)
+            </summary>
+            <remarks>
+            You will receive all information (fingerprint, ipfshash, etc.) about the nfts within a specific state.
+            IsActive "all" lists all available nft in this project. The other states are: "free", "reserved", "sold" and "error"
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <param Name="state">The state of the nfts you want to receive</param>
+            <param Name="count">How may NFTs do you want. Max 50. Min 1</param>
+            <param Name="page">The page number. Starts with 1</param>
+            <param name="orderby">(Optional) The sort order of the result. Possible values are: id (default),id_desc (descending order), selldate (on sold nfts) and selldate_desc (descending order)</param>
+            <response code="200">Returns a List of the NFT Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="406">The state was not known - possible states are: free, reserved, sold, error and all</response>
+            <response code="406">The projectuid was not found</response>            
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.GetPaymentAddressForRandomNftSaleController">
+            <summary>
+            Returns an address for a random nft sale (project id)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForRandomNftSaleController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns an address for a random nft sale (project id) Constructor
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForRandomNftSaleController.Get(System.String,System.String,System.Int32,System.Int64,System.String,System.String)">
+            <summary>
+            Returns an address for a random nft sale (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param Name="customeripaddress">The IP-Address from your Customer</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForRandomNftSaleController.Get(System.String,System.String,System.Int32,System.String,System.String)">
+            <summary>
+            Returns an address for a random nft sale (price from pricelist) (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+            IMPORTANT:
+            Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+            Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="countnft">The count of the nft/tokens you want to mint and send.</param>
+            <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+            <param Name="customeripaddress">The IP-Address from your Customer</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForSpecificNftSaleController.Get(System.String,System.String,System.Int64,System.Int64,System.String,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution) (project and nft id)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="authorization">The apikey you have created on NMKR Studio</param>
+             <param Name="nftuid">The uid of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <param Name="customeripaddress">The IP-Address from your Customer</param>
+             <param name="referer">(Optional) A referer code</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForSpecificNftSaleController.Get(System.String,System.String,System.Int64,System.String,System.String)">
+             <summary>
+             Returns an address for a specific nft sale (no random distribution) - price from pricelist or specific nft price (project and nft id)
+             </summary>
+             <remarks>
+             When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+             If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            
+             IMPORTANT:
+             Please notice, that the call is limited to 300 addressreservations per minute. You will get the error 429 if you call this routine more than 300 times a minute.
+             Please do not implement this function on your start page. And please prevent the call of this function from bots with a captcha.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="nftuid">The uid of the nft you want to mint and send</param>
+             <param Name="tokencount">The amount of tokens you want to send (only if multiple tokens available)</param>
+             <param Name="lovelace">The adaamount the buyer has to send in lovelace - so 1 ADA is 1000000 lovelace</param>
+             <param Name="customeripaddress">The IP-Address from your Customer</param>
+             <param name="referer">(Optional) A referer code</param>
+             <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+             <response code="404">The id of the nft is not found or not assigned to this project</response>            
+             <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+             <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+             <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPaymentAddressForSpecificNftSaleController.Post(System.String,System.String,NMKR.Shared.Classes.ReserveMultipleNftsClassV2,System.String)">
+            <summary>
+            Returns an address for a multiple specific nfts sale (no random distribution) (project id)
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address where the buyer has to pay the amount of ada you define. The address will be monitored until it exipred. The count of nft will be reserved until it expires or the buyer has send the ada to this address.
+            If the buyer has send the amount of ada, the nfts will be minted and send to his senderaddress and the nfts state changes to sold.
+            </remarks>
+            <param Name="apikey">The apikey you have created on NMKR Studio</param>
+            <param Name="customeripaddress">The IP-Address from your Customer</param>
+            <param name="referer">(Optional) A referer code</param>
+            <response code="200">Returns the GetPaymentAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The id of the nft is not found or not assigned to this project</response>            
+            <response code="406">The demanded ada amount is too less. The minimium is 5 ADA - eg 5000000 lovelace</response>
+            <response code="409">There is a conflict with the selected nft. See errormessage in the resultset</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPayoutWalletsController.Get(System.String)">
+            <summary>
+            Returns all payout wallets in your account
+            </summary>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <response code="200">Returns the GetPayoutWalletsResultClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.GetPricelistController">
+            <summary>
+            Returns the actual valid pricelist for this project (project uid)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPricelistController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns the actual valid pricelist for this project (project uid) - Constructor
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetPricelistController.Get(System.String,System.String)">
+            <summary>
+            Returns the actual valid pricelist for this project (project uid)
+            </summary>
+            <remarks>
+            You will get the predefined prices for one or more nf
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project (not the id)</param>
+            <response code="200">Returns an array of the PricelistClass</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+        </member>
+        <member name="T:NMKR.Api.Controllers.v2.GetProjectDetailsController">
+            <summary>
+            Returns detail information about a project 
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetProjectDetailsController.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Returns detail information about a project - Constructor
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetProjectDetailsController.Get(System.String,System.String)">
+            <summary>
+            Returns detail information about a project 
+            </summary>
+            <remarks>
+            You will receive all information about this project
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="uid">The uid of the project</param>
+            <response code="200">Returns the NftProjectsDetails Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">The nft was not found</response>            
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.GetWalletValidationAddressController.Get(System.String,System.String)">
+            <summary>
+            Returns an address for wallet validation
+            </summary>
+            <remarks>
+            When you call this API, you will receive an address for a wallet validation. The user can send any ada to this address and the ada (and tokens) will sent back to the sender. With the function CheckWalletValidation you can check the state of the address
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="validationname">An optional name for the validation - will returned in CheckWalletValidation</param>
+            <response code="200">Returns the GetWalletValidationAddressResultClass Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.ListProjectsController.Get(System.String)">
+             <summary>
+             Lists all your projects
+             </summary>
+             <remarks>
+             You will receive a list with all of your projects
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="authorization">The apikey you have created on NMKR Studio</param>
+             <response code="200">Returns the NftProjectsDetails Class</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+             <response code="404">The apikey or the projects where not found</response>
+             <response code="406">The provided informations are not valid for this request</response>     
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.ListProjectsController.Get(System.String,System.Int32,System.Int32)">
+             <summary>
+             Lists all your projects with pagination
+             </summary>
+             <remarks>
+             You will receive a list with all of your projects
+            
+             IMPORTANT:
+             This function uses an internal cache. All results will be cached for 10 seconds. You do not need to call this function more than once in 10 seconds, because the results will be the same.
+             </remarks>
+             <param Name="apikey">The apikey you have created on NMKR Studio</param>
+             <param Name="count">How many projects do you want th get on one page´. Min. 1, Max 50</param>
+             <param Name="apikey">The Pagenumber. It starts with 1</param>
+             <response code="200">Returns the NftProjectsDetails Class</response>
+             <response code="404">The apikey or the projects where not found</response>
+             <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+             <response code="406">The provided informations are not valid for this request</response>    
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.MintAndSendRandomController.Get(System.String,System.String,System.Int32,System.String)">
+            <summary>
+            Mints random Nfts and sends it to an Address
+            </summary>
+            <remarks>
+            When you call this API, random NFTs will be selected, minted and send to an ada address. You will need ADA in your Account for the transaction and minting costs.
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="countnft">The count of the nft you want to mint and send</param>
+            <param Name="receiveraddress">The address you want to send the nft</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No more nft available</response>            
+            <response code="402">Too less ADA in your account. Fill up ADA first before try to mint and send</response>        
+            <response code="409">There are pending transactions on the sender address (your account address). Please wait a second</response>
+            <response code="406">The receiveraddress is not a valid cardano address</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.MintAndSendSpecificController.Get(System.String,System.String,System.String,System.Int32,System.String)">
+            <summary>
+            Mints a specific Nft and sends it to an Address
+            </summary>
+            <remarks>
+            When you call this API, a specific NFT will be minted and send to an ada address. You will need ADA in your Account for the transaction and minting costs.
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="nftprojectid">The id of your project</param>
+            <param Name="nftid">The ID of the NFT</param>
+            <param Name="tokencount">How many tokens of the nft you want to mint and send</param>
+            <param Name="receiveraddress">The address you want to send the nft</param>
+            <response code="200">Returns the Nft Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">NFT no more available (already sold)</response>            
+            <response code="402">Too less ADA in your account. Fill up ADA first before try to mint and send</response>        
+            <response code="409">There are pending transactions on the sender address (your account address). Please wait a second</response>
+            <response code="406">The receiveraddress is not a valid cardano address</response>
+            <response code="500">Internal server error - see the errormessage in the result</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.UpdateMetadataController.Post(System.String,System.String,System.String,NMKR.Shared.Classes.UploadMetadataClass)">
+            <summary>
+            Updates the Metadata for one specific NFT
+            </summary>
+            <remarks>
+            With this API you can update the Metadata Override for one specific NFT
+            If you leave the field blank, the Metadata override will be deleted and the Metadata from the project will be used.
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="nftuid">The UID of the NFT you want to change the metadata</param>
+            <param Name="metdata">The UploadMetadataClass as Body Content</param>
+            <response code="200">Returns the Nftdetails Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>
+            <response code="404">The NFT was not found</response>     
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.Controllers.v2.UploadNftController.Post(System.String,System.String,NMKR.Shared.Classes.UploadNftClassV2)">
+            <summary>
+            Upload a File to a project and pin it to IPFS
+            </summary>
+            <remarks>
+            With this API you can upload a file to IPFS and add it to a project. You can upload the file as BASE64 Content or as URL Link or as IPFS Hash.
+            If you submit Metadata, this Metadata will be used instead of the Metadatatemplate from the project. You can either submit Metadata or MetadataPlaceholder, but not both (because it makes no sense).
+            The Metadata field is optional and if you dont use it, it will use the Template from your project. It is poosible to mix both versions in one project. You can have one nft with own metadata and other nfts
+            with the template.
+            </remarks>
+            <param Name="authorization">The apikey you have created on NMKR Studio</param>
+            <param Name="projectuid">The uid of your project</param>
+            <param Name="nft">The UploadNft Class as Body Content</param>
+            <response code="200">Returns the UploadNftResult Class</response>
+            <response code="401">The access was denied. (Wrong or expired APIKEY, wrong projectid etc.)</response>     
+            <response code="404">No Image Content was provided. Send a file either as Base64 or as Link or IPFS Hash</response>            
+            <response code="406">See the errormessage in the resultset for further information</response>
+            <response code="409">There is a conflict with the provided images. Send a file either as Base64 or as Link or IPFS Hash</response>
+            <response code="500">Internal server error - see the errormessage in the resultset</response>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PaymentGatewayTransaction.PreparedPaymentTransactionsPaymentGatewayClass.CheckParameter(NMKR.Shared.Classes.CreatePaymentTransactionClass,NMKR.Shared.Model.Nftproject,NMKR.Shared.Classes.ApiErrorResultClass,System.Int32@)">
+            <summary>
+            Checks the Parameters from the incoming JSON
+            </summary>
+            <param name="paymenttransaction"></param>
+            <param name="result"></param>
+            <param name="statuscode"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Prepare.PaymentGatewayTransaction.PreparedPaymentTransactionsPaymentGatewayMintAndSendSpecificClass">
+            <summary>
+            Checks all parameters for the specific mint and send
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PaymentGatewayTransaction.PreparedPaymentTransactionsPaymentGatewayMintAndSendSpecificClass.#ctor(NMKR.Shared.Model.EasynftprojectsContext,NMKR.Shared.Classes.PaymentTransactionTypes)">
+            <summary>
+            Checks all parameters for the specific mint and send
+            </summary>
+            <param name="db"></param>
+            <param name="PaymentTransactionType"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PaymentGatewayTransaction.PreparedPaymentTransactionsPaymentGatewayMintAndSendSpecificClass.CheckParameter(NMKR.Shared.Classes.CreatePaymentTransactionClass,NMKR.Shared.Model.Nftproject,NMKR.Shared.Classes.ApiErrorResultClass,System.Int32@)">
+            <summary>
+            Checks all parameters for the specific mint and send
+            </summary>
+            <param name="paymenttransaction"></param>
+            <param name="result"></param>
+            <param name="statuscode"></param>
+            <returns></returns>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PaymentGatewayTransaction.PreparedPaymentTransactionsPaymentGatewayMintAndSendSpecificClass.SaveTransactionAsync(NMKR.Shared.Classes.CreatePaymentTransactionClass,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Nftproject,NMKR.Shared.Model.Preparedpaymenttransaction@,System.Int32@)">
+            <summary>
+            Saves the specific mint and send transaction parameters
+            </summary>
+            <param name="paymenttransaction"></param>
+            <param name="result"></param>
+            <param name="project"></param>
+            <param name="preparedpaymenttransaction"></param>
+            <param name="statuscode"></param>
+            <returns></returns>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PreparedPaymentTransactionsBaseClass.CheckParameter(NMKR.Shared.Classes.CreatePaymentTransactionClass,NMKR.Shared.Model.Nftproject,NMKR.Shared.Classes.ApiErrorResultClass,System.Int32@)">
+            <summary>
+            Checks the Parameters from the incoming JSON
+            </summary>
+            <param name="paymenttransaction"></param>
+            <param name="result"></param>
+            <param name="statuscode"></param>
+            <returns></returns>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Prepare.PreparedPaymentTransactionsBaseClass.SaveTransactionAsync(NMKR.Shared.Classes.CreatePaymentTransactionClass,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Nftproject,NMKR.Shared.Model.Preparedpaymenttransaction@,System.Int32@)">
+            <summary>
+            Save the Base Transaction
+            </summary>
+            <param name="paymenttransaction"></param>
+            <param name="result"></param>
+            <param name="project"></param>
+            <param name="preparedpaymenttransaction"></param>
+            <param name="statuscode"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Decentral.CancelDecentralPaymentClass">
+            <summary>
+            Cancels a decentral payment
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.CancelDecentralPaymentClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Reserves Nfts for Mint and Send
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSendClass">
+            <summary>
+            Signs a decentral mint and send command
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSendClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Reserves Nfts for Mint and Send
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSendClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Signs a decentral mint and send command
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSaleClass">
+            <summary>
+            Signs a decentral mint and send command
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSaleClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Signs a decentral mint and send command
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.SignDecentralPaymentMintAndSaleClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Signs a decentral mint and send command
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Decentral.SubmitDecentralPaymentTransactionClass">
+            <summary>
+            Submits a decentral Transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Decentral.SubmitDecentralPaymentTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Submits a decentral Transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Legacy.BetOnLegacyAuctionClass">
+            <summary>
+            Bets on a legacy auction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Legacy.BetOnLegacyAuctionClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Bets on a legacy auction
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Legacy.BetOnLegacyAuctionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Bets on a legacy auction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Legacy.CancelLegacyDirectSaleTransactionClass">
+            <summary>
+            Cancels legacy directsale transactions
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Legacy.CancelLegacyDirectSaleTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Cancels legacy directsale transactions
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.Legacy.LockNftOnLegacyTransactionsClass">
+            <summary>
+            Locks an nft on a legacy transaction (auction or directsale)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.Legacy.LockNftOnLegacyTransactionsClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Locks an nft on a legacy transaction (auction or directsale)
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CancelPaymentgatewayMintAndSendClass">
+            <summary>
+            Cancels a Mint and send Transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CancelPaymentgatewayMintAndSendClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Cancels a Mint and send Transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CancelPaymentTransactionClass">
+            <summary>
+            Cancels a payment transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CancelPaymentTransactionClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Cancels a payment transaction
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CancelPaymentTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Cancels a payment transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CheckPaymentAddressClass">
+            <summary>
+            Checks a payment address and returns the state of it
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CheckPaymentAddressClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Checks a payment address and returns the state of it
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.CheckPaymentAddressClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Checks a payment address and returns the state of it
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPaymentAddressClass">
+            <summary>
+            Retrieves a payment address and sends it to the transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPaymentAddressClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Retrieves a payment address and sends it to the transaction
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPaymentAddressClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Retrieves a payment address and sends it to the transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPriceListFoProjectClass">
+            <summary>
+            Retrives the pricelist for a specific project
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPriceListFoProjectClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Retrives the pricelist for a specific project
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.GetPriceListFoProjectClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Retrives the pricelist for a specific project
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.MintAndSendPaymentgatewayNftClass">
+            <summary>
+            Mints the previously reserved nfts
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.MintAndSendPaymentgatewayNftClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Mints the previously reserved nfts
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.MintAndSendPaymentgatewayNftClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Mints the previously reserved nfts
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.ReservePaymentgatewayMintAndSendNftClass">
+            <summary>
+            Reserves Nfts for Mint and Send
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.ReservePaymentgatewayMintAndSendNftClass.#ctor(StackExchange.Redis.IConnectionMultiplexer)">
+            <summary>
+            Reserves Nfts for Mint and Send
+            </summary>
+            <param name="redis"></param>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.ReservePaymentgatewayMintAndSendNftClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+             Reserves Nfts for Mint and Send
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.SubmitPaymentgatewayPaymentTransactionClass">
+            <summary>
+            Submits a payment gateway (PGW) Transaction (Directsale or Auction)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.PaymentGatewayTransaction.SubmitPaymentgatewayPaymentTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Submits a payment gateway (PGW) Transaction (Directsale or Auction)
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.BetOnSmartContractAuctionClass">
+            <summary>
+            Bets on a smart contract auction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.BetOnSmartContractAuctionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Bets on a smart contract auction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.BuyDirectsaleSmartContractClass">
+            <summary>
+            Creates a buy smart contract transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.BuyDirectsaleSmartContractClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Creates a buy smart contract transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.CancelSmartContractDirectSaleTransactionClass">
+            <summary>
+            Cancels the Smart Contract Direct Sale Transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.CancelSmartContractDirectSaleTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Cancels the Smart Contract Direct Sale Transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.EndSmartContractTransactionClass">
+            <summary>
+            End a smart contract transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.EndSmartContractTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            End a smart contract transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.LockNftOnSmartContractClass">
+            <summary>
+            Locks a nft on a smartcontract (auction or directsale)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.LockNftOnSmartContractClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+             Locks a nft on a smartcontract (auction or directsale)
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.SmartContract.SubmitSmartContractPaymentTransactionClass">
+            <summary>
+            Submits a Smartcontract Transaction (Directsale or Auction)
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.SmartContract.SubmitSmartContractPaymentTransactionClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+             Submits a Smartcontract Transaction (Directsale or Auction)
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+        <member name="T:NMKR.Api.PaymentTransactions.Processing.UpdateCustomPropertiesClass">
+            <summary>
+            Updates the custom properties from the payment transaction
+            </summary>
+        </member>
+        <member name="M:NMKR.Api.PaymentTransactions.Processing.UpdateCustomPropertiesClass.ProcessTransaction(NMKR.Shared.Model.EasynftprojectsContext,System.String,System.String,NMKR.Shared.Classes.ApiErrorResultClass,NMKR.Shared.Model.Preparedpaymenttransaction,System.Object)">
+            <summary>
+            Updates the custom properties from the payment transaction
+            </summary>
+            <param name="db"></param>
+            <param name="apikey"></param>
+            <param name="remoteipaddress"></param>
+            <param name="result"></param>
+            <param name="preparedtransaction"></param>
+            <param name="postparameter1"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

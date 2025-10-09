@@ -1,0 +1,321 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    @if (project != null)
+    {
+        <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Sale conditions (@project.Id - @project.Projectname)</MudText>
+    }
+    <MudText>The buyer can purchase an NFT if ALL conditions are met.</MudText>
+    <MudTable Items="@saleconditions" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Nftprojectsalecondition" Loading="@progressIsVisible">
+        <HeaderContent>
+            <MudTh>Condition</MudTh>
+            <MudTh>Policy/Collection ID</MudTh>
+            <MudTh>Max/Min value</MudTh>
+            <MudTh>State</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+                
+                <MudText>@GlobalFunctions.GetEnumDescription(context.Condition.ToEnum<SaleConditionsTypes>())</MudText>
+             
+            </MudTd>
+            <MudTd>
+                <ShowBlockchainIcon Blockchain="@(context.Blockchain.ToEnum<Blockchain>())" ShowText="true"/><br/><br/>
+                @context.Policyid
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid2"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid3"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid4"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid5"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid6"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid7"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid8"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid9"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid10"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid11"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid12"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid13"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid14"></ShowPolicyidInSalecondition>
+                <ShowPolicyidInSalecondition PolicyId="@context.Policyid15"></ShowPolicyidInSalecondition>
+            </MudTd>
+            <MudTd>
+                @context.Maxvalue
+            </MudTd>
+
+            <MudTd>
+                @switch (context.State)
+                {
+                    case "active":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                        break;
+                    case "notactive":
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                        break;
+                }
+            </MudTd>
+            <MudTd>
+                @context.Description
+            </MudTd>
+
+            <MudTd Style="text-align: right">
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">Edit</MudNavLink>
+                @if (context.Condition == nameof(SaleConditionsTypes.countedwhitelistedaddresses))
+                {
+                    <MudNavLink @onclick="() => ShowWhitelistUsage(context.Id)" Icon="@Icons.Material.Filled.List">Show whitelist usage</MudNavLink>
+                }
+                <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete">Delete</MudNavLink>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false" Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Size="Size.Large"
+               StartIcon="@Icons.Material.Filled.Add"
+               Color="Color.Tertiary"
+               OnClick="AddCondition">
+        Add Sale condition
+    </MudButton>
+
+    <MudButton DropShadow="false" Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Size="Size.Large"
+               StartIcon="@Icons.Material.Filled.FactCheck"
+               Color="Color.Tertiary"
+               OnClick="TestCondition">
+        Test sale conditions on an address
+    </MudButton>
+
+
+
+
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int customerid { get; set; }
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public string projectuid { get; set; }
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool progressIsVisible { get; set; }
+    private bool isSubmitting;
+
+    private Nftproject? project = new();
+    private List<Nftprojectsalecondition> saleconditions = new();
+
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (projectid != 0)
+        {
+            await ReloadData();
+            _items.Add(new($"Project ({project.Projectname})", href: $"/projects/{projectuid}/{customerid}/{projectuid}", disabled: false));
+            _items.Add(new("Sale Conditions (" + project.Projectname + ")", href: "/saleconditons/" + customerid + "/" + projectid, disabled: true));
+        }
+    }
+
+    private void ShowWhitelistUsage(int id)
+    {
+        NavigationManager.NavigateTo("/whitelistusage/" + projectid + "/" + id);
+    }
+
+    private async Task ReloadData()
+    {
+        if (projectid == 0)
+            return;
+
+        progressIsVisible = true;
+        StateHasChanged();
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        project = await (from a in db.Nftprojects
+                         where a.Id == projectid && a.CustomerId == customerid
+                         select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+        if (project == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            return;
+        }
+
+
+        saleconditions = await (from a in db.Nftprojectsaleconditions
+                                where a.NftprojectId == projectid
+                                select a).AsNoTracking().ToListAsync();
+
+
+        progressIsVisible = false;
+        StateHasChanged();
+    }
+
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        bool? result = await DialogService.ShowMessageBox(
+        "Warning",
+        "Are you sure you want to delete this sale condition?",
+        yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            var p = await (from a in db.Nftprojectsaleconditions
+                           where a.Id == id && a.NftprojectId == projectid
+                           select a).FirstOrDefaultAsync();
+            if (p != null)
+            {
+                db.Nftprojectsaleconditions.Remove(p);
+                await db.SaveChangesAsync();
+                await ReloadData();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Sale condition deleted", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error - Please contact support", Severity.Error);
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var p = await (from a in db.Nftprojectsaleconditions
+                       where a.Id == id && a.NftprojectId == projectid
+                       select a).AsNoTracking().FirstOrDefaultAsync();
+        if (p != null)
+        {
+            AddSaleCondtionClass pl = new()
+                {
+                    Id = p.Id,
+                    NftProjectId = projectid,
+                    Activated = p.State == "active",
+                    Description = p.Description,
+                    Maxvalue = p.Maxvalue,
+                    Condition = p.Condition,
+                    Projectname = p.Policyprojectname,
+                    WhitelistedAddresses = p.Whitlistaddresses,
+                    CumulateMaxCountPerStakeAddress = !p.Onlyonesaleperwhitlistaddress,
+                    BlacklistedAddresses = p.Blacklistedaddresses,
+                            Blockchain = p.Blockchain,
+                };
+
+            pl.AddPolicyid.Add(p.Policyid);
+            if (!string.IsNullOrEmpty(p.Policyid2))
+                pl.AddPolicyid.Add(p.Policyid2);
+            if (!string.IsNullOrEmpty(p.Policyid3))
+                pl.AddPolicyid.Add(p.Policyid3);
+            if (!string.IsNullOrEmpty(p.Policyid4))
+                pl.AddPolicyid.Add(p.Policyid4);
+            if (!string.IsNullOrEmpty(p.Policyid5))
+                pl.AddPolicyid.Add(p.Policyid5);
+            if (!string.IsNullOrEmpty(p.Policyid6))
+                pl.AddPolicyid.Add(p.Policyid6);
+            if (!string.IsNullOrEmpty(p.Policyid7))
+                pl.AddPolicyid.Add(p.Policyid7);
+            if (!string.IsNullOrEmpty(p.Policyid8))
+                pl.AddPolicyid.Add(p.Policyid8);
+            if (!string.IsNullOrEmpty(p.Policyid9))
+                pl.AddPolicyid.Add(p.Policyid9);
+            if (!string.IsNullOrEmpty(p.Policyid10))
+                pl.AddPolicyid.Add(p.Policyid10);
+            if (!string.IsNullOrEmpty(p.Policyid11))
+                pl.AddPolicyid.Add(p.Policyid11);
+            if (!string.IsNullOrEmpty(p.Policyid12))
+                pl.AddPolicyid.Add(p.Policyid12);
+            if (!string.IsNullOrEmpty(p.Policyid13))
+                pl.AddPolicyid.Add(p.Policyid13);
+            if (!string.IsNullOrEmpty(p.Policyid14))
+                pl.AddPolicyid.Add(p.Policyid14);
+            if (!string.IsNullOrEmpty(p.Policyid15))
+                pl.AddPolicyid.Add(p.Policyid15);
+
+
+            var parameters = new DialogParameters { { nameof(EditSaleConditionModalWindow.salecondition), pl }, { nameof(EditSaleConditionModalWindow.project), project } };
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<EditSaleConditionModalWindow>("Edit sale condition", parameters, maxWidth);
+            var result = await dialog.Result;
+
+            if (result != DialogResult.Cancel())
+            {
+                await ReloadData();
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task TestCondition()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var parameters = new DialogParameters { { nameof(AskForAdaAddressTestSaleConditionsModalWindow.Projectid), project.Id } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<AskForAdaAddressTestSaleConditionsModalWindow>("Test sale condition", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        isSubmitting = false;
+    }
+
+
+
+    private async Task AddCondition()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        AddSaleCondtionClass pl = new() { Id = null, NftProjectId = projectid };
+        pl.AddPolicyid.Add("");
+
+        var parameters = new DialogParameters { { nameof(EditSaleConditionModalWindow.salecondition), pl }, { nameof(EditSaleConditionModalWindow.project), project } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditSaleConditionModalWindow>("Add sale condition", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await ReloadData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+}
+

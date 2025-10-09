@@ -1,0 +1,102 @@
+﻿@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+        @_loc["Create New API Key"]"
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" Label="@_loc["Comment"]"  @bind-Value="comment" Lines="1" Immediate="true" Class="mb-3" />
+    
+        <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" Label="@_loc["Expiration"]" DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" @bind-Date="date" />
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">@_loc["Cancel"]</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CreateKey">@_loc["Create Apikey"]</MudButton>
+    </DialogActions>
+</MudDialog>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    private string comment { get; set; } = "Default key";
+  
+
+    private DateTime? date { get; set; } = DateTime.Now.AddYears(1);
+
+    private bool isSubmitting;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task CreateKey()
+    {
+
+        if (date == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Expiration date is invalid"], Severity.Error);
+            return;
+        }
+        if (date < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Expiration must be in the future"], Severity.Error);
+            return;
+        }
+
+        if (date > DateTime.Now.AddYears(3))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Expiration can not exceed three years"], Severity.Error);
+            return;
+        }
+        bool ok = IsAdmin || await _twoFactorCheck.CheckTwoFactor(CustomerId, TwoFactorCases.CreateEditApikey);
+        if (!ok)
+        {
+            isSubmitting = false;
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Two factor authentication failed. Please try again.", Severity.Error);
+            return;
+        }
+
+        string apikey = GlobalFunctions.GetGuid();
+        string hash = HashClass.GetHash(SHA256.Create(), apikey);
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        Apikey ap = new()
+        {
+            Created = DateTime.Now,
+            Expiration = (DateTime)date,
+            CustomerId = CustomerId,
+            State = "active",
+            Uploadnft = true,
+            Listnft = true,
+            Checkaddresses = true,
+            Createprojects = true,
+            Purchaserandomnft = true,
+            Purchasespecificnft = true,
+            Walletvalidation = true,
+            Paymenttransactions = true,
+            Listprojects=true,
+            Apikeyhash = hash,
+            Makepayouts = true,
+            Comment = comment,
+            Apikeystartandend = GlobalFunctions.GetStartAndEnd(apikey)
+        };
+
+        await db.Apikeys.AddAsync(ap);
+        await db.SaveChangesAsync();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add(@_loc["New Apikey created"], Severity.Success);
+        MudDialog.Close(DialogResult.Ok(apikey));
+    }
+
+}

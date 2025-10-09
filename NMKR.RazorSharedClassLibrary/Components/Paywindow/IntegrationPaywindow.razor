@@ -1,0 +1,352 @@
+﻿@inject ClipboardService ClipboardService
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer redis
+@if (project != null && model != null)
+{
+    <MudGrid Class="mb-3">
+        @if (project.Enabledcoins.Contains(Coin.ADA.ToString()))
+        {
+            <MudItem xs="6">
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary"  @bind-Value="SwitchEnbleDecentralPayment" Label="Enable Multi-Sig Payments">
+                    <TooltipHelper Description="Enable Multi-Sig Payments"/>
+                </MudSwitch>
+            </MudItem>
+        }
+        @if (SwitchEnbleDecentralPayment == true && !EnableFiat)
+        {
+            <MudItem xs="6">
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="SwitchDisableManualMintingButton" Label="Disable manual minting button">
+                    <TooltipHelper Description="Disable manual minting button"/>
+                </MudSwitch>
+            </MudItem>
+        }
+
+        <MudItem xs="12">
+            <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary"  @bind-Value="SwitchPGWSalestart" Label="Define NMKR Pay sale start">
+                <TooltipHelper Description="What does the NMKR Pay sale start mean?"/>
+            </MudSwitch>
+        </MudItem>
+
+        @if (SwitchPGWSalestart)
+        {
+            <MudItem xs="12">
+                <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary"  @bind-Value="PublishMintTo3rdPartyWebsites" Label="Publish Mint to 3rd Party Websites">
+                    <TooltipHelper Description="What does the this mean?"/>
+                </MudSwitch>
+            </MudItem>
+            <MudItem xs="6">
+                <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))"
+                               AutoClose="true" Label="NMKR Pay sale start (date - UTC)" @ref="_picker1" Color="Color.Tertiary"
+                               DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" Date="@model.PaymentGatewaySaleStart" DateChanged="OnDateChanged">
+                    <PickerActions>
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" OnClick="@(() => _picker1.CloseAsync(false))">Cancel</MudButton>
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" OnClick="SaveChangesAsync">Ok</MudButton>
+                    </PickerActions>
+                </MudDatePicker>
+            </MudItem>
+            <MudItem xs="6">
+                <MudTimePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))"
+                               AutoClose="true" Label="NMKR Pay sale start (time -UTC)" Color="Color.Tertiary"
+                               @ref="_picker2" Time="@model.PaymentGatewaySaleStartTime" TimeChanged="OnTimeChanged">
+                    <PickerActions>
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" OnClick="@(() => _picker2.CloseAsync(false))">Cancel</MudButton>
+                        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" OnClick="SaveChangesAsync">Ok</MudButton>
+                    </PickerActions>
+                </MudTimePicker>
+            </MudItem>
+        }
+
+
+        @* FIAT PAYMENT*@
+
+        @if (project != null && project.Maxsupply == 1 && project.Projecttype == "nft-project" && isFiatAllowed)
+        {
+            <MudItem xs="12">
+                @switch (project.Checkfiat)
+                {
+                    case 0:
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="rounded-xl px-6 py-3 mb-5" OnClick="EnableFiatPayment">
+                            Enable FIAT/ETH/SOL Payments
+                        </MudButton>
+                        <TooltipHelper Description="What does Enable FIAT/ETH/SOL Payment mean?"/>
+                        <MudText>
+                            By enabling these payment methods, you accept the Crossmint [MSA] (<a href="https://www.crossmint.com/master-services-agreement" target="_blank">https://www.crossmint.com/master-services-agreement</a>) and [Content Policy] (<a href="https://www.crossmint.com/content-policy" target="_blank">https://www.crossmint.com/content-policy</a>).
+                        </MudText>
+                        break;
+                    case 1:
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="rounded-xl px-6 py-3 mb-5" Disabled="true">
+                            Your project will be verified to enable FIAT Payments.
+                        </MudButton>
+                        break;
+                    case 2:
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="rounded-xl px-6 py-3 mb-5" Disabled="true">
+                            FIAT payments cannot be activated.
+                        </MudButton>
+                        break;
+                    case 3:
+                        <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" T="bool" @bind-Value="EnableFiat" Label="Enable FIAT/ETH/SOL Payments">
+                            <TooltipHelper Description="What does Enable FIAT/ETH/SOL Payment mean?"/>
+                        </MudSwitch>
+                        <MudText>
+                            By enabling these payment methods, you accept the Crossmint [MSA] (<a href="https://www.crossmint.com/master-services-agreement" target="_blank">https://www.crossmint.com/master-services-agreement</a>) and [Content Policy] (<a href="https://www.crossmint.com/content-policy" target="_blank">https://www.crossmint.com/content-policy</a>).
+                        </MudText>
+                        break;
+
+                }
+
+            </MudItem>
+        }
+    </MudGrid>
+    <IntegrationPayButton @bind-Value="model" Project="@project"/>
+}
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public bool IsAdmin { get; set; } = false;
+    MudDatePicker _picker1;
+    MudTimePicker _picker2;
+    private Nftproject? project { get; set; }
+    bool _SwitchPGWSalestart = false;
+    bool _SwitchEnbleDecentralPayment = false;
+    bool _SwitchDisableManualMintingButton = false;
+    bool _PublishMintTo3rdPartyWebsites = true;
+    bool _EnableFiat = false;
+    bool isFiatAllowed = false;
+
+    bool PublishMintTo3rdPartyWebsites
+    {
+        get => _PublishMintTo3rdPartyWebsites;
+        set
+        {
+            if (value != _PublishMintTo3rdPartyWebsites)
+            {
+                _PublishMintTo3rdPartyWebsites = value;
+                SaveChanges();
+            }
+        }
+    }
+
+    bool SwitchPGWSalestart
+    {
+        get => _SwitchPGWSalestart;
+        set
+        {
+            if (value != _SwitchPGWSalestart)
+            {
+                _SwitchPGWSalestart = value;
+                SaveChanges();
+            }
+        }
+    }
+
+    bool SwitchEnbleDecentralPayment
+    {
+        get => _SwitchEnbleDecentralPayment;
+        set
+        {
+            if (value != _SwitchEnbleDecentralPayment)
+            {
+                _SwitchEnbleDecentralPayment = value;
+                SaveChanges();
+            }
+        }
+    }
+
+    bool SwitchDisableManualMintingButton
+    {
+        get => _SwitchDisableManualMintingButton;
+        set
+        {
+            if (value != _SwitchDisableManualMintingButton)
+            {
+                _SwitchDisableManualMintingButton = value;
+                SaveChanges();
+            }
+        }
+    }
+
+    bool EnableFiat
+    {
+        get => _EnableFiat;
+        set
+        {
+            if (value == _EnableFiat) return;
+            _EnableFiat = value;
+
+            if (_EnableFiat)
+                _SwitchDisableManualMintingButton = false;
+
+            SaveChanges();
+        }
+    }
+
+    private PaybuttonClass? model = null;
+
+    private List<Pricelist> _prices = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        project = await (from a in db.Nftprojects
+            .Include(a => a.Settings)
+            .Include(a => a.Customer)
+                         where a.Id == ProjectId
+                         select a).FirstOrDefaultAsync();
+
+        if (project == null)
+            return;
+
+        isFiatAllowed = project.Customer.Kycstatus == "GREEN";
+        if ((await GlobalFunctions.GetWebsiteSettingsBoolAsync(db,"fiatenabled"))==false)
+        {
+            isFiatAllowed = false;
+        }
+
+        model = new(project);
+
+
+        
+
+
+
+        _prices = await (from a in db.Pricelists
+                         where a.NftprojectId == ProjectId && a.State == "active"
+                         orderby a.Countnftortoken
+                         select a).ToListAsync();
+
+        if (_prices.Any())
+            model.Pricelist = _prices.First();
+
+        if (project.Paymentgatewaysalestart == null)
+        {
+            _SwitchPGWSalestart = false;
+            model.PaymentGatewaySaleStartTime = DateTime.Now.TimeOfDay;
+            model.PaymentGatewaySaleStart = DateTime.Now;
+        }
+        else
+        {
+            _SwitchPGWSalestart = true;
+            model.PaymentGatewaySaleStartTime = ((DateTime)project.Paymentgatewaysalestart).TimeOfDay;
+            model.PaymentGatewaySaleStart = project.Paymentgatewaysalestart;
+        }
+
+        _SwitchEnbleDecentralPayment = project.Enabledecentralpayments;
+        _SwitchDisableManualMintingButton = project.Disablemanualmintingbutton;
+        _PublishMintTo3rdPartyWebsites = project.Publishmintto3rdpartywebsites;
+        _EnableFiat = project.Enablefiat;
+    }
+
+    void OnTimeChanged(TimeSpan? newTime)
+    {
+        if (newTime != model.PaymentGatewaySaleStartTime)
+        {
+            model.PaymentGatewaySaleStartTime = newTime;
+            SaveChanges();
+        }
+    }
+
+    void OnDateChanged(DateTime? newDate)
+    {
+        if (newDate != model.PaymentGatewaySaleStart)
+        {
+            model.PaymentGatewaySaleStart = newDate;
+            SaveChanges();
+        }
+    }
+
+    private void SaveChanges()
+    {
+        Task.Run(async () => await SaveChangesAsync());
+    }
+
+
+    private async Task SaveChangesAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var p = await (from a in db.Nftprojects
+            .Include(a => a.Settings)
+                       where a.Id == ProjectId
+                       select a).FirstOrDefaultAsync();
+
+        if (p == null)
+            return;
+
+        if (SwitchPGWSalestart == false || model.PaymentGatewaySaleStart == null || model.PaymentGatewaySaleStartTime == null)
+        {
+            p.Paymentgatewaysalestart = null;
+        }
+        else
+        {
+            p.Paymentgatewaysalestart = (((DateTime)model.PaymentGatewaySaleStart).Date) + (TimeSpan)model.PaymentGatewaySaleStartTime;
+        }
+
+        p.Enabledecentralpayments = SwitchEnbleDecentralPayment;
+        p.Disablemanualmintingbutton = p.Enabledecentralpayments && SwitchDisableManualMintingButton;
+        p.Enablefiat = _EnableFiat && p.Maxsupply == 1;
+        p.Publishmintto3rdpartywebsites = PublishMintTo3rdPartyWebsites;
+
+        await db.SaveChangesAsync();
+        project = p;
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Changes saved. It may take up to 2 minutes for the changes to be affected", Severity.Success);
+
+        StateHasChanged();
+    }
+
+
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await ClipboardService.WriteTextAsync(model.PaywindowCode);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Code copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+        }
+    }
+
+    private async Task EnableFiatPayment()
+    {
+        /* Checkfiat
+       * 0=not checked yet
+       1=has to been checked
+       2=check was not successful
+       3=successfully checked
+
+       */
+        if (project == null)
+            return;
+        AskForAdditionalInformationsForFiatPaymentClass aic = new AskForAdditionalInformationsForFiatPaymentClass() { Discord = project.Discordurl, Twitter = project.Twitterurl };
+        var parameters = new DialogParameters { { nameof(AskForAdditionalFiatFieldsModalWindow.AskForAdditionalInformationsForFiatPayment), aic } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<AskForAdditionalFiatFieldsModalWindow>("Add additional fields", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var p = await (from a in db.Nftprojects
+                .Include(a => a.Settings)
+                           where a.Id == ProjectId
+                           select a).FirstOrDefaultAsync();
+
+            aic = (AskForAdditionalInformationsForFiatPaymentClass)result.Data;
+            p.Twitterurl = aic.Twitter;
+            p.Discordurl = aic.Discord;
+            p.Checkfiat = 1;
+            await db.SaveChangesAsync();
+            project = p;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,77 @@
+﻿@using NMKR.Shared.Functions.Metadata
+
+@if (Tokenname != File.FileName)
+{
+    <MudText Typo="Typo.body1" Style="text-align: center;">@File.FileName</MudText>
+}
+
+@if (File.FilesSrcIpfsHash!=null && File.FilesSrcIpfsHash.Contains("<") && File.FilesSrcIpfsHash.Contains(">"))
+{
+    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="400px" Height="400px" Class="rounded-lg ma-4" />
+}
+else
+{
+    @switch (File.MimeType)
+    {
+        case "image/png":
+        case "image/jpeg":
+        case "image/gif":
+        case "image/webp":
+        case "image/bmp":
+        case "image/tiff":
+
+
+            <a href="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" target="_blank" class="btn btn-primary">
+                <MudImage Src="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" Width="400" Alt="@File.FileName" Elevation="25" Class="rounded-lg ma-4" />
+            </a>
+            break;
+        case "video/mp4":
+        case "video/ogg":
+        case "video/webm":
+        case "video/mpeg":
+            <BlazoredVideo class="w-100"
+                           style="max-width:400px;"
+                           controls="controls">
+                <source src="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" type="@File.MimeType" />
+            </BlazoredVideo>
+            break;
+        case "audio/mpeg":
+        case "audio/ogg":
+        case "audio/wav":
+        case "audio/mp3":
+            <a href="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" target="_blank" class="btn btn-primary">
+                <audio id="@File.FileName" controls="" preload="none" style="max-width: 628px; max-height: 546px;">
+                    <source src="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" />
+                </audio>
+            </a>
+            break;
+        default:
+            <a href="@(GeneralConfigurationClass.IPFSGateway + File.FilesSrcIpfsHash)" target="_blank" class="btn btn-primary">
+                <MudImage Src="@(GetMimeTypeImage())" Width="50" Alt="@File.FileName" Elevation="25" Class="rounded-lg ma-4" />
+            </a>
+            break;
+    }
+}
+@foreach (var field in File.MetadataFields)
+{
+    <ShowMetadataField Field="@field"></ShowMetadataField>
+}
+
+
+<br />
+
+@code {
+    [Parameter]
+    public Metadatafiles File { get; set; }
+    [Parameter]
+    public string Tokenname { get; set; }
+
+    private string GetMimeTypeImage()
+    {
+        using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        var mimeType = db.Mimetypes.FirstOrDefault(m => m.Mimetype1 == File.MimeType);
+        return mimeType != null ? mimeType.Placeholderfile : "/images/icons/unknown.svg";
+    }
+
+}

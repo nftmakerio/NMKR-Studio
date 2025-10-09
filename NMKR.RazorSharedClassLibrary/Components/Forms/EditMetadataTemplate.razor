@@ -1,0 +1,768 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.VisualizeMetadata
+@using Newtonsoft.Json.Linq
+@using System.Text.RegularExpressions
+@using NMKR.Shared.Functions.Metadata
+@using BlazorMonaco.Editor
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.Solana
+@inject ISnackbar Snackbar
+
+<MudGrid>
+
+    @if (Value != null)
+    {
+
+        <MudItem xs="12" sm="6">
+
+            <MudText Typo="Typo.h5">Social fields</MudText>
+            @for (int i = 0; i < SocialFields.Count; i++)
+            {
+                var i1 = i;
+                <MudTextField Variant="Variant.Outlined" Label="@SocialFields[i1].Key" T="string" @bind-Value="@SocialFields[i1].Value" Immediate="true" OnKeyUp="LookForCustomerSocialFields" OnClearButtonClick="LookForCustomerSocialFields" Clearable="true"/>
+            }
+
+            <MudText Typo="Typo.h5" Class="mt-10">Static fields (Value is the same on all NFTs)</MudText>
+            @for (int i = 0; i < CustomStaticFields2.Count; i++)
+            {
+                var i2 = i;
+                <MudGrid Class="mb-3">
+                    <MudItem xs="6">
+                        <MudTextField Variant="Variant.Outlined" Label="@("Key " + (i2 + 1))" T="string" @bind-Value="@CustomStaticFields2[i2].Key" Immediate="true" OnKeyUp="LookForCustomStaticFields" OnClearButtonClick="LookForCustomStaticFields" Clearable="true"/>
+                    </MudItem>
+                    <MudItem xs="5">
+                        <MudTextField Variant="Variant.Outlined" Label="@("Value " + (i2 + 1))" T="string" @bind-Value="@CustomStaticFields2[i2].Value" Immediate="true" OnKeyUp="LookForCustomStaticFields" OnClearButtonClick="LookForCustomStaticFields" Clearable="true"/>
+                    </MudItem>
+                    <MudItem xs="1" Class="align-self-center">
+                        @if (i2 != 0)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="() => RemoveCustomStaticField(i2)"/>
+                        }
+                        @if (i2 == (CustomStaticFields2.Count - 1))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="AddNewCustomStaticField"/>
+                        }
+
+                    </MudItem>
+                </MudGrid>
+            }
+
+
+            <MudText Typo="Typo.h5" Class="mt-10">Placeholder fields (Value can be defined on every NFT separately)</MudText>
+            @for (int i = 0; i < PlaceholderFields.Count; i++)
+            {
+                var i1 = i;
+                <MudGrid Class="mb-3">
+                    <MudItem xs="11">
+                        <MudTextField Variant="Variant.Outlined" Label="@("Placeholder field " + (i1 + 1) + " " + "- " + GetCustomFieldPlaceholderValue(PlaceholderFields[i1]))" T="string" @bind-Value="@PlaceholderFields[i1].Key" Immediate="true" OnKeyUp="LookForCustomPlaceholderInFields" OnClearButtonClick="LookForCustomPlaceholderInFields" Clearable="true"/>
+                    </MudItem>
+                    <MudItem xs="1" Class="align-self-center">
+                        @if (i1 != 0)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="() => RemoveField(i1)"/>
+                        }
+                        @if (i1 == (PlaceholderFields.Count - 1))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small" OnClick="AddNewField"/>
+                        }
+
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudItem>
+        <MudItem xs="12" sm="6">
+
+            <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4" Outlined="true">
+                <MudTabPanel Text="Preview">
+                    <VisualizeMetadata Metadata="@Value.MetaData" Cip68="false" CipVersionText="@(BlockchainClass?.CipStandard==1?"CIP68":"CIP25")" ProjectName="@Model1.Projectname" ProjectDescription="@Model1.Description"></VisualizeMetadata>
+                </MudTabPanel>
+                @if (Model1?.solana==true)
+                {
+                    <MudTabPanel Text="Solana">
+                        <MudGrid Class="mb-3">
+                            <MudItem xs="12">
+                                <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsSolana" @ref="editorsolana" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+                @if (Model1?.aptos==true)
+                {
+                    <MudTabPanel Text="Aptos">
+                        <MudGrid Class="mb-3">
+                            <MudItem xs="12">
+                                <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsAptos" @ref="editoraptos" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+                @if (BlockchainClass?.CipStandard == 1)
+                {
+                    <MudTabPanel Text="Cardano - CIP68">
+                        <MudGrid Class="mb-3">
+                            <MudItem xs="12">
+                                <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip68" @ref="editorcip68"/>
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+                }
+
+                <MudTabPanel Text="Cardano - CIP25">
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip25" @ref="editorcip25" OnKeyUp="() => LookForCustomerPlaceholderInJson(true)"/>
+                        </MudItem>
+                    </MudGrid>
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h5">Predefined Placeholder:</MudText>
+                            <MudText>You can use the placeholder below or you can define your own placeholder in the format @("<placeholder_name>"). If you upload your NFT, just enter the value of the placeholder in the details section.</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTooltip Color="Color.Dark" Text="The Name of the NFT excl. Tokenprefix">
+                                <NMKRChip Text="<nft_name>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The description of the NFT">
+                                <NMKRChip Text="<description>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Link and Hash for the IPFS System (ipfs://)">
+                                <NMKRChip Text="<ipfs_link>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Link and Hash for the Iagon System (iagon://)">
+                                <NMKRChip Text="<iagon_link>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Gateway Link for the file (https://)">
+                                <NMKRChip Text="<gateway_link>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The complete Tokenname of the NFT incl. Tokenprefix">
+                                <NMKRChip Text="<asset_name>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Name of the NFT. If this field is used but empty, the asset_name field will used instead.">
+                                <NMKRChip Text="<display_name>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The detaildate/description field">
+                                <NMKRChip Text="<detail_data>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Tokenprefix">
+                                <NMKRChip Text="<token_prefix>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The policy id">
+                                <NMKRChip Text="<policy_id>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The mimetype of the file">
+                                <NMKRChip Text="<mime_type>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Name of the project">
+                                <NMKRChip Text="<project_name>"></NMKRChip>
+                            </MudTooltip>
+                            <MudTooltip Color="Color.Dark" Text="The Description of the project">
+                                <NMKRChip Text="<project_description>"></NMKRChip>
+                            </MudTooltip>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+
+
+            </MudTabs>
+
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+
+    [Parameter]
+    public CreateNewProject3Class? Value { get; set; }
+
+    [Parameter]
+    public CreateNewProjectClass? Model1 { get; set; }
+    [Parameter]
+    public CreateNewProjectBlockchainsClass? BlockchainClass { get; set; }
+
+    [Parameter]
+    public EventCallback<CreateNewProject3Class> ValueChanged { get; set; }
+
+    [Parameter]
+    public string PolicyId { get; set; } = "12345678901234567890123456789012345678901234567890123456";
+
+    private StandaloneCodeEditor? editorcip68;
+    private StandaloneCodeEditor? editorcip25;
+    private StandaloneCodeEditor? editorsolana;
+    private StandaloneCodeEditor? editoraptos;
+    private string _valuecip68 = "";
+
+    private string Valuecip68
+    {
+        get => _valuecip68;
+        set
+        {
+            _valuecip68 = value;
+            if (editorcip68 != null)
+                editorcip68.SetValue(_valuecip68);
+        }
+    }
+    private string _valuesolana = "";
+
+    private string Valuesolana
+    {
+        get => _valuesolana;
+        set
+        {
+            _valuesolana = value;
+            if (editorsolana != null)
+                editorsolana.SetValue(_valuesolana);
+        }
+    }
+    private string _valueaptos = "";
+
+    private string Valueaptos
+    {
+        get => _valueaptos;
+        set
+        {
+            _valueaptos = value;
+            if (editoraptos != null)
+                editoraptos.SetValue(_valueaptos);
+        }
+    }
+    private string Valuecip25
+    {
+        get => Value?.MetaData??"";
+        set
+        {
+            if (Value != null)
+            {
+                Value.MetaData = value;
+                if (editorcip25 != null)
+                    editorcip25.SetValue(Value.MetaData);
+
+                ValueChanged.InvokeAsync(Value);
+            }
+        }
+    }
+
+    private List<KeyValueClass> CustomFields = new() ;
+    private List<KeyValueClass> CustomStaticFields = new() ;
+    private List<KeyValueClass> PlaceholderFields = new List<KeyValueClass> {new KeyValueClass("","")};
+    private List<KeyValueClass> SocialFields = new List<KeyValueClass> { new KeyValueClass("Twitter", ""), new KeyValueClass("Discord", ""), new KeyValueClass("Website", ""), new KeyValueClass("Telegram", ""), };
+    private List<KeyValueClass> CustomStaticFields2 = new List<KeyValueClass> { new KeyValueClass("", "") };
+
+    private List<Smartcontract> smartcontracts = new();
+    private bool firstParameterSet=true;
+    protected override void OnParametersSet()
+    {
+        if (firstParameterSet)
+        {
+            firstParameterSet = false;
+            FillCustomFieldsFromJson();
+            SynchronizePlaceHolders(true);
+            UpdateCip68Metadata(true);
+            UpdateSolanaMetadata();
+            UpdateAptosMetadata();
+        }
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsCip68(StandaloneCodeEditor editor)
+    {
+
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Valuecip68,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 600},
+            TabSize = 2,
+                FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsSolana(StandaloneCodeEditor editor)
+    {
+
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Valuesolana,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 600},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsAptos(StandaloneCodeEditor editor)
+    {
+
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Valueaptos,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 600},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsCip25(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+                Value = Value?.MetaData,
+            ReadOnly = false, 
+            Dimension = new Dimension(){Height = 600},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+    private void FillSocialFieldsFromJson()
+    {
+        if (!GlobalFunctions.IsValidJson(Value?.MetaData, out string metadata)) return;
+        foreach (var fixedField in SocialFields)
+        {
+            fixedField.Value = JsonElementsClass.Get(Value?.MetaData, fixedField.Key);
+        }
+    }
+
+    private async Task LookForCustomerPlaceholderInJson(bool notify)
+    {
+        if (editorcip25 != null && notify)
+        {
+            var res =  await editorcip25?.GetValue();
+            Value.MetaData = res;
+        }
+        FillCustomFieldsFromJson();
+        SynchronizePlaceHolders(true);
+        if (notify)
+        {
+            ValueChanged.InvokeAsync(Value);
+            UpdateCip68Metadata(false);
+            UpdateSolanaMetadata();
+            UpdateAptosMetadata();
+        }
+    }
+
+    private void FillCustomFieldsFromJson()
+    {
+        string s = Value!=null ? Value.MetaData : "";
+
+        if (!GlobalFunctions.IsValidJson(s,out string formated))
+            return;
+
+
+        // Add Static Fields
+
+        CustomStaticFields.Clear();
+        ParseCip25Metadata chm = new();
+        try
+        {
+            var parsed = chm.ParseMetadata(s);
+
+            foreach (var parsedMetadataField in parsed.MetadataFields)
+            {
+                if (parsedMetadataField.FieldValues.Count==0)
+                    continue;
+
+                if (parsedMetadataField.FieldValues.Count == 1)
+                {
+                    if (parsedMetadataField.FieldValues.First().Value.StartsWith("<") && parsedMetadataField.FieldValues.First().Value.EndsWith(">"))
+                        continue;
+                    var kv = new KeyValueClass(parsedMetadataField.Key, parsedMetadataField.FieldValues.First().Value);
+                    if (SocialFields.Find(x => x.Key == kv.Key)==null)
+                        CustomStaticFields.Add(kv);
+                }
+                else
+                {
+                    string v = "";
+                    foreach (var metadatafield in parsedMetadataField.FieldValues)
+                    {
+                        if (!string.IsNullOrEmpty(v))
+                            v += " ";
+                        v += metadatafield.Value;
+                    }
+                    var kv = new KeyValueClass(parsedMetadataField.Key, v);
+                    if (SocialFields.Find(x => x.Key == kv.Key)==null)
+                        CustomStaticFields.Add(kv);
+
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+
+    // Remove the Static fields (the fields which are always in the metadata)
+          CustomFields.Clear();
+        s = GlobalFunctions.RemoveStaticPlaceholder(s);
+
+
+    // Add Placeholder
+        do
+        {
+            string st = s.Between("<", ">");
+            if (string.IsNullOrEmpty(st))
+                break;
+
+            var key = GlobalFunctions.FindKeyInJson(s, "<" + st + ">");
+            if (string.IsNullOrEmpty(key))
+                break;
+
+            CustomFields.Add(new KeyValueClass(key,st));
+            s = s.Replace("<" + st + ">", "");
+        } while (true);
+    }
+
+    private void SynchronizePlaceHolders(bool jsonFirst)
+    {
+        if (jsonFirst)
+        {
+            if (CustomFields.Any())
+                PlaceholderFields.Clear();
+            foreach (var customField in CustomFields)
+            {
+                PlaceholderFields.Add(customField);
+            }
+
+
+            if (CustomStaticFields.Any())
+                CustomStaticFields2.Clear();
+            foreach (var customField in CustomStaticFields)
+            {
+                CustomStaticFields2.Add(customField);
+            }
+            FillSocialFieldsFromJson();
+        }
+        else
+        {
+            // Add New Fields
+            foreach (var customfield in PlaceholderFields)
+            {
+                if (CustomFields.Find(x=>x.Value==customfield.Value && x.Key==customfield.Key) == null)
+                {
+                    AddCustomField2ToJson(customfield);
+                }
+            }
+            foreach (var customfield in CustomStaticFields2)
+            {
+                if (CustomStaticFields.Find(x=>x.Value==customfield.Value && x.Key==customfield.Key) == null)
+                {
+                    AddCustomStaticField2ToJson(customfield);
+                }
+            }
+
+            FillCustomFieldsFromJson();
+            // Remove Fields
+            foreach (var customfield in CustomFields)
+            {
+                if (PlaceholderFields.Find(x => x.Key == customfield.Key) == null)
+                {
+                    RemoveCustomFieldFromJson(customfield);
+                }
+            }
+          // Static fields
+            foreach (var customfield in CustomStaticFields)
+            {
+                if (CustomStaticFields2.Find(x => x.Key == customfield.Key) == null)
+                {
+                    RemoveStaticFieldFromJson(customfield);
+                }
+            }
+
+            FillCustomFieldsFromJson();
+        }
+    }
+
+    private void RemoveCustomFieldFromJson(KeyValueClass customfield)
+    {
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string metadata)) return;
+        var metadataUnformated = JToken.Parse(metadata).ToString(Formatting.None);
+
+        metadataUnformated = metadataUnformated.Replace("\"" + customfield.Key + "\":" + "\"<" + GetCustomFieldPlaceholderValue(customfield) + ">\""+ ",", "");
+        metadataUnformated = metadataUnformated.Replace(",\"" + customfield.Key + "\":" + "\"<" + GetCustomFieldPlaceholderValue(customfield)+ ">\"", "");
+
+        if (GlobalFunctions.IsValidJson(metadataUnformated, out string metadataFormated))
+        {
+            Value.MetaData = metadataFormated;
+        }
+    }
+    private void RemoveStaticFieldFromJson(KeyValueClass customfield)
+    {
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string metadata)) return;
+        var metadataUnformated = JToken.Parse(metadata).ToString(Formatting.None);
+
+        metadataUnformated = metadataUnformated.Replace("\"" + customfield.Key + "\":" + "\"" + customfield.Value + "\""+ ",", "");
+        metadataUnformated = metadataUnformated.Replace(",\"" + customfield.Key + "\":" + "\"" + customfield.Value+ "\"", "");
+
+        if (GlobalFunctions.IsValidJson(metadataUnformated, out string metadataFormated))
+        {
+            Value.MetaData = metadataFormated;
+        }
+    }
+    private void AddCustomField2ToJson(KeyValueClass customfield)
+    {
+        if (string.IsNullOrEmpty(customfield.Key)) return;
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string metadata)) return;
+        int insertPosition = Value?.MetaData?.IndexOf("\"files\":", StringComparison.Ordinal)??-1;
+        if (insertPosition == -1)
+        {
+            insertPosition = Value?.MetaData?.IndexOf("\"mediaType\":", StringComparison.Ordinal)??-1;
+        }
+        if (insertPosition != 0)
+        {
+            string metadataUnformated = Value?.MetaData?.Substring(0, insertPosition) + 
+                                        "\"" + customfield.Key + "\":" + "\"<" + GetCustomFieldPlaceholderValue(customfield) + ">\"" + "," + 
+                                        Value?.MetaData?.Substring(insertPosition);
+            if (GlobalFunctions.IsValidJson(metadataUnformated, out string metadataFormated))
+            {
+                Value.MetaData = metadataFormated;
+            }
+        }
+    }
+    private void AddCustomStaticField2ToJson(KeyValueClass customfield)
+    {
+        if (string.IsNullOrEmpty(customfield.Key)) return;
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string metadata)) return;
+        int insertPosition = Value?.MetaData?.IndexOf("\"files\":", StringComparison.Ordinal)??-1;
+        if (insertPosition == -1)
+        {
+            insertPosition = Value?.MetaData?.IndexOf("\"mediaType\":", StringComparison.Ordinal)??-1;
+        }
+        if (insertPosition != 0)
+        {
+            string metadataUnformated = Value?.MetaData?.Substring(0, insertPosition) +
+                                        GetStringFieldOrArray(customfield.Key, customfield.Value) + ","
+                                        + Value?.MetaData?.Substring(insertPosition);
+            if (GlobalFunctions.IsValidJson(metadataUnformated, out string metadataFormated))
+            {
+                Value.MetaData = metadataFormated;
+            }
+        }
+    }
+
+    private string GetStringFieldOrArray(string customfieldKey, string customfieldValue)
+    {
+        if (customfieldValue.Length < 64)
+        {
+            string s="\"" + customfieldKey + "\":" + "\"" + customfieldValue + "\"";
+            return s;
+        }
+
+        var lines = GlobalFunctions.SplitStringIntoChunks(customfieldValue);
+        string res = "\"" + customfieldKey + "\":[";
+
+        string res1 = "";
+        foreach (var line in lines)
+        {
+            if (!string.IsNullOrEmpty(res1))
+                res1 += ",";
+
+            res1 += "\"" + line + "\"";
+        }
+        res += res1+ "]";
+
+        return res;
+    }
+
+    private string GetCustomFieldPlaceholderValue(KeyValueClass customfield)
+    {
+        if (!string.IsNullOrEmpty(customfield.Value))
+            return customfield.Value;
+
+        var placeholder = customfield.Key.ToLower();
+        placeholder = placeholder.Replace(" ", "_");
+        placeholder = Regex.Replace(placeholder, "[^0-9A-Za-z _-]", "");
+        return placeholder;
+    }
+    private string GetCustomFieldStaticValue(KeyValueClass customfield)
+    {
+        if (!string.IsNullOrEmpty(customfield.Value))
+            return customfield.Value;
+
+        var placeholder = customfield.Key;
+        return placeholder;
+    }
+
+    private void AddNewField()
+    {
+        PlaceholderFields.Add(new KeyValueClass("",""));
+    }
+    private void AddNewCustomStaticField()
+    {
+        CustomStaticFields2.Add(new KeyValueClass("",""));
+    }
+    private void LookForCustomPlaceholderInFields()
+    {
+        for (var index = 0; index < PlaceholderFields.Count; index++)
+        {
+            if (string.IsNullOrEmpty(PlaceholderFields[index].Key))
+                PlaceholderFields[index].Value = "";
+        }
+        SynchronizePlaceHolders(false);
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+
+    private void LookForCustomStaticFields()
+    {
+        for (var index = 0; index < CustomStaticFields2.Count; index++)
+        {
+            if (string.IsNullOrEmpty(CustomStaticFields2[index].Key))
+                CustomStaticFields2[index].Value = "";
+        }
+        SynchronizePlaceHolders(false);
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+
+
+
+
+    private void RemoveField(int i1)
+    {
+        PlaceholderFields.RemoveAt(i1);
+        LookForCustomPlaceholderInFields();
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+    private void RemoveCustomStaticField(int i1)
+    {
+        CustomStaticFields2.RemoveAt(i1);
+        LookForCustomStaticFields();
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+
+    private void LookForCustomerSocialFields()
+    {
+        // Delete all fixed fields
+        foreach (var fixedField in SocialFields)
+        {
+           
+            if (!string.IsNullOrEmpty(fixedField.Value))
+                AddFixedFieldToJson(fixedField);
+            else
+                Value.MetaData=JsonElementsClass.Delete(Value.MetaData, fixedField.Key);
+        }
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+
+    private void AddFixedFieldToJson(KeyValueClass customfield)
+    {
+        if (string.IsNullOrEmpty(customfield.Key)) return;
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string metadata)) return;
+        int insertPosition = Value?.MetaData.IndexOf("\"files\":", StringComparison.Ordinal)??-1;
+        if (insertPosition == -1)
+        {
+            insertPosition = Value?.MetaData.IndexOf("\"mediaType\":", StringComparison.Ordinal)??-1;
+        }
+        if (insertPosition != 0)
+        {
+            string metadataUnformated = Value?.MetaData?.Substring(0, insertPosition) + 
+                                        GetStringFieldOrArray(customfield.Key, GetCustomFieldPlaceholderValue(customfield)) + "," +
+                                        Value?.MetaData?.Substring(insertPosition);
+            if (GlobalFunctions.IsValidJson(metadataUnformated, out string metadataFormated))
+            {
+                Value.MetaData = metadataFormated;
+            }
+            else
+            {
+                Value.MetaData = metadataUnformated;
+            }
+        }
+        ValueChanged.InvokeAsync(Value);
+        UpdateCip68Metadata(true);
+        UpdateSolanaMetadata();
+        UpdateAptosMetadata();
+    }
+
+    private void UpdateSolanaMetadata()
+    {
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string formated))
+            return;
+        IBlockchainFunctions blockchain = new SolanaBlockchainFunctions();
+        Valuesolana=blockchain.GetMetadataFromCip25Metadata(Value.MetaData, Model1.ToNftProject());
+    }
+    private void UpdateAptosMetadata()
+    {
+        if (!GlobalFunctions.IsValidJson(Value.MetaData, out string formated))
+            return;
+        IBlockchainFunctions blockchain = new AptosBlockchainFunctions();
+        Valueaptos=blockchain.GetMetadataFromCip25Metadata(Value.MetaData, Model1.ToNftProject());
+    }
+
+    private void UpdateCip68Metadata(bool updateEditorcip25)
+    {
+        if (editorcip25!=null && updateEditorcip25)
+            editorcip25.SetValue(Value.MetaData);
+        try
+        {
+            if (!GlobalFunctions.IsValidJson(Value.MetaData, out string formated))
+                return;
+            var chm = new ParseCip25Metadata();
+            var x = chm.ParseMetadata(Value.MetaData);
+
+            if (BlockchainClass == null)
+                return;
+            string extrafield = "";
+            switch (BlockchainClass.Cip68ExtrafieldType)
+            {
+                case 1:
+                    extrafield = BlockchainClass.Cip68Extrafield;
+                    break;
+                case 2:
+                    extrafield = "0x" + BlockchainClass.Cip68Extrafield;
+                    break;
+                case 3:
+                    extrafield = "<pkh_policy_address>";
+                    break;
+                case 4:
+                    extrafield = "<pkh_user_token>";
+                    break;
+
+            }
+
+            Valuecip68 = x.ToCip68Metadata(extrafield);
+        }
+        catch (Exception e)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+    }
+
+}

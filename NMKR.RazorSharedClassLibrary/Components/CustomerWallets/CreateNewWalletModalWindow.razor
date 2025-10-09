@@ -1,0 +1,173 @@
+﻿@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.BITCOIN
+@using NMKR.Shared.Blockchains.Cardano
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Add New Wallet
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudGrid Class="mb-3">
+            <MudItem xs="8">
+                <MudTextField Variant="Variant.Outlined" Label="Your wallet address"  @bind-Value="walletaddress" Lines="1" Immediate="true" Class="mb-3" Clearable="true"/>
+            </MudItem>
+            <MudItem xs="4">
+                <BlockchainSelector @bind-Value="cointype"></BlockchainSelector>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Variant="Variant.Outlined" Label="Comment"  @bind-Value="comment" Lines="1" Immediate="true" Class="mb-3" Clearable="true"/>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="CreateWallet" Disabled="isSubmitting">Submit wallet address</MudButton>
+    </DialogActions>
+</MudDialog>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Customer customer { get; set; }
+    [Parameter]
+    public string IpAddress { get; set; }
+    [Parameter]
+    public string EmailConformationcode { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    [Parameter]
+    public string walletaddress { get; set; }
+    [Parameter]
+    public string comment { get; set; }
+
+    private string cointype { get; set; } = Blockchain.Cardano.ToString();
+    private bool isSubmitting;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+    }
+
+    private async Task CreateWallet()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(walletaddress))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter a wallet address", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var t = await (from a in db.Customerwallets
+                       where a.Walletaddress == walletaddress && a.CustomerId == customer.Id && a.State != "deleted"
+                       select a).FirstOrDefaultAsync();
+        if (t != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Wallet address already exists", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        IBlockchainFunctions blockchainFunctions = null;
+        switch (cointype.ToEnum<Blockchain>())
+        {
+            case Blockchain.Cardano:
+                blockchainFunctions = new CardanoBlockchainFunctions();
+                break;
+            case Blockchain.Solana:
+                blockchainFunctions = new SolanaBlockchainFunctions();
+                break;
+            case Blockchain.Aptos:
+                blockchainFunctions = new AptosBlockchainFunctions();
+                break;
+            case Blockchain.Bitcoin:
+                blockchainFunctions = new BitcoinBlockchainFunctions();
+                break;
+
+        }
+
+        if (blockchainFunctions == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Invalid blockchain", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        if (!blockchainFunctions.CheckForValidAddress(walletaddress, GlobalFunctions.IsMainnet()))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Wallet address is not a valid {cointype} Address", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        bool ok = IsAdmin || await _twoFactorCheck.CheckTwoFactor(customer.Id, TwoFactorCases.CreateWallet);
+
+        if (ok)
+        {
+            string confirmationcode = GlobalFunctions.GetGuid();
+            Customerwallet cw = new()
+            {
+                Comment = comment,
+                Walletaddress = walletaddress,
+                Created = DateTime.Now,
+                CustomerId = customer.Id,
+                Ipaddress = IpAddress,
+                State = "active", // always active - no email confirmation any longer
+                Confirmationcode = confirmationcode,
+                Cointype = cointype.ToEnum<Blockchain>().ToCoin().ToString(),
+                Confirmationvalid = DateTime.Now.AddMinutes(30)
+            };
+
+
+            await db.Customerwallets.AddAsync(cw);
+            await db.SaveChangesAsync();
+           // SendEmail(confirmationcode, customer.Email, customer.Id);
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Wallet address saved", Severity.Success);
+        }
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(walletaddress));
+    }
+
+    public void SendEmail(string code, string email, int userid)
+    {
+        Dictionary<string, string> d = new()
+        {
+            {"{confirmationcode}", System.Web.HttpUtility.UrlEncode(code)}
+        };
+        SendMailClass smc = new();
+        smc.SendConfirmationMail(ConfirmationTypes.ConfirmNewWalletAddress, email, d, userid);
+    }
+}

@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32228.430
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.Pro", "NMKR.Pro\NMKR.Pro.csproj", "{8AD19215-7CF0-4251-BE2D-0AE1D96756E9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.Shared", "NMKR.Shared\NMKR.Shared.csproj", "{620DA6D8-5A97-43A4-8820-AD4CEBEF933C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.Api", "NMKR.Api\NMKR.Api.csproj", "{A3B893CD-C3D0-486C-B55B-176D539625E1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.SimpleExec", "NMKR.SimpleExec\NMKR.SimpleExec.csproj", "{58996F6D-743A-4004-A791-F133C2F5A0C2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.BackgroundService", "NMKR.BackgroundService\NMKR.BackgroundService.csproj", "{436D7572-9813-40F8-AF5E-15BB22E59AFE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NMKR.RazorSharedClassLibrary", "NMKR.RazorSharedClassLibrary\NMKR.RazorSharedClassLibrary.csproj", "{04BA4738-4448-4B75-A857-2DF306344374}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Projektmappenelemente", "{4AB6ED4E-BE49-47B2-AB5C-9D9696152AEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NMKR.CardanoCliApi", "NMKR.CardanoCliApi\NMKR.CardanoCliApi.csproj", "{8F0B56C1-66A9-4F67-AC48-55A176C2D136}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8AD19215-7CF0-4251-BE2D-0AE1D96756E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AD19215-7CF0-4251-BE2D-0AE1D96756E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AD19215-7CF0-4251-BE2D-0AE1D96756E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AD19215-7CF0-4251-BE2D-0AE1D96756E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{620DA6D8-5A97-43A4-8820-AD4CEBEF933C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{620DA6D8-5A97-43A4-8820-AD4CEBEF933C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{620DA6D8-5A97-43A4-8820-AD4CEBEF933C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{620DA6D8-5A97-43A4-8820-AD4CEBEF933C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3B893CD-C3D0-486C-B55B-176D539625E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3B893CD-C3D0-486C-B55B-176D539625E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3B893CD-C3D0-486C-B55B-176D539625E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3B893CD-C3D0-486C-B55B-176D539625E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58996F6D-743A-4004-A791-F133C2F5A0C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58996F6D-743A-4004-A791-F133C2F5A0C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58996F6D-743A-4004-A791-F133C2F5A0C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58996F6D-743A-4004-A791-F133C2F5A0C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{436D7572-9813-40F8-AF5E-15BB22E59AFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{436D7572-9813-40F8-AF5E-15BB22E59AFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{436D7572-9813-40F8-AF5E-15BB22E59AFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{436D7572-9813-40F8-AF5E-15BB22E59AFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04BA4738-4448-4B75-A857-2DF306344374}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04BA4738-4448-4B75-A857-2DF306344374}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04BA4738-4448-4B75-A857-2DF306344374}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04BA4738-4448-4B75-A857-2DF306344374}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F0B56C1-66A9-4F67-AC48-55A176C2D136}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F0B56C1-66A9-4F67-AC48-55A176C2D136}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F0B56C1-66A9-4F67-AC48-55A176C2D136}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F0B56C1-66A9-4F67-AC48-55A176C2D136}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9022303A-04F6-48D7-8EDA-66F103CE8462}
+	EndGlobalSection
+EndGlobal

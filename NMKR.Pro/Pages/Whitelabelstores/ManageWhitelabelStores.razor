@@ -1,0 +1,18 @@
+﻿@page "/managewhitelabelstores"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <WhiteLabelStoresList CustomerId="settings.UserId??0"/>
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Href="/editwhitelabelstore" Class="mt-5 mb-5 rounded-xl px-6 py-3">Create new store</MudButton>
+</MudContainer>
+
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Whitelabel stores", href: "/managewhitelabelstores", disabled:true),
+    };
+}

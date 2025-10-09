@@ -1,0 +1,70 @@
+﻿@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h4">
+            Complete collection
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.h6">
+            Collection details
+        </MudText>
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Collection name" HelperText="Ex.: Cool collection"  @bind-Value="collection.Collectionname" Class="mb-5"/>
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Collection description" HelperText="Ex.: This is my cool collection" @bind-Value="collection.Collectiondescription" Class="mb-5" />
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Name of creator (optional)" HelperText="Ex.: Bob Ross" @bind-Value="collection.Nameofcreator" Class="mb-5" />
+        <MudText Typo="Typo.h6">
+            Preview image
+        </MudText>
+
+        <UploadImageHash @bind-ImageHash="@collection.Previewimage" FileTypes=".jpg,.png,.jpeg" PreviewMaxWidth="200"
+                                        DescriptionText="Preview image" FileSize="new System.Drawing.Size(0,0)" />
+
+        <MudText Typo="Typo.h6">
+            Social media links
+        </MudText>
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Twitter link (optional)"  @bind-Value="collection.Twritterlink" Class="mb-5" />
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Instagram link (optional)" @bind-Value="collection.Instagramlink" Class="mb-5" />
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Discord link (optional)" @bind-Value="collection.Discordlink" Class="mb-5" />
+        @if (ShowDropSwitch)
+        {
+            <MudSwitch UncheckedColor="Color.Dark" T="bool?" @bind-Value="collection.Isdropinprogess" Color="Color.Info" Size="Size.Large">
+                <MudText Typo="Typo.h5">Activate Drop</MudText>
+            </MudSwitch>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" Color="Color.Dark" OnClick="Cancel">CANCEL</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Add">ADD COLLECTION</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Whitelabelstorecollection collection{ get; set; }
+
+    [Parameter]
+    public bool ShowDropSwitch { get; set; } = false;
+    void Cancel() => MudDialog.Cancel();
+
+    private string ImageValue { get; set; } = "";
+
+    public void Add()
+    {
+        if (string.IsNullOrEmpty(collection.Collectionname))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Enter collection name", Severity.Error);
+            return;
+        }
+        if (string.IsNullOrEmpty(collection.Collectiondescription))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"Enter collection description", Severity.Error);
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(collection));
+    }
+}

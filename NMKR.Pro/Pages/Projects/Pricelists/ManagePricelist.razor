@@ -1,0 +1,76 @@
+﻿@page "/pricelist/{projectid:int}/{projectuid}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    @if (project != null)
+    {
+        <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Pricelist - @project.Id - @project.Projectname</MudText>
+        <PricelistList IsAdmin="false" ProjectId="@project.Id" @ref="pl" OnReloadPricelist="OnPricelistReload" />
+    }
+</MudContainer>
+
+    @if (pricelist != null && pricelist.Any() && project != null)
+{
+    <Integration project="project" ></Integration>
+}
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public string projectuid { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool isSubmitting;
+
+    private Nftproject project = new();
+    private List<Pricelist> pricelist = new();
+    private PricelistList pl;
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+        if (projectid != 0 && project!=null)
+        {
+            _items.Add(new($"Project ({project.Projectname})", href: $"/projects/{projectuid}", disabled: false));
+            _items.Add(new("Pricelist (" + project.Projectname + ")", href: "/pricelist/" + projectid, disabled: true));
+        }
+    }
+    private async Task ReloadData()
+    {
+        if (projectid == 0)
+            return;
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        project = await (from a in db.Nftprojects
+            .Include(a=>a.Settings)
+            where a.Id == projectid && a.CustomerId == (int)settings.UserId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (project == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            return;
+        }
+
+        pricelist = await (from a in db.Pricelists
+                           where a.NftprojectId == projectid
+            orderby a.Countnftortoken
+            select a).AsNoTracking().ToListAsync();
+        StateHasChanged();
+    }
+    private async Task OnPricelistReload()
+    {
+        await ReloadData();
+    }
+}

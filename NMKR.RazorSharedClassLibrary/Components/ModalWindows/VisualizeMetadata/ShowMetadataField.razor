@@ -1,0 +1,42 @@
+﻿@using NMKR.Shared.Functions.Metadata
+
+
+<MudText Typo="Typo.body1" Style="text-align: center;">@GlobalFunctions.FirstCharToCharArray(Field.DisplayKey)</MudText>
+@foreach (var f in Field.FieldValues)
+{
+    @if (!string.IsNullOrEmpty(f.Description))
+    {
+        <MudText Typo="Typo.body2" Style="text-align: center;">
+            @(f.Description + ": " + f.Value)
+        </MudText>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Style="text-align: center;">
+            @f.Value
+        </MudText>
+    }
+}
+
+<br/>
+
+@code {
+    [Parameter]
+    public Metadatafields Field { get; set; }
+    [Parameter]
+    public string ProjectName { get; set; }
+    [Parameter]
+    public string ProjectDescription { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        foreach (var fieldFieldValue in Field.FieldValues)
+        {
+            if (fieldFieldValue.Value=="<project_name>" || fieldFieldValue.Value=="<series_name>")
+                fieldFieldValue.Value= ProjectName;
+
+            if (fieldFieldValue.Value=="<project_description>" || fieldFieldValue.Value=="<series_description>")
+                fieldFieldValue.Value= ProjectDescription;
+        }
+    }
+}

@@ -1,0 +1,14 @@
+﻿@if (!string.IsNullOrEmpty(Uid))
+{
+    <span style="white-space: nowrap;">
+        @GlobalFunctions.GetStartAndEnd(Uid, 6)
+        <CopyToClipboard name="UID" content="@Uid"></CopyToClipboard>
+    </span>
+    
+}
+
+
+@code {
+    [Parameter]
+    public string Uid { get; set; }
+}

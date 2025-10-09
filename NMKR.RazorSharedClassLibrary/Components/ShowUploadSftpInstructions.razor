@@ -1,0 +1,166 @@
+﻿@inject ISnackbar Snackbar
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudGrid>
+        <MudItem xs="12" sm="12" md="10">
+            <MudText Typo="Typo.subtitle1">
+                Server: <b>
+                    @GeneralConfigurationClass.SFTP_Server
+                </b>
+                <br /><br />
+                Email: <b>@sftpuserid</b>
+                <br /><br />
+                Password: <b>@sftppassword</b>
+                <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 ml-10" Size="Size.Small" Variant="Variant.Outlined" ButtonType="ButtonType.Submit" Color="Color.Secondary" OnClick="SetNewPassword">Change Password</MudButton>
+
+                <br /><br />
+                Type: <b>SFTP</b>
+                <br /><br />
+                Port: <b>22</b>
+                <br /><br />
+                Private Key: <b>No private SSH Key required</b>
+            </MudText>
+
+            <!-- <MudExpansionPanels Elevation="25">
+                <MudExpansionPanel Text="Information">
+                    <MudText Typo="Typo.body2">You can upload your files through our SFTP-Server.
+                        <br/><br />
+                        Download a SFTP-Client like <a href="https://cyberduck.io/" target="_blank">Cyberduck (https://cyberduck.io/)</a> or <a href="https://filezilla-project.org/" target="_blank">Filezilla (https://filezilla-project.org/)</a> (both are free) and connect with your userid and SFTP-Password.
+                        <br/><br />
+                        You will see all of your active projects and you can up- and download all files from there.
+                        <br/>
+                        <br/>
+
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Server Information">
+
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="File naming">
+                    <MudText Typo="Typo.body2">
+                        The SFTP Server accept all files with the correct mimetypes and valid filenames.
+                        <br /><br />
+                        If you upload a file named "Image #0001.jpeg", the Tokenname of the File will be "Image0001" and the Displayname (the Name of the NFT) will be "Image #0001". The Extension ".jpeg" defines the Mimetype.
+                        <br /><br />
+                        If you upload a file named "Image #0001.subfile.1.jpeg", the prevoius uploaded File "Image #0001" gets a subfile. This file will be added to the NFT as the subfile Number 1.
+                        <br /><br />
+                        If you upload a file named "Image #0001.metadata", the prevois uploaded NFT will takes this file as metadata (in the metadata override). Please note that you have to upload the NFT first, before adding Metadata or Subfiles.
+                        <br /><br />
+                        After uploading, you will see all files in your project with the corresponding names.
+                        <br /><br />
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="File delete / File renaming">
+                    <MudText Typo="Typo.body2">
+                        You can delete files from the SFTP-Server (and from your project) as long as they are in "Free" state. If you have sold them or if they are reserved, deleting is not possible.
+                        <br /><br />
+                        It is not possible to rename a file. If you want to rename a file, you have to delete it first and upload it again.
+                        <br /><br />
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Projects">
+                    <MudText Typo="Typo.body2">
+                        It is not possible to create a new project via the SFTP-Service. You have to create the project either from the website or by the API. It is also not possible to upload files without a valid project or to rename or move projects.
+                        <br /><br />
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Metadata">
+                    <MudText Typo="Typo.body2">
+                        You can upload a file with the extension ".metadata" to override the metadata of the actual NFT. This file must be a valid JSON File and must contain the Policy ID (or the policy_id placeholder) and the 721 Section.
+                        <br /><br />
+                        For example: If your NFT has the Name "Image #0001", you have to upload the Image file "Image #0001.jpg" first. Then you can upload the Metadata File "Image #0001.metadata". If you try to upload the metadata first, you will receive an error.
+                        <br /><br />
+                    </MudText>
+                </MudExpansionPanel>
+             @*   <MudExpansionPanel Text="Placeholder">
+                    <MudText Typo="Typo.body2">
+                      Coming soon
+                        <br /><br />
+                    </MudText>
+                </MudExpansionPanel>
+                *@
+            </MudExpansionPanels> -->
+
+        </MudItem>
+    </MudGrid>
+
+
+</MudContainer>
+
+@code {
+
+    [Parameter]
+    public int projectid { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private List<BreadcrumbItem> _items = new();
+    private Nftproject? project = new();
+    private string sftppassword = "";
+    private string sftpuserid = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        project = await (from a in db.Nftprojects
+            where a.Id == projectid
+            select a).FirstOrDefaultAsync();
+        if (project == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact support", Severity.Error);
+            NavigationManager.NavigateTo("/projects");
+            return;
+        }
+        _items.Add(new("Dashboard", href: "/"));
+        _items.Add(new("NFT Projects", href: "/projects"));
+        _items.Add(new("Manage NFT (" + project.Projectname + ")", "/managenft/" + projectid));
+        _items.Add(new("Upload Files", href: "/uploadfiles/" + projectid, disabled: true));
+
+
+        var customer = await (from a in db.Customers
+            where a.Id == project.CustomerId
+            select a).FirstOrDefaultAsync();
+
+        if (customer != null)
+        {
+            if (string.IsNullOrEmpty(customer.Ftppassword))
+            {
+                PronounceablePasswordGenerator generator = new();
+                int numPasswords = 1;
+                int passwordLength = 12;
+                IEnumerable<string> passwords = generator.Generate(numPasswords, passwordLength);
+                customer.Ftppassword = passwords.First();
+                await db.SaveChangesAsync();
+            }
+            sftppassword = customer.Ftppassword;
+            sftpuserid = customer.Id.ToString();
+        }
+    }
+
+    private async Task SetNewPassword()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var customer = await (from a in db.Customers
+            where a.Id == project.CustomerId
+            select a).FirstOrDefaultAsync();
+
+        if (customer != null)
+        {
+            PronounceablePasswordGenerator generator = new();
+            int numPasswords = 1;
+            int passwordLength = 12;
+            IEnumerable<string> passwords = generator.Generate(numPasswords, passwordLength);
+            customer.Ftppassword = passwords.First();
+            await db.SaveChangesAsync();
+            sftppassword = customer.Ftppassword;
+            sftpuserid = customer.Id.ToString();
+        }
+    }
+
+}

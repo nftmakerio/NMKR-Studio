@@ -1,0 +1,27 @@
+﻿@inject AppSettings settings
+@inject TimerServices Timer
+
+@if (settingsshowtokenad)
+{
+    <MudAlert Severity="Severity.Success">@((MarkupString) settingstokenadtext)</MudAlert>
+}
+
+@code {
+    private bool settingsshowtokenad { get; set; } = false;
+    private string settingstokenadtext { get; set; } = "";
+    protected override async Task OnInitializedAsync()
+    {
+        settings.OnChange += StateHasChanged;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var websitesettings = await (from a in db.Websitesettings
+            where a.Key == "showtokenad"
+            select a).AsNoTracking().FirstOrDefaultAsync();
+        if (websitesettings != null)
+        {
+            settingsshowtokenad = (bool) websitesettings.Boolvalue;
+            settingstokenadtext = websitesettings.Stringvalue;
+        }
+    }
+
+}

@@ -1,0 +1,184 @@
+﻿@page "/apikeys"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["API Keys"]</MudText>
+    <MudTable Items="@keys" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" Class="border" Elevation="0" Style="border-color:#E0E0E0">
+        <HeaderContent>
+            <MudTh>@_loc["Key"]</MudTh>
+            <MudTh>@_loc["Comment"]</MudTh>
+            <MudTh>@_loc["State"]</MudTh>
+            <MudTh>@_loc["Created"]</MudTh>
+            <MudTh>@_loc["Expires"]</MudTh>
+            <MudTh Style="width:250px;">@_loc["Actions"]</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Key">@context.Apikeystartandend</MudTd>
+            <MudTd DataLabel="Comment">@context.Comment</MudTd>
+
+                <MudTd DataLabel="State">
+
+                @if (context.Expiration < DateTime.Now)
+                {
+                    <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">@_loc["Expired"]</NMKRChip>
+                }
+                else
+                {
+                    switch (context.State)
+                    {
+                        case "active":
+                            <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">@_loc["Active"]</NMKRChip>
+                            break;
+                        case "revoked":
+                            <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">@_loc["Revoked"]</NMKRChip>
+                            break;
+                    }
+                }
+            </MudTd>
+            <MudTd DataLabel="Created">@context.Created.ToShortDateString() @context.Created.ToShortTimeString()</MudTd>
+            <MudTd DataLabel="Expires">@context.Expiration.ToShortDateString() @context.Expiration.ToShortTimeString()</MudTd>
+        
+
+            <MudTd>
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">@_loc["Edit"]</MudNavLink>
+                <MudNavLink @onclick="() => LimitAccess(context.Id)" Icon="@Icons.Material.Filled.AccessAlarm">@_loc["Limit IP Access"]</MudNavLink> 
+                <MudNavLink @onclick="() => Revoke(context.Id)" Icon="@NMKRIcons.Delete">@_loc["Revoke"]</MudNavLink>
+              
+            </MudTd>
+
+        </RowTemplate>
+        <PagerContent>
+                <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CreateNewApikey" Class="mt-5 mb-5 rounded-xl px-6 py-3">@_loc["Create new Apikey"]</MudButton>
+</MudContainer>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private List<Apikey> keys = new();
+    private bool isSubmitting;
+
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new();
+   
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Apikeys"], href: "/apikeys", disabled: true));
+        await LoadData();
+    }
+
+    private void LimitAccess(int id)
+    {
+        NavigationManager.NavigateTo($"/limitipaccess/{id}");
+        
+    }
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var apk = await (from a in db.Apikeys
+            where a.Id == id
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true,BackdropClick = false};
+        var parameters = new DialogParameters { { nameof(EditApikeyModalWindow.apikey),apk } };
+        var dialog = await DialogService.ShowAsync<EditApikeyModalWindow>(@_loc["Edit Apikey"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+        isSubmitting = false;
+    }
+    private async Task Revoke(int id)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            @_loc["Warning"],
+            @_loc["Revoking can not be undone!"],
+            yesText: @_loc["Revoke!"], cancelText: @_loc["Cancel"]);
+        if (result != null)
+        {
+            bool ok =  await _twoFactorCheck.CheckTwoFactor(settings.UserId??0, TwoFactorCases.CreateEditApikey);
+            if (!ok)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Two factor authentication failed. Please try again.", Severity.Error);
+                return;
+            }
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var apk = await (from a in db.Apikeys
+                             where a.Id == id
+                             select a).FirstOrDefaultAsync();
+
+            if (apk == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Internal Error. Please try again later or contact the support."], Severity.Error);
+                return;
+            }
+            apk.State = "revoked";
+            await db.SaveChangesAsync();
+            await OnInitializedAsync();
+        }
+        await LoadData();
+
+        StateHasChanged();
+    }
+    private async Task CreateNewApikey()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(CreateNewApikeyModalWindow.CustomerId), settings.UserId }, { nameof(CreateNewApikeyModalWindow.IsAdmin), false } };
+
+        var dialog = await DialogService.ShowAsync<CreateNewApikeyModalWindow>(@_loc["Create new apikey"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+
+            string key = Convert.ToString(result.Data);
+
+            var parameters2 = new DialogParameters { { nameof(ShowApikeyModalWindow.ShowApikey), key } };
+            var dialog1 = await DialogService.ShowAsync<ShowApikeyModalWindow>(@_loc["Apikey"], parameters2, maxWidth);
+            await dialog1.Result;
+        }
+        isSubmitting = false;
+    }
+
+    private async Task LoadData()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        keys = await (from a in db.Apikeys
+                where a.CustomerId == settings.UserId && a.State != "deleted"
+                orderby a.Created descending
+                select a).ToListAsync();
+    }
+}

@@ -1,0 +1,45 @@
+﻿@inject ClipboardService ClipboardService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Lock NFT
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+       <MudText>@description</MudText>
+
+        <MudTextField Variant="Variant.Outlined" ReadOnly="true" T="string" Label="Auction address"  Text="@auctionaddress" Class="mb-5" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" Color="Color.Tertiary" OnClick="Cancel">Close</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" StartIcon="@Icons.Material.Filled.ContentCopy"  Variant="Variant.Filled" OnClick="CopyToClipboard">Copy address to clipboard</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string auctionaddress { get; set; }
+    [Parameter]
+    public string description { get; set; }
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task CopyToClipboard()
+    {
+        // Writing to the clipboard may be denied, so you must handle the exception
+        try
+        {
+            await ClipboardService.WriteTextAsync(auctionaddress);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Auction address link copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+        }
+    }
+}

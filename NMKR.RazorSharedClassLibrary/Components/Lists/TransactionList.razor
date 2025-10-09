@@ -1,0 +1,422 @@
+﻿@using BlazorDownloadFile
+@using NMKR.Shared.Functions.Api
+@using NMKR.Shared.Functions.Extensions
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject ISnackbar Snackbar
+
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Indeterminate="true" />
+</MudOverlay>
+<MudCard Elevation="25" Style="height: 100%;">
+
+    <MudCardContent Class="px-0">
+        @if (showDateTimePicker)
+        {
+            <MudItem xs="12" sm="6" Class="mr-5 ml-5">
+                <MudDateRangePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" @ref="_picker" Label="Select Range" @bind-DateRange="_dateRange" >
+                    <PickerActions>
+                        <MudButton DropShadow="false" Class="mr-auto align-self-start rounded-pill px-6 py-3" OnClick="@(() => _picker.ClearAsync())">Clear</MudButton>
+                        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" OnClick="@(() => _picker.CloseAsync(false))">Cancel</MudButton>
+                        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" OnClick="LoadStatistics">Ok</MudButton>
+                    </PickerActions>
+                </MudDateRangePicker>
+            </MudItem>
+        }
+
+        <MudTable Hover="true" Class="border" Bordered="true" Striped="false" Elevation="0" Style="border-color:#E0E0E0; border-top-right-radius: 0px; border-top-left-radius: 0px;"
+                  HorizontalScrollbar="true" T="Transaction" OnRowClick="@(OnRowClicked)" Loading="isloading" RowsPerPage="30" @ref="_table"
+                  ServerData="LoadTodos">
+            <HeaderContent>
+                <MudTh>Date/Time (UTC)</MudTh>
+                <MudTh>Type</MudTh>
+                @if (ShowProjectName)
+                {
+                    <MudTh>Project</MudTh>
+                }
+                <MudTh Style="text-align: right">Paid</MudTh>
+                <MudTh Style="text-align: right"># NFTs/Tokens</MudTh>
+                <MudTh Style="text-align: right">Total Costs</MudTh>
+                <MudTh Style="text-align: right">Send to seller</MudTh>
+                <MudTh>Tx-Id</MudTh>
+                <MudTh>Payout Wallet</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+
+                <MudTd DataLabel="">@(context.Created.ToShortDateString() + " " + context.Created.ToLongTimeString())</MudTd>
+                <MudTd>
+                    <ShowCoinNameWithImage Cointype="@(context.Coin.ToEnum<Coin>())"></ShowCoinNameWithImage>
+                    <br/>
+                    <ShowTransactionTypeChips TransactionType="@context.Transactiontype"></ShowTransactionTypeChips>
+                </MudTd>
+                @if (ShowProjectName)
+                {
+                    <MudTd DataLabel="">@(context.NftprojectId == null ? "" : context.NftprojectId + " - " + @context.Nftproject?.Projectname)</MudTd>
+                }
+                <MudTd Style="text-align: right" DataLabel="">
+                    @if (context.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress))
+                    {
+                        @(GlobalFunctions.FormatCurrency((context.Projectada ?? 0) + (context.Discount ?? 0) + (context.Fee ?? 0) + (context.Mintingcostsada ?? 0) + context.Ada, 5, context.Coin.ToEnum<Coin>()))
+                     
+                        @if (context.Priceintokensquantity != null)
+                        {
+                            <br/>
+                            <MudText Typo="Typo.body2">
+                                <DisplayComaNumbers Number="@GlobalFunctions.FormatMultiplier((long) context.Priceintokensquantity, context.Priceintokensmultiplier)"></DisplayComaNumbers>
+
+                                @(" x " + GlobalFunctions.GetStartAndEnd(context.Priceintokenspolicyid) + "." + context.Priceintokenstokennamehex.FromHex())</MudText>
+
+                        }
+                    }
+                  
+                </MudTd>
+                <MudTd Style="text-align: right">@context.TransactionNfts.Sum(x => x.Tokencount)</MudTd>
+                <MudTd Style="text-align: right" DataLabel="">@(GlobalFunctions.FormatCurrency((context.Fee ?? 0) + (context.Mintingcostsada ?? 0) + context.Ada, 5, context.Coin.ToEnum<Coin>()))</MudTd>
+                <MudTd Style="text-align: right" DataLabel="">
+
+                    @if (context.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress))
+                    {
+                        @(GlobalFunctions.FormatCurrency((context.Projectada ?? 0), 5, context.Coin.ToEnum<Coin>()))
+                    }
+                    else
+                    {
+                        @(GlobalFunctions.FormatCurrency(0, 5, context.Coin.ToEnum<Coin>()))
+                    }
+                    @if (context.Priceintokensquantity != null)
+                    {
+                        <br/>
+                        <MudText Typo="Typo.body2">
+                            <DisplayComaNumbers Number="@GlobalFunctions.FormatMultiplier((long) context.Priceintokensquantity, context.Priceintokensmultiplier)"></DisplayComaNumbers>
+
+                            @(" x " + GlobalFunctions.GetStartAndEnd(context.Priceintokenspolicyid) + "." + context.Priceintokenstokennamehex.FromHex())</MudText>
+
+                    }
+                </MudTd>
+                <MudTd DataLabel="">
+                    <ShowTransactionHash TxId="@context.Transactionid" Blockchain="@((context.Coin.ToEnum<Coin>()).ToBlockchain())"></ShowTransactionHash>
+
+                    @if (context.Confirmed)
+                    {
+                        <br/>
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Confirmed</NMKRChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="">@(context.WalletId == null ? "internal Wallet" : context.Wallet.Comment)</MudTd>
+            </RowTemplate>
+
+            <ChildRowContent>
+                @if (context.Id == DetailsId)
+                {
+                    <MudTr>
+                        <td colspan="9">
+                            <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                            <MudCard Elevation="0">
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.body1">Details for <strong>@context.Transactionid</strong></MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent Class="pa-0">
+
+                                    <MudSimpleTable Style="overflow-x: auto; vertical-align: top; ">
+                                        <thead>
+                                        <tr>
+                                            <th>Paid from User</th>
+                                            <th>Send back to User (MinUtxo)</th>
+                                            <th>Network fees</th>
+                                            <th>Mint fees</th>
+                                            <th>Send to seller</th>
+                                            <th>Discount</th>
+                                            <th>Add. Payout Wallets</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr>
+                                            <td>
+                                                @if (context.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress))
+                                                {
+                                                        @(GlobalFunctions.FormatCurrency((context.Projectada ?? 0) + (context.Discount ?? 0) + (context.Fee ?? 0) + (context.Mintingcostsada ?? 0) + context.Ada, 5, context.Coin.ToEnum<Coin>()))
+                                                }
+                                                else
+                                                {
+                                                        @(GlobalFunctions.FormatCurrency(0, 5, context.Coin.ToEnum<Coin>()))
+                                                }
+                                                <br/>
+
+                                                <TransactionDetailAddresslist transaction="@context"></TransactionDetailAddresslist>
+                                            </td>
+                                            <td>@((context.Transactiontype == nameof(TransactionTypes.decentralmintandsale) ||
+                                                   context.Transactiontype == nameof(TransactionTypes.decentralmintandsend))
+                                                        ? GlobalFunctions.FormatCurrency(0, 5) : (GlobalFunctions.FormatCurrency(context.Ada + (context.Discount ?? 0), 5, context.Coin.ToEnum<Coin>())))
+                                                </td>
+                                                <td>@(GlobalFunctions.FormatCurrency((context.Fee ?? 0), 5, context.Coin.ToEnum<Coin>()))</td>
+                                                <td>@(GlobalFunctions.FormatCurrency((context.Mintingcostsada ?? 0), 5, context.Coin.ToEnum<Coin>()))</td>
+                                            <td>
+                                                @if (context.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress))
+                                                {
+                                                        @(GlobalFunctions.FormatCurrency((context.Projectada ?? 0), 5, context.Coin.ToEnum<Coin>()))
+                                                }
+                                                else
+                                                {
+                                                        @(GlobalFunctions.FormatCurrency(0, 5, context.Coin.ToEnum<Coin>()))
+                                                }
+                                                @if (context.Priceintokensquantity != null)
+                                                {
+                                                    <br/>
+                                                    <MudText Typo="Typo.body2">@(context.Priceintokensquantity + " x " + GlobalFunctions.GetStartAndEnd(context.Priceintokenspolicyid) + "." + context.Priceintokenstokennamehex.FromHex())</MudText>
+                                                }
+                                            </td>
+                                                <td>@(GlobalFunctions.FormatCurrency((context.Discount ?? 0), 5, context.Coin.ToEnum<Coin>()))</td>
+                                                <td>@(GlobalFunctions.FormatCurrency((context.TransactionsAdditionalpayouts?.Sum(x => x.Lovelace) ?? 0), 5, context.Coin.ToEnum<Coin>()))</td>
+                                        </tr>
+                                        </tbody>
+                                    </MudSimpleTable>
+                                    @if (context.Transactiontype == nameof(TransactionTypes.paidonprojectaddress) ||
+                                         context.Transactiontype == nameof(TransactionTypes.paidonftaddress) ||
+                                         context.Transactiontype == nameof(TransactionTypes.mintfromcustomeraddress) ||
+                                         context.Transactiontype == nameof(TransactionTypes.decentralmintandsale) ||
+                                         context.Transactiontype == nameof(TransactionTypes.decentralmintandsend) ||
+                                         context.Transactiontype == nameof(TransactionTypes.mintfromnftmakeraddress) ||
+                                         context.Transactiontype == nameof(TransactionTypes.burning))
+                                    {
+                                        <MudTable Items="@context.TransactionNfts" Context="nftContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                            <HeaderContent>
+                                                <MudTh>Nft Name</MudTh>
+                                                <MudTh>Image</MudTh>
+                                                @if (context.Coin == Coin.ADA.ToString())
+                                                {
+                                                    <MudTh>Fingerprint</MudTh>
+                                                } else
+                                                {
+                                                    <MudTh>Asset</MudTh>
+                                                }
+                                            </HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd>@(context.Nftproject.Tokennameprefix + nftContext.Nft.Name)</MudTd>
+                                                <MudTd>
+                                                    @if (!string.IsNullOrEmpty(nftContext.Nft.Ipfshash))
+                                                    {
+                                                        <a href="@(GeneralConfigurationClass.IPFSGateway + nftContext.Nft.Ipfshash)" target="_blank"> <img src="@(GeneralConfigurationClass.IPFSGateway + nftContext.Nft.Ipfshash)" height="50"></a>
+                                                    }
+                                                </MudTd>
+                                                <MudTd>
+                                                    @if (context.Coin == Coin.ADA.ToString())
+                                                    {
+                                                        <ShowFingerprint Fingerprint="@nftContext.Nft.Fingerprint"></ShowFingerprint>
+                                                    }
+                                                    @if (context.Coin == Coin.SOL.ToString())
+                                                    {
+                                                        <ShowSolanaToken Token="@nftContext.Txhash"/>
+                                                    }
+                                                    @if (context.Coin == Coin.APT.ToString())
+                                                    {
+                                                        <ShowTransactionHash TxId="@nftContext.Txhash" Blockchain="@(Blockchain.Aptos)"/>
+                                                       
+                                                    }
+                                                    @if (nftContext.Confirmed==true)
+                                                    {
+                                                        <br />
+                                                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Confirmed</NMKRChip>
+                                                    }
+                                                </MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                            <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                        </td>
+                    </MudTr>
+                }
+            </ChildRowContent>
+
+            <PagerContent>
+                <MudTablePager HideRowsPerPage="false"/>
+            </PagerContent>
+        </MudTable>
+
+    </MudCardContent>
+</MudCard>
+
+<MudButton DropShadow="false" HtmlTag="label2" Class="mb-5 mt-5 rounded-xl px-6 py-3"
+           Variant="Variant.Filled"
+           Color="Color.Tertiary" OnClick="ExportTransactions">
+    Export all Transactions
+</MudButton>
+@code {
+    [Parameter]
+    public int? CustomerId { get; set; }
+    [Parameter]
+    public int? ProjectId { get; set; }
+    [Parameter]
+    public IConnectionMultiplexer Redis { get; set; }
+    [Parameter]
+    public bool showDateTimePicker { get; set; } = true;
+    [Parameter]
+    public bool ShowProjectName { get; set; } = true;
+    MudDateRangePicker _picker;
+    DateRange _dateRange = new(DateTime.Today.AddDays(1 - DateTime.Today.Day), DateTime.Today.AddDays(1 - DateTime.Today.Day).AddMonths(1).AddDays(-1));
+    private int? DetailsId { get; set; }
+    private bool isloading { get; set; } = false;
+    private bool isSubmitting { get; set; }
+    private bool OverlayIsVisible { get; set; }
+    private MudTable<Transaction> _table;
+    private void LoadStatistics()
+    {
+        if (_picker != null) _picker.CloseAsync();
+        _table.ReloadServerData();
+    }
+    public async Task<TableData<Transaction>> LoadTodos(TableState state, CancellationToken cancellationToken)
+    {
+        DateTime start = showDateTimePicker ? _dateRange.Start.Value.Date : DateTime.MinValue;
+        DateTime end = showDateTimePicker ? _dateRange.End.Value.Date.AddDays(1) : DateTime.MaxValue;
+        string redisKey1 = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_Pro_ShowTransactions_{CustomerId}_{ProjectId}_{state.PageSize}_{state.Page}_{start}_{end}";
+        var td1 = RedisFunctions.GetData<TableData<Transaction>>(Redis, redisKey1);
+
+        if (td1 != null)
+            return td1;
+
+
+        isloading = true;
+        StateHasChanged();
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        var transactions = await (from a in db.Transactions
+            .Include(a=>a.TransactionsAdditionalpayouts).AsSplitQuery()
+        .Include(a => a.Nftproject).AsSplitQuery()
+        .Include(a => a.Wallet).AsSplitQuery()
+        .Include(a => a.TransactionNfts)
+        .ThenInclude(a => a.Nft).AsSplitQuery()
+                                  where (a.CustomerId == CustomerId || CustomerId == null) && (a.NftprojectId == ProjectId || ProjectId == null) && a.Created > start && a.Created < end &&
+                                        a.Transactiontype != nameof(TransactionTypes.paidfailedtransactiontocustomeraddress) && a.Transactiontype != nameof(TransactionTypes.doublepaymentsendbacktobuyer)
+                                        && a.Transactiontype != nameof(TransactionTypes.mintfromnftmakeraddress)
+
+                                  orderby a.Id descending
+                                  select a).AsNoTracking().Skip(state.PageSize * state.Page).Take(state.PageSize).ToListAsync();
+
+        int c = await (from a in db.Transactions
+                       where (a.CustomerId == CustomerId || CustomerId == null) && (a.NftprojectId == ProjectId || ProjectId == null) && a.Created > start && a.Created < end &&
+                                        a.Transactiontype != nameof(TransactionTypes.paidfailedtransactiontocustomeraddress) && a.Transactiontype != nameof(TransactionTypes.doublepaymentsendbacktobuyer)
+                                        && a.Transactiontype != nameof(TransactionTypes.mintfromnftmakeraddress)
+                       orderby a.Id descending
+                       select a).AsNoTracking().CountAsync();
+
+
+        isloading = false;
+        StateHasChanged();
+
+        var td = new TableData<Transaction>() { Items = transactions, TotalItems = c };
+        RedisFunctions.SetData<TableData<Transaction>>(Redis, redisKey1, td, 30);
+        return td;
+    }
+
+    private void OnRowClicked(TableRowClickEventArgs<Transaction> trans)
+    {
+        if (trans == null || trans.Item == null)
+            return;
+
+        if (DetailsId == trans.Item.Id)
+        {
+            DetailsId = null;
+        }
+        else
+        {
+            DetailsId = trans.Item.Id;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportTransactions()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        string projectuid = "";
+
+        if (ProjectId != null)
+        {
+            var project = await (from a in db.Nftprojects
+                where a.Id == ProjectId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+            if (project == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Error while exporting Transactions (1) - Please contact the support", Severity.Error);
+                isSubmitting = false;
+                OverlayIsVisible = false;
+                return;
+            }
+            projectuid = project.Uid;
+        }
+        DateTime start = _dateRange.Start.Value.Date;
+        DateTime end = _dateRange.End.Value.Date.AddDays(1);
+        var transactions = await ApiFunctions.CallGetTransactionsAsync(projectuid, showDateTimePicker ? start:null,showDateTimePicker ? end:null,ProjectId==null? CustomerId:null);
+
+        if (transactions == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Error while exporting Transactions (2) - Please contact the support", Severity.Error);
+            isSubmitting = false;
+            OverlayIsVisible = false;
+            return;
+        }
+
+        var path = GeneralConfigurationClass.TempFilePath;
+
+        string filteredfilename = $"transactions";
+        string filteredcsvfilename = $"transactions_nfts";
+        string filename = path + filteredfilename + ".zip";
+        string csvfilename = path + filteredfilename + ".csv";
+        string csvnftsfilename = path + filteredfilename + "_nfts.csv";
+
+        System.IO.Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+        await using (var writer = new StreamWriter(csvfilename))
+        await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            await csv.WriteRecordsAsync(transactions);
+        }
+        await using (var writer = new StreamWriter(csvnftsfilename))
+        await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csv.WriteHeader<GetTransactionNftsCsvExportClass>();
+            await csv.NextRecordAsync();
+            foreach (var transaction in transactions)
+            {
+                foreach (var nft in transaction.TransactionNfts)
+                {
+                    csv.WriteRecord(new GetTransactionNftsCsvExportClass(nft, transaction.Transactionid));
+                    await csv.NextRecordAsync();
+                }
+                        
+            }
+        }
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(csvnftsfilename, Path.GetFileName(filteredcsvfilename + ".csv"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        OverlayIsVisible = false;
+        isSubmitting = false;
+    }
+
+}

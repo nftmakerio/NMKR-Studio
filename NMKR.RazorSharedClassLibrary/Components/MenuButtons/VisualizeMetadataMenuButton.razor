@@ -1,0 +1,62 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.VisualizeMetadata
+@using NMKR.Shared.Functions.Metadata
+ @inject ISnackbar Snackbar
+ @inject IConnectionMultiplexer _redis;
+
+@if (ShowTextButton)
+{
+    <MudNavLink @onclick="(() => CheckMetadata(NftId))" Disabled="@isSubmitting">
+        @if (isSubmitting)
+        {
+            <MudProgressCircular Class="ms-n1" Style="height:15px;width:15px;" Indeterminate="true" />
+        }
+        View Asset
+    </MudNavLink>
+}
+else
+{
+    <MudTooltip Color="Color.Dark" Text="View Asset" Placement="Placement.Start">
+        <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.RemoveRedEye" Size="Size.Small" @onclick="(() => CheckMetadata(NftId))"></MudIconButton>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter]
+    public int NftId { get; set; }
+    [Parameter]
+    public bool ShowTextButton { get; set; } = false;
+    [Parameter]
+    public Nftproject Project { get; set; }
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private async Task CheckMetadata(int nftid)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        GetMetadataClass md = new(nftid, "",true);
+        string metadata = (await md.MetadataResultAsync()).Metadata;
+        if (Project.Cip68)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var nft = (from a in db.Nfts
+                .Include(a => a.Nftproject).AsSplitQuery()
+                       where a.Id == nftid
+                select a).AsNoTracking().FirstOrDefault();
+            metadata = ConsoleCommand.CreateMetadataCip68(new NftWithMintingAddressClass(nft, ""),true);
+        }
+
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick=true, CloseButton = true, CloseOnEscapeKey = true};
+        var parameters = new DialogParameters { { nameof(VisualizeMetadataModalWindow.Metadata), metadata }, { nameof(VisualizeMetadataModalWindow.Cip68), !metadata.Contains("\"721\"") } };
+        isSubmitting = false;
+        StateHasChanged();
+        var dialog = await DialogService.ShowAsync<VisualizeMetadataModalWindow>("View Asset", parameters, maxWidth);
+        await dialog.Result;
+    }
+}

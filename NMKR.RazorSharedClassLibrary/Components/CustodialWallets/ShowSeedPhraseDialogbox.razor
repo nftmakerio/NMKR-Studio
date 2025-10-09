@@ -1,0 +1,26 @@
+﻿@using NMKR.Shared.Classes.CustodialWallets
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mt-5 mb-5">Seedphrase (Don't loose this):</MudText>
+        
+
+        <MudText Typo="Typo.body2" Class="mt-5 mb-5">@walletresultclass.SeedPhrase
+            <CopyToClipboard name="SeedPhrase" content="@walletresultclass.SeedPhrase"></CopyToClipboard></MudText>
+
+        <MudText Typo="Typo.h6" Class="mt-5 mb-5">Address:
+            <ShowAddress Address="@walletresultclass.Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public CreateWalletResultClass walletresultclass { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+}

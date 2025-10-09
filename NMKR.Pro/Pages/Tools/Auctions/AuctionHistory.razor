@@ -1,0 +1,111 @@
+﻿@page "/auctionhistory/{auctionid:int}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManager
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    @if (auction!=null && auction.Legacyauctionshistories != null)
+    {
+        <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Auction history - @auction.Auctionname
+            </MudText>
+        <MudTable Class="border" Elevation="0" Style="border-color:#E0E0E0" Items="@auction.Legacyauctionshistories.OrderByDescending(x => x.Created)" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Legacyauctionshistory" Loading="@progressIsVisible">
+            <HeaderContent>
+                <MudTh>Bid date (UTC)</MudTh>
+                <MudTh Style="text-align: right">Bid amount</MudTh>
+                <MudTh>State</MudTh>
+                <MudTh>TxHash</MudTh>
+                <MudTh>Return TxHash</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+
+                <MudTd>
+                    @context.Created.ToShortDateString() @context.Created.ToLongTimeString()
+                </MudTd>
+                <MudTd Style="text-align: right">
+                    @GlobalFunctions.FormatCurrency(context.Bidamount, 4) ADA
+                </MudTd>
+                <MudTd>
+                    @switch (context.State)
+                    {
+                        case "seller":
+                            <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Seller (Lock NFT)</NMKRChip>
+                            break;
+                        case "outbid":
+                            <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Outbid</NMKRChip>
+                            break;
+                        case "invalid":
+                            <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Invalid</NMKRChip>
+                            break;
+                        case "expired":
+                            <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Expired</NMKRChip>
+                            break;
+                        case "buyer":
+                            <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Highest bid</NMKRChip>
+                            break;
+                    }
+                </MudTd>
+
+                <MudTd Style="text-align: right">
+                    <ShowTransactionHash TxId="@context.Txhash" Blockchain="@(Blockchain.Cardano)"></ShowTransactionHash>
+                </MudTd>
+                <MudTd Style="text-align: right">
+                    <ShowTransactionHash TxId="@context.Returntxhash" Blockchain="@(Blockchain.Cardano)"></ShowTransactionHash>
+                </MudTd>
+
+            </RowTemplate>
+
+            <PagerContent>
+                <MudTablePager HideRowsPerPage="true" />
+            </PagerContent>
+        </MudTable>
+        <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" @onclick='(() => Refresh())' Class="mt-5 mb-5 rounded-xl px-6 py-3">Refresh</MudButton>
+
+    }
+
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int auctionid { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+    
+    private bool progressIsVisible { get; } = false;
+    private bool isSubmitting;
+    private Legacyauction auction { get; set; }
+    private List<Legacyauction> auctions = new();
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Auctions", href: "/auctions"),
+
+    };
+    protected override async Task OnParametersSetAsync()
+    {
+        await Refresh();
+
+        _items.Add(new($"Auction {auction.Auctionname}", $"/auctionhistory/{auction.Id}", disabled: true));
+    }
+
+    private async Task Refresh()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        auction = await (from a in db.Legacyauctions
+            .Include(a=>a.Legacyauctionshistories)
+            .AsSplitQuery()
+            where a.Id == auctionid && a.CustomerId == (int) settings.UserId
+            select a).FirstOrDefaultAsync();
+
+        if (auction == null)
+        {
+            NavigationManager.NavigateTo("/",true);
+            return;
+        }
+
+    }
+}

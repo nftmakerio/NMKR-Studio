@@ -1,0 +1,38 @@
+﻿<MudLink Href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/token/" + assetidWithCip68Prefix)" Target="_blank">@GlobalFunctions.GetStartAndEnd(assetidWithCip68Prefix, 6)</MudLink>
+<CopyToClipboard name="AssetId" content="@assetidWithCip68Prefix"></CopyToClipboard>
+   
+
+   @code {
+
+       [Parameter]
+       public string AssetId
+       {
+           get { return assetid; }
+           set
+           {
+               assetid = value;
+               SetName();
+           }
+       }
+
+       [Parameter]
+       public bool Cip68 {
+           get
+           {
+               return cip68;
+           }
+           set
+           {
+               cip68 = value;
+               SetName();
+           } }
+       private string assetid;
+       private string assetidWithCip68Prefix;
+       private bool cip68;
+       private void SetName()
+       {
+           assetidWithCip68Prefix = Cip68 ? "000643b0" + assetid : assetid;
+       }
+
+      
+   }

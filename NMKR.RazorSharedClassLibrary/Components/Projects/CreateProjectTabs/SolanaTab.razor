@@ -1,0 +1,56 @@
+﻿<EditForm Model="@Value" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <MudGrid Class="mb-10 pa-5 mr-3 ml-1 mt-5" Style="border-radius: 0rem; border-width: 1px; border-color: #d2d2d2;">
+        <MudItem xs="12">
+        <MudText Typo="Typo.h5" Color="Color.Dark">Solana</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <SelectWallet @bind-Value="Value.SolanaWalletId" Coin="Coin.SOL" Blockchain="Blockchain.Solana" IsAdmin="@IsAdmin" CustomerId="@CustomerId"></SelectWallet>
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Label="Solana Symbol" HelperText="@GlobalFunctions.CharHelper("max. 10 characters (optional)", Value?.SolanaSymbol ?? "")"
+                          @bind-Value="Value.SolanaSymbol" For="@(() => Value.SolanaSymbol)" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField Variant="Variant.Outlined" Label="Solana Collection Family" HelperText="@GlobalFunctions.CharHelper("max. 64 characters (optional)", Value?.Solanacollectionfamily ?? "")"
+                          @bind-Value="Value.Solanacollectionfamily" For="@(() => Value.Solanacollectionfamily)" Immediate="true" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudSwitch UncheckedColor="Color.Dark" T="bool" Color="Color.Primary" @bind-Value="@Value.CreateSolanaVerifiedCollection" Label="Create verified collection (Costs one Mint Coupon to create the Collection NFT)" />
+        </MudItem>
+
+        @if (Value.CreateSolanaVerifiedCollection)
+        {
+            <MudItem xs="12">
+                <UploadProjectImage @bind-Image="@Value.SolanaCollectionImage" DescriptionText="Preview Image of the Solana Collection" FileSize="@(new System.Drawing.Size(0, 0))" PreviewMaxWidth="300" />
+            </MudItem>
+            <MudItem xs="2">
+                <MudNumericField @bind-Value="Value.SellerFeeBasisPoints" Label="Seller Fee Basis Points (in %)" Variant="Variant.Text" Min="0" Max="100" />
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="OnPreviousClick" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+    </MudContainer>
+
+</EditForm>
+@code {
+    [Parameter]
+    public CreateNewProjectBlockchainsClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateNewProjectBlockchainsClass> ValueChanged { get; set; }
+
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool iagonenabled { get; set; }
+    [Parameter] public List<Activeblockchain> activeblockchains { get; set; }
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnPreviousClick { get; set; }
+
+    [Parameter] public bool isSubmitting { get; set; }
+    [Parameter] public CreateNewProjectClass model { get; set; }
+}

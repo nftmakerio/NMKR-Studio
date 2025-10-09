@@ -1,0 +1,314 @@
+﻿@page "/limitipaccess/{apikeyid:int}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["Limit IP Access"] @apikey.Apikeystartandend </MudText>
+    <MudTable Class="border" Elevation="0" Style="border-color:#E0E0E0" Items="@apikeyaccesses" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Apikeyaccess" Loading="@progressIsVisible">
+        <HeaderContent>
+            <MudTh>@_loc["Order"]</MudTh>
+            <MudTh>@_loc["IP Address"]</MudTh>
+                <MudTh>@_loc["State"]</MudTh>
+            <MudTh>@_loc["Description"]</MudTh>
+            <MudTh>@_loc["Actions"]</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+                @context.Order
+            </MudTd>
+            <MudTd>
+                @context.Accessfrom
+            </MudTd>
+            <MudTd>
+                @switch (context.State)
+                {
+                    case "allowed":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">@_loc["Allowed"]</NMKRChip>
+                        break;
+                    case "forbidden":
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">@_loc["Forbidden"]</NMKRChip>
+                        break;
+                }
+            </MudTd>
+            <MudTd>
+                @context.Description
+            </MudTd>
+
+            <MudTd Style="text-align: right">
+
+                @if (apikeyaccesses.Count > 1)
+                {
+                    @if (apikeyaccesses.First() != context)
+                    {
+                        <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Medium" @onclick="(() => MoveUp(context.Id))"></MudIconButton>
+                    }
+
+                    @if (apikeyaccesses.Last() != context)
+                    {
+                        <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Medium" @onclick="(() => MoveDown(context.Id))"></MudIconButton>
+                    }
+                @*    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Medium" @onclick="(() => MoveDown(context.Id))" Disabled="apikeyaccesses.Last() == context"></MudIconButton> *@
+                }
+
+                <MudTooltip Color="Color.Dark" Text="@_loc["Edit"]" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" @onclick="(() => Edit(context.Id))"></MudIconButton>
+                </MudTooltip>
+                <MudTooltip Color="Color.Dark" Text="@_loc["Delete"]" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" @onclick="(() => Delete(context.Id))"></MudIconButton>
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false" Class="mt-5 mb-5 rounded-xl px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               OnClick="AddIpAddress">
+    @_loc["Add Access Rule"]
+    </MudButton>
+
+
+
+
+
+</MudContainer>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+@code {
+    [Parameter]
+    public int apikeyid { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool progressIsVisible { get; set; } = false;
+    private bool isSubmitting;
+
+    private Apikey apikey = new();
+    private List<Apikeyaccess> apikeyaccesses = new();
+
+    private readonly List<BreadcrumbItem> _items = new();
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Apikeys"], href: "/apikeys", disabled: false));
+        if (apikeyid != 0)
+        {
+            _items.Add(new(@_loc["Limit IP Access (Key: "] + apikey.Apikeystartandend + ")", "", disabled: true));
+        }
+
+    }
+
+
+    private async Task MoveUp(int id)
+    {
+        var t1 = apikeyaccesses.Find(x => x.Id == id);
+        var t2 = apikeyaccesses.OrderBy(x=>x.Order).LastOrDefault(x => x.Order < t1.Order);
+
+        if (t2 != null && t1 != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var r1 = await (from a in db.Apikeyaccesses
+                            where a.Id == t1.Id
+                            select a).FirstOrDefaultAsync();
+            var r2 = await (from a in db.Apikeyaccesses
+                            where a.Id == t2.Id
+                            select a).FirstOrDefaultAsync();
+            if (r1 != null && r2 != null)
+            {
+                r1.Order = t2.Order;
+                r2.Order = t1.Order;
+                await db.SaveChangesAsync();
+                await ReloadData();
+            }
+        }
+    }
+
+    private async Task MoveDown(int id)
+    {
+        var t1 = apikeyaccesses.Find(x => x.Id == id);
+        var t2 = apikeyaccesses.OrderBy(x=>x.Order).FirstOrDefault(x => x.Order > t1.Order);
+
+        if (t2 != null && t1 != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var r1 = await (from a in db.Apikeyaccesses
+                            where a.Id == t1.Id
+                            select a).FirstOrDefaultAsync();
+            var r2 = await (from a in db.Apikeyaccesses
+                            where a.Id == t2.Id
+                            select a).FirstOrDefaultAsync();
+            if (r1 != null && r2 != null)
+            {
+                r1.Order = t2.Order;
+                r2.Order = t1.Order;
+                await db.SaveChangesAsync();
+                await ReloadData();
+            }
+        }
+    }
+
+
+    private async Task AddIpAddress()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        AddIpLimitClass pl = new() {Id = null, State = "allowed", ApiKeyId = apikeyid, Order = (apikeyaccesses.Count()+1), CustomerId = settings.UserId??0};
+
+        var parameters = new DialogParameters { { nameof(EditIpAccessModalWindow.access),pl } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditIpAccessModalWindow>(@_loc["Add Ip access"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await ReloadData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var p = await (from a in db.Apikeyaccesses
+                .Include(a=>a.Apikey).AsSplitQuery()
+            where a.Id == id && a.Apikey.CustomerId == (int)settings.UserId
+            select a).FirstOrDefaultAsync();
+
+        AddIpLimitClass pl = new() {Id = p.Id, State = p.State, ApiKeyId = apikeyid, Order = p.Order, Description = p.Description, AccessFrom = p.Accessfrom, CustomerId = settings.UserId??0};
+
+        var parameters = new DialogParameters { { nameof(EditIpAccessModalWindow.access), pl } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditIpAccessModalWindow>(@_loc["Edit Ip access"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await ReloadData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        bool? result = await DialogService.ShowMessageBox(
+            @_loc["Warning"],
+            @_loc["Are you sure you want to delete this access rule ? "],
+            yesText: @_loc["Delete!"], cancelText: @_loc["Cancel"]);
+        if (result != null)
+        {
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var p = await (from a in db.Apikeyaccesses
+            .Include(a=>a.Apikey).AsSplitQuery()
+                           where a.Id == id && a.Apikey.CustomerId == (int)settings.UserId
+                           select a).FirstOrDefaultAsync();
+            if (p != null)
+            {
+                bool ok =  await _twoFactorCheck.CheckTwoFactor(apikey.CustomerId, TwoFactorCases.CreateEditApikey);
+                if (!ok)
+                {
+                    isSubmitting = false;
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Two factor authentication failed. Please try again.", Severity.Error);
+                    return;
+                }
+
+                int on1 = p.Order;
+                db.Apikeyaccesses.Remove(p);
+
+
+                // Reorder the entrys after the deleted
+                var onx= await (from a in db.Apikeyaccesses
+                                where a.Order>on1 && a.ApikeyId==apikeyid
+                                select a).ToListAsync();
+
+                foreach (var oc1 in onx)
+                {
+                    oc1.Order--;
+                }
+                await db.SaveChangesAsync();
+
+                await ReloadData();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Access rule deleted"], Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Internal error - Please contact the support"], Severity.Error);
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task ReloadData()
+    {
+        if (apikeyid == 0)
+            return;
+
+        progressIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        apikey = await (from a in db.Apikeys
+                        where a.Id == apikeyid && a.CustomerId == (int)settings.UserId
+                        select a).FirstOrDefaultAsync();
+
+
+        if (apikey == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Internal error - Please contact the support"], Severity.Error);
+            return;
+        }
+
+        apikeyaccesses = await (from a in db.Apikeyaccesses
+            .Include(a=>a.Apikey).AsSplitQuery()
+                                where a.ApikeyId==apikeyid && a.Apikey.CustomerId==(int)settings.UserId
+                                orderby a.Order
+                                select a).AsNoTracking().ToListAsync();
+
+
+        if (apikeyaccesses.Count == 0)
+        {
+            await db.Apikeyaccesses.AddAsync(new() { Accessfrom = "0.0.0.0/0", ApikeyId = apikeyid, State = "allowed", Description = @_loc["Allow all"], Order = 1});
+            await db.SaveChangesAsync();
+
+            apikeyaccesses = await (from a in db.Apikeyaccesses
+                .Include(a=>a.Apikey).AsSplitQuery()
+                                    where a.ApikeyId==apikeyid && a.Apikey.CustomerId==(int)settings.UserId
+                                    select a).AsNoTracking().ToListAsync();
+        }
+
+        progressIsVisible = false;
+        StateHasChanged();
+    }
+}

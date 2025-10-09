@@ -1,0 +1,22 @@
+﻿@using NMKR.Shared.Functions.Extensions
+<MudText Typo="Typo.inherit">Discount:</MudText>
+<DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Discount ?? 0), 5, context.Coin.ToEnum<Coin>()))" />
+
+@if (context.Stakereward != 0)
+{
+    <br/>
+    <MudText Typo="Typo.inherit">Stakerewards:</MudText>
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Stakereward ?? 0), 5, context.Coin.ToEnum<Coin>()))" />
+}
+@if (context.Tokenreward != 0)
+{
+    <br/>
+    <MudText Typo="Typo.inherit">Tokenrewards:</MudText>
+    <DisplayComaNumbers Number="@(GlobalFunctions.FormatCurrency((context.Tokenreward ?? 0), 5, context.Coin.ToEnum<Coin>()))" />
+}
+
+
+@code {
+    [Parameter]
+    public Transaction context { get; set; }
+}

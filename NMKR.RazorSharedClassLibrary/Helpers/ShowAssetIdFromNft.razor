@@ -1,0 +1,40 @@
+﻿<MudLink Href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/token/" + assetidWithCip68Prefix)" Target="_blank">@GlobalFunctions.GetStartAndEnd(assetidWithCip68Prefix, 6)</MudLink>
+<CopyToClipboard name="AssetId" content="@assetidWithCip68Prefix"></CopyToClipboard>
+   
+
+@code {
+
+    [Parameter]
+    public Nft Nft
+    {
+        get => nft;
+        set
+        {
+            nft = value;
+            SetName();
+        }
+    }
+
+    [Parameter]
+    public Nftproject Project {
+        get => project;
+        set
+        {
+            project = value;
+            SetName();
+        } }
+    private Nft? nft;
+    private string assetidWithCip68Prefix;
+    private Nftproject? project;
+    private void SetName()
+    {
+        if (project != null && nft != null)
+        {
+            string assetid = GlobalFunctions.GetAssetId(project.Policyid, project.Tokennameprefix, nft.Name, false);
+
+            assetidWithCip68Prefix = project.Cip68 ? "000643b0" + assetid : assetid;
+        }
+    }
+
+      
+}

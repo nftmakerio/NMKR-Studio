@@ -1,0 +1,62 @@
+﻿@using NMKR.Shared.Functions.Koios
+@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.VisualizeMetadata
+@using NMKR.Shared.Functions.DbSync
+@inject ISnackbar Snackbar
+<MudOverlay @bind-Visible="isSubmitting" DarkBackground="true" ZIndex="9999" AutoClose="true" />
+@if (!string.IsNullOrEmpty(Fingerprint))
+{
+    <span style="white-space: nowrap;">
+    <MudLink Typo="Typo.body2" Href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/token/" + Fingerprint)" Target="_blank">@GlobalFunctions.GetStartAndEnd(Fingerprint, 6)</MudLink>
+        <CopyToClipboard name="Fingerprint" content="@Fingerprint"></CopyToClipboard>
+
+        <MudTooltip Color="Color.Dark" Text="View Asset" Placement="Placement.Start">
+            <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.RemoveRedEye" Size="Size.Small" @onclick='(() => VisualizeMetadata())'>
+            </MudIconButton>
+        </MudTooltip>
+    </span>
+}
+
+
+@code {
+    [Parameter]
+    public string Fingerprint { get; set; }
+    private bool isSubmitting;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private async Task VisualizeMetadata()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+        StateHasChanged();
+        var policyidandassetname = await DbSyncFunctions.GetPolicyidAndAssetnameFromFingerprintAsync(Fingerprint);
+       // var policyidandassetname = await KoiosFunctions.GetPolicyidAndAssetnameFromFingerprintAsync(Fingerprint);
+        if (policyidandassetname == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Asset not found - Fingerprint is wrong", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        var metadata = await KoiosFunctions.GetMetadataAsync(policyidandassetname.PolicyId, policyidandassetname.AssetName);
+
+        if (string.IsNullOrEmpty(metadata))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Metadata not found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = true,  CloseButton = true, CloseOnEscapeKey = true };
+        var parameters = new DialogParameters {{nameof(VisualizeMetadataModalWindow.Metadata), metadata}, {nameof(VisualizeMetadataModalWindow.Cip68), !metadata.Contains("\"721\"")}};
+        var dialog = await DialogService.ShowAsync<VisualizeMetadataModalWindow>("View Asset", parameters, maxWidth);
+        await dialog.Result;
+      
+    }
+
+}

@@ -1,0 +1,26 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Policy" Class="mr-3" />Enter Policy Id
+            <hr/>
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Enter Policy Id"  Immediate="true" @bind-Value="policyId" Lines="1" Required="true" RequiredError="The policy id is required" />
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Ok">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+
+    public string policyId { get; set; }
+    void Cancel() => MudDialog.Cancel();
+    void Ok()=>MudDialog.Close(DialogResult.Ok(policyId));
+}

@@ -1,0 +1,14 @@
+﻿@page "/policysnapshot"
+
+<BreadCrumb Items="_items"></BreadCrumb>
+<PolicySnapshot></PolicySnapshot>
+
+@code {
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Policy snapshot", href: "/policysnapshot", disabled: true),
+    };
+
+}

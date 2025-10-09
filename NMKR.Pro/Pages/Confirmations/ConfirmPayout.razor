@@ -1,0 +1,90 @@
+﻿@layout ConfirmationLayout
+@page "/confirm/payout/{userid:int}/{walletid:int}/{confirmationcode}"
+@inject IStringLocalizer _loc
+
+
+<MudText Typo="Typo.h4" GutterBottom="true">@_loc["Confirm Payout"]</MudText>
+
+    <MudText Color="@Color.Error" Class="mt-3">
+        @errormessage
+    </MudText>
+
+<MudText Color="@Color.Primary" Class="mt-3">
+    @message
+</MudText>
+
+
+
+@code { 
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+    [Parameter]
+    public int UserId { get; set; }
+    [Parameter]
+    public int WalletId { get; set; }
+    [Parameter]
+    public string ConfirmationCode { get; set; }
+
+    private string message { get; set; }
+    private string errormessage { get; set; }
+
+ //   private EasynftprojectsContext _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var pending = await (from a in db.Payoutrequests
+            .Include(a => a.Customer).AsSplitQuery()
+            .Include(a => a.Wallet).AsSplitQuery()
+            where a.Confirmationcode == ConfirmationCode && a.CustomerId == UserId && a.WalletId == WalletId && (a.State == "active" || a.State == "execute" || a.State == "executed")
+            select a).FirstOrDefaultAsync();
+
+        if (pending == null)
+        {
+            errormessage = @_loc["The confirmation code is not correct."];
+            return;
+        }
+
+        if (pending.State == "executed")
+        {
+            errormessage = @_loc["Your payout request was already executed."];
+            return;
+        }
+
+        if (pending.Confirmationexpire < DateTime.Now)
+        {
+            errormessage = @_loc["The request has expired. Please start a new payout request."];
+            return;
+        }
+
+        if (pending.Wallet.State != "active")
+        {
+            errormessage = @_loc["The Wallet is not confirmed. Please confirm the wallet address first"];
+            return;
+        }
+        if (pending.Customer.State != "active")
+        {
+            errormessage = @_loc["Your User account is not active. Please contact the support"];
+            return;
+        }
+        if (pending.Customer.Addressblocked == true)
+        {
+            errormessage = @_loc["Your internal wallet is currently blocked due to pending transactions. Please try again in 1 Minute"];
+            return;
+        }
+
+
+        if (pending.State == "active")
+        {
+            pending.State = "execute"; // IMPORTANT: NOT executed - the backgroundtask will execute the transaction
+            pending.Confirmationtime = DateTime.Now;
+
+            if (ConnectionInfo != null) pending.Confirmationipaddress = ConnectionInfo.RemoteIpAddress;
+            await db.SaveChangesAsync();
+        }
+
+
+        message = @_loc["Your payout request will be executed within the next 10-15 minutes."];
+
+    StateHasChanged();
+    } }

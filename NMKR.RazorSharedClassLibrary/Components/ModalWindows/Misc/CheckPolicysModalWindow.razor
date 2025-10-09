@@ -1,0 +1,292 @@
+﻿@using NMKR.Shared.Classes.Blockfrost
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Check Status against Blockchain
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" T="string"  @bind-Value="logfile" Lines="20" ReadOnly="true" />
+        <MudProgressLinear Color="Color.Success" Value="progressvalue" Min="0" Max="progressmax" />
+    </DialogContent>
+    <DialogActions>
+        @if (nftid == null)
+        {
+            <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@checkerror" T="bool" Label="Check only NFT in error state"></MudCheckBox>
+        }
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CheckPolicyIdsNew">Start</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public int? nftid { get; set; }
+
+    private bool isSubmitting;
+    private string logfile { get; set; }
+
+    private int progressvalue { get; set; }
+    private int progressmax { get; set; }
+
+    private bool checkerror { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task CheckPolicyIdsNew()
+    {
+        progressvalue = 0;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        int page = 0;
+        int pagesize = 250;
+        Log("Start");
+        var nftscount = await (from a in db.Nfts
+            where a.NftprojectId == projectid && a.Isroyaltytoken == false 
+                  && a.MainnftId == null && a.State != "deleted" 
+                   && (nftid == null || a.Id == nftid)
+            select a).CountAsync();
+
+        do
+        {
+
+            var nfts = await (from a in db.Nfts
+                .Include(a => a.Nftproject).AsSplitQuery()
+                where a.NftprojectId == projectid && a.Isroyaltytoken == false 
+                      && a.MainnftId == null 
+                      && a.State != "deleted" 
+                      && (nftid == null || a.Id == nftid)
+                select a).Skip(page*pagesize).Take(pagesize).ToListAsync();
+
+            page++;
+                if (!nfts.Any())
+                    break;  
+
+
+            progressmax = nftscount;
+            foreach (var nft in nfts)
+            {
+                if (checkerror && nft.Errorcount == 0 && nft.State != "error")
+                    continue;
+
+                progressvalue++;
+                var log = (progressvalue) + "/"+progressmax + " - " +(nft.Nftproject.Tokennameprefix??"")+nft.Name + " - Actual state: " + nft.State;
+                StateHasChanged();
+                string assetid = GlobalFunctions.GetAssetId(nft.Nftproject.Policyid, nft.Nftproject.Tokennameprefix, nft.Name);
+                
+                if (string.IsNullOrEmpty(nft.Assetid) || nft.Assetid != assetid)
+                {
+                    nft.Assetid = assetid;
+                    await db.SaveChangesAsync();
+                }
+
+                BlockfrostAssetClass? as1 = null;
+                   as1 = await ConsoleCommand.GetAssetFromBlockchainAsync(nft,nft.Nftproject);
+
+
+                string oldstate = nft.State;
+
+                if (as1 == null)
+                {
+                    switch (nft.State)
+                    {
+                        case "sold" when nft.Selldate != null && nft.Selldate > DateTime.Now.AddHours(-1):
+                        log+= " - NFT was marked as sold less than an hour ago. Try again later. ";
+                            Log(log);
+                            continue;
+                        case "error" when nft.Markedaserror != null && nft.Markedaserror > DateTime.Now.AddHours(-1):
+                        log += " - NFT was marked as error less than an hour ago. Try again later. ";
+                            Log(log);
+                            continue;
+                    }
+
+                    if (nft.Soldcount > 0 || nft.State == "sold" || nft.State == "error" && nft.Nftproject.Maxsupply == 1)
+                    {
+                        log += " - Status is not correct: NFT not found on Blockchain";
+                        var nto = await (from a in db.Nfttonftaddresses
+                            .Include(a => a.Nftaddresses).AsSplitQuery()
+                            where a.NftId == nft.Id
+                            select a).AsNoTracking().ToListAsync();
+
+                        var tx1 = await (from a in db.TransactionNfts
+                            .Include(a => a.Transaction).AsSplitQuery()
+                            where a.NftId == nft.Id
+                            select a).AsNoTracking().ToListAsync();
+
+                        if (!nto.Any() && !tx1.Any())
+                        {
+                            log += " - Not Found in NftToAddresses or Transactions";
+                            if (nft.State == "sold")
+                            {
+                                if (!nft.Isroyaltytoken)
+                                {
+                                    log += " - but state is sold - so we leave it";
+                                    nft.Fingerprint = null;
+                                    nft.State = "error";
+                                    nft.Markedaserror = DateTime.Now;
+                                    nft.Soldcount = 0;
+                                    nft.Reservedcount = 0;
+                                    nft.Errorcount = 0;
+                                    nft.Initialminttxhash = null;
+                                    nft.Series = null;
+                                    nft.Lastpolicycheck = null;
+                                    nft.Checkpolicyid = true;
+                                }
+                            }
+                            else
+                            {
+                                log += " - Set new state to free";
+                                nft.Fingerprint = null;
+                                nft.State = "free";
+                                nft.Markedaserror = null;
+                                nft.Soldcount = 0;
+                                nft.Reservedcount = 0;
+                                nft.Errorcount = 0;
+                                nft.Initialminttxhash = null;
+                                nft.Series = null;
+                                nft.Lastpolicycheck = null;
+                            }
+                        }
+                        else
+                        {
+                            log += " - but found in NftToAddresses or Transactions";
+
+                            bool settofree = false;
+                            if (nto.Count == 1)
+                            {
+                                if (nto.First().Nftaddresses.State == "error" ||
+                                    nto.First().Nftaddresses.State == "error2")
+                                    settofree = true;
+                            }
+
+                            if (settofree)
+                            {
+                                log += " - Transaction was marked as error ";
+                                log += "- Set new IsActive to free (2)";
+                                nft.Fingerprint = null;
+                                nft.State = "free";
+                                nft.Soldcount = 0;
+                                nft.Reservedcount = 0;
+                                nft.Errorcount = 0;
+                                nft.Initialminttxhash = null;
+                                nft.Series = null;
+                                nft.Lastpolicycheck = null;
+    //  await db.Database.ExecuteSqlRawAsync("delete from nfttonftaddresses where nft_id=" + nft.Id);
+                            }
+                            else
+                            {
+                                log += " - Transaction was NOT marked as error";
+                                if (nto.Any())
+                                    log += " - Addresses-ID: " + nto.First().Nftaddresses.Id + " - state of address: " + nto.First().Nftaddresses.State + " -TX-ID (incoming): " + nto.First().Nftaddresses.Txid;
+
+                                if (tx1.Any())
+                                    log += "- Transaction-ID" + tx1.First().Transaction.Id + " - state: " + tx1.First().Transaction.State + " - Receiveraddress: " + tx1.First().Transaction.Receiveraddress + " - TX-ID (outgoing): " + tx1.First().Transaction.Transactionid;
+
+                                log += (nft.State == "error") ? " - Leave state in 'error' - Release via 'Release to free' Button." : " - Set new state to error";
+                                nft.Fingerprint = null;
+                                nft.State = "error";
+                                nft.Soldcount = 0;
+                                nft.Reservedcount = 0;
+                                nft.Errorcount = 1;
+                                nft.Initialminttxhash = null;
+                                nft.Series = null;
+                                nft.Lastpolicycheck = null;
+                            }
+
+                            await db.SaveChangesAsync();
+                        }
+                    }
+                    else
+                    {
+                        log += " - correct";
+                    }
+
+                    Log(log);
+                    continue;
+                }
+
+                log += " - Found on Blockchain - "+ as1.Blockchain+ " - " + as1.Quantity + " - " + as1.Fingerprint;
+              //  nft.Series = as1.OnchainMetadata?.ArtworkTitle;
+                nft.Assetname = as1.AssetName;
+                nft.Fingerprint = as1.Fingerprint;
+                nft.Initialminttxhash = as1.InitialMintTxHash;
+              //  nft.Title = as1.OnchainMetadata?.Name;
+                nft.Minted = true;
+
+                if (as1.Quantity >= nft.Nftproject.Maxsupply && nft.InstockpremintedaddressId == null)
+                    nft.State = "sold";
+
+
+                if (nft.Nftproject.Maxsupply == 1)
+                {
+                    if (as1.Quantity == 0)
+                    {
+                        nft.Checkpolicyid = false;
+                        nft.Lastpolicycheck = null;
+                        nft.Soldcount = 0;
+                        nft.Reservedcount = 0;
+                        nft.Errorcount = 0;
+                        nft.Burncount = 0;
+                        nft.State = "free";
+                        if (as1.MintOrBurnCount == 2)
+                        {
+                            nft.State = "burned";
+                            nft.Burncount = 1;
+                            log += " - Set to burned";
+                        }
+                        else log += " - Set to free";
+                    }
+                    else
+                    {
+                        log += oldstate == "sold" ? " - Leave state at 'sold'" : " - Set state to 'sold'";
+                        nft.Checkpolicyid = false;
+                        nft.Lastpolicycheck = null;
+                        nft.Soldcount = 1;
+                        nft.Reservedcount = 0;
+                        nft.Errorcount = 0;
+                        nft.State = "sold";
+                       
+                    }
+                }
+                else
+                {
+                    if (nft.Soldcount == (as1.Quantity ?? 0))
+                    {
+                        nft.Checkpolicyid = false;
+                        nft.Lastpolicycheck = null;
+                    }
+
+                    if (nft.Soldcount != (as1.Quantity ?? 0))
+                    {
+                        nft.Soldcount = as1.Quantity ?? 0;
+                        nft.Checkpolicyid = false;
+                        nft.Lastpolicycheck = null;
+                    }
+                }
+
+                if (nft.Checkpolicyid == true)
+                    nft.Checkpolicyid = false;
+
+                Log(log);
+            }
+            await db.SaveChangesAsync();
+        } while (true);
+        Log("finished");
+    }
+
+
+    private int nr = 0;
+
+    private void Log(string st)
+    {
+        nr++;
+        logfile = $"{nr}. {st}{Environment.NewLine}{logfile}";
+        StateHasChanged();
+    }
+}

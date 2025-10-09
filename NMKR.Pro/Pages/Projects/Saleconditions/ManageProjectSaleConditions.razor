@@ -1,0 +1,36 @@
+﻿@page "/saleconditions/{projectid:int}/{projectuid}"
+
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+<ShowSaleConditions customerid="@((int)settings.UserId)" projectid="@projectid" projectuid="@projectuid"></ShowSaleConditions>
+
+
+
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public string projectuid { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (projectid != 0)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var project = await (from a in db.Nftprojects
+                                 where a.Id == projectid && a.CustomerId == (int)settings.UserId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            _items.Add(new($"Project ({project.Projectname})", href: $"/projects/{projectuid}", disabled: false));
+            _items.Add(new("Sale Conditions (" + project.Projectname + ")", href: "/saleconditons/" + projectid, disabled: true));
+        }
+    }
+}

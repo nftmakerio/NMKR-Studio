@@ -1,0 +1,41 @@
+﻿<MudDialog>
+    <TitleContent>
+        @if (Blockchain == Blockchain.Cardano)
+        {
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-3"/>Burning Endpoint
+                <h5 class="mt-2">Be careful - any Token (from this project) you send to this address will be burned.</h5>
+                <small>All other Tokens will be send back.</small>
+                <h6>The endpoint is valid until: @ValidUntil - to burn your token(s) send the tokens to this address.</h6>
+            </MudText>
+        }
+        @if (Blockchain == Blockchain.Solana)
+        {
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-3"/>Burning Endpoint
+                <h5 class="mt-2">Be careful - any Token(!) you send to this address will be burned.</h5>
+                <h6>The endpoint is valid until: @ValidUntil - to burn your token(s) send the tokens to this address.</h6>
+            </MudText>
+        }
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" ReadOnly="true" T="string" Label="@(Blockchain.ToString() + " Burning Endpoint Address")"  Text="@Address" Class="mb-5" />
+    </DialogContent>
+    <DialogActions>
+        <CopyToClipboardButton Name="@(Blockchain.ToString() + " Burning Endpoint Address")" Content="@Address"></CopyToClipboardButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string Address { get; set; }
+
+    [Parameter]
+    public string ValidUntil { get; set; }
+    [Parameter]
+    public Blockchain  Blockchain { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+}

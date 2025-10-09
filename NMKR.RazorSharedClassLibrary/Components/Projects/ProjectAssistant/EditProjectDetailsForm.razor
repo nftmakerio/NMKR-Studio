@@ -1,0 +1,46 @@
+﻿@inject NavigationManager NavigationManager
+@using NMKR.Shared.Classes.Projects
+
+<MudGrid Justify="Justify.SpaceBetween" Style="margin-left: -12px">
+    <BlockchainToggle @bind-Value="Value.Blockchainselection" ></BlockchainToggle>
+    <MudItem xs="12" sm="12">
+        <MudText Typo="Typo.h6" Color="Color.Dark">Enter Project Details</MudText>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudTextField Variant="Variant.Outlined" Label="Project Name" HelperText="@GlobalFunctions.CharHelper("Min. 1 characters, max. 64 characters", Value?.Projectname ?? "")"
+                      @bind-Value="Value.Projectname" For="@(() => Value.Projectname)" Immediate="true"/>
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField Variant="Variant.Outlined" Label="Description" HelperText="@GlobalFunctions.CharHelper("optional, max. 256 characters", Value?.Description ?? "")"
+                      @bind-Value="Value.Description" For="@(() => Value.Description)" Immediate="true" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField Variant="Variant.Outlined" Label="Project Url" HelperText="@GlobalFunctions.CharHelper("optional, max. 256 characters", Value?.Projecturl ?? "")"
+                      @bind-Value="Value.Projecturl" For="@(() => Value.Projecturl)" Immediate="true" />
+    </MudItem>
+</MudGrid>
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [Parameter]
+    public CreateProjectFromTemplateClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateProjectFromTemplateClass> ValueChanged { get; set; }
+
+    private void SetupWallet()
+    {
+        if (IsAdmin)
+            NavigationManager.NavigateTo("/wallets/"+CustomerId);
+        else
+            NavigationManager.NavigateTo("/wallets");
+    }
+
+    private void BlockchainSelected(Blockchain[] obj)
+    {
+       StateHasChanged();
+    }
+
+}

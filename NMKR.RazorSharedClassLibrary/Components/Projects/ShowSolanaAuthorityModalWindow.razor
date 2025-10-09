@@ -1,0 +1,108 @@
+﻿@using BlazorDownloadFile
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Policy Information
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-height: 800px; overflow-y: scroll">
+            <MudTextField Variant="Variant.Outlined" T="string" Text="@MintAuth" Label="Mint authority" Lines="1" ReadOnly="true" />
+            <MudTextField Variant="Variant.Outlined" T="string" Text="@CollectionAddress" Label="Collection address" Lines="1" ReadOnly="true" Class="mt-3" />
+            <MudTextField Variant="Variant.Outlined" T="string" Text="@CollectionMetadata" Label="Collection Metadata" Lines="6" ReadOnly="true" Class="mt-3" />
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Color="Color.Secondary" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Ok">Close</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="ExportKey">Export Secret Keys</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" Href="@link">View Mint Authority on Solana Explorer</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<TwoFactorCheck Message="The Code to download the secret keys is:" @ref="_twoFactorCheck" />
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string MintAuth { get; set; }
+    [Parameter]
+    public string CollectionAddress { get; set; }
+    [Parameter]
+    public string CollectionMetadata { get; set; }
+    [Parameter]
+    public Customer customer { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+
+    private string link { get; set; }
+    private bool isSubmitting;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+    protected override void OnParametersSet()
+    {
+        link = $"https://explorer.solana.com/address/{MintAuth}" + (GlobalFunctions.IsMainnet() ? "" : "?cluster=devnet");
+    }
+    private void Ok()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+    private async Task ExportKey()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        bool ok = true;
+
+
+        if (!IsAdmin)
+        {
+            ok = await _twoFactorCheck.CheckTwoFactor(customer.Id, TwoFactorCases.ExportKeys);
+
+            if (!ok)
+            {
+                isSubmitting = false;
+                return;
+            }
+        }
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname);
+
+
+        string seed = Encryption.DecryptString(project.Solanaseedphrase, project.Password);
+        string pubkey = Encryption.DecryptString(project.Solanapublickey, project.Password);
+
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".seed", seed);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".publickey", pubkey);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".metadata", CollectionMetadata);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".collectionaddress", CollectionAddress);
+
+        string filename = GeneralConfigurationClass.TempFilePath + "" + filteredfilename + "_keys.zip";
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteOldFiles(GeneralConfigurationClass.TempFilePath + "", 1);
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".seed", Path.GetFileName(filteredfilename + ".seed"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".publickey", Path.GetFileName(filteredfilename + ".publickey"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".metadata", Path.GetFileName(filteredfilename + ".metadata"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".collectionaddress", Path.GetFileName(filteredfilename + ".collectionaddress"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".seed");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".publickey");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".script");
+        File.Delete(GeneralConfigurationClass.TempFilePath + "" + filteredfilename + ".collectionaddress");
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + "_solanakeys.zip", AsBase64String, "application/octet-stream");
+
+
+        isSubmitting = false;
+    }
+}

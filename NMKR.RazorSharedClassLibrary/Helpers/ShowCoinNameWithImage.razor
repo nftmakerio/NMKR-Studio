@@ -1,0 +1,27 @@
+﻿    
+
+@if (activeblockchain != null)
+{
+    <img style="vertical-align:middle" src="@activeblockchain.Image" alt="@activeblockchain.Name" height="@Height">
+    @if (ShowName)
+    {
+        <span style="vertical-align:middle; margin-left:10px;"> @activeblockchain.Name (@(activeblockchain.Coinname))</span>
+    }
+}
+
+@code {
+    [Parameter]
+    public Coin Cointype { get; set; }
+
+    [Parameter]
+    public bool ShowName { get; set; } = true;
+
+    [Parameter]
+    public int Height { get; set; } = 20;
+    private Activeblockchain? activeblockchain { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        activeblockchain = await db.Activeblockchains.Where(x=>x.Coinname == Cointype.ToString()).AsNoTracking().FirstOrDefaultAsync();
+    }
+}

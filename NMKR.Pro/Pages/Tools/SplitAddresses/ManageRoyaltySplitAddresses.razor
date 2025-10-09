@@ -1,0 +1,18 @@
+﻿@page "/royaltysplitaddresses"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Split Addresses</MudText>
+    <RoyaltySplitAddresses CustomerId="@((int)settings.UserId)" IsAdmin="false"/>
+</MudContainer>
+
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Manage royalty split addresses", href: "/royaltysplitaddresses", disabled: true),
+    };
+}

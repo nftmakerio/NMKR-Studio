@@ -1,0 +1,234 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["Additional Payoutwallets"] (@project.Id - @project.Projectname)</MudText>
+    <MudText  Color="Color.Tertiary" Class="mb-4">@_loc["Here you can set up additional payout wallets to split the payout to different wallets"]</MudText>
+    <MudTable Items="@payoutwallets" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Nftprojectsadditionalpayout">
+        <HeaderContent>
+            <MudTh>Wallet</MudTh>
+            <MudTh Style="text-align:right">@_loc["Percent/Fixed Amount"]</MudTh>
+            <MudTh>@_loc["Blockchain"]</MudTh>
+            <MudTh>@_loc["Optional condition"]</MudTh>
+            <MudTh>@_loc["Actions"]</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+
+                @if (context.Wallet != null)
+                {
+                    @(context.Wallet.Comment + " (" + GlobalFunctions.GetStartAndEnd(context.Wallet.Walletaddress, 6) + ")")
+                }
+            </MudTd>
+            <MudTd Style="text-align:right">
+                @if (context.Valuepercent != null)
+                {
+                    @(((double)context.Valuepercent).ToString("N2", CultureInfo.GetCultureInfo("en-US")) + " %")
+                    @if (context.Coin == Coin.ADA.ToString())
+                    {
+                        <br/>
+                        <small>@_loc["min."] @(context.Wallet.Walletaddress.ToLower().StartsWith("addr") ? "1" : "2") @context.Coin</small>
+                    }
+                }
+                @if (context.Valuetotal != null)
+                {
+                    @(((long)context.Valuetotal).ToString("N0", CultureInfo.GetCultureInfo("en-US")))
+                }
+            </MudTd>
+            <MudTd >
+                <ShowBlockchainIcon Blockchain="GlobalFunctions.ConvertToBlockchain(context.Coin.ToEnum<Coin>())" ShowText="true" />
+            </MudTd>
+            <MudTd >
+                @context.Custompropertycondition
+            </MudTd>
+            <MudTd Style="text-align: right">
+                @if (!string.IsNullOrEmpty(context.Custompropertycondition))
+                {
+                 <MudTooltip Color="Color.Dark" Text="@_loc["Create Paywindow Button/Link"]" Placement="Placement.Start">
+                        <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Payment" Size="Size.Medium" @onclick="(() => CreatePayButton(context))"></MudIconButton>
+                </MudTooltip>
+                }
+                <MudTooltip Color="Color.Dark"  Text="@_loc["Edit"]" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Edit" Size="Size.Medium" @onclick="(() => Edit(context.Id))"></MudIconButton>
+                </MudTooltip>
+                <MudTooltip Color="Color.Dark"  Text="@_loc["Delete"]" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" @onclick="(() => Delete(context.Id))"></MudIconButton>
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false" Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               StartIcon="@Icons.Material.Filled.Payment"
+               OnClick="Add">
+        Add new payout wallet
+    </MudButton>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Inject] private IDialogService DialogService { get; set; }
+    private bool isSubmitting;
+
+    private List<Nftprojectsadditionalpayout> payoutwallets = new();
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+    }
+
+    private async Task ReloadData()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        payoutwallets = await (from a in db.Nftprojectsadditionalpayouts
+            .Include(a=>a.Wallet).AsSplitQuery()
+                               where a.NftprojectId == project.Id 
+                               select a).AsNoTracking().ToListAsync();
+
+        StateHasChanged();
+    }
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        bool? result = await DialogService.ShowMessageBox(
+            @_loc["Warning"],
+            @_loc["Are you sure you want to delete this additional payoutwallet?"],
+        yesText: @_loc["Delete!"], cancelText: @_loc["Cancel"]);
+        if (result != null)
+        {
+            var p = await (from a in db.Nftprojectsadditionalpayouts
+                           where a.Id == id && a.NftprojectId == project.Id
+                           select a).FirstOrDefaultAsync();
+            if (p != null)
+            {
+                db.Nftprojectsadditionalpayouts.Remove(p);
+                await db.SaveChangesAsync();
+                await ReloadData();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Addtional Payoutwallet deleted"], Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(@_loc["Internal error - Please contact support"], Severity.Error);
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var p = await (from a in db.Nftprojectsadditionalpayouts
+                       where a.Id == id && a.NftprojectId == project.Id
+                       select a).AsNoTracking().FirstOrDefaultAsync();
+        if (p != null)
+        {
+            var parameters = new DialogParameters { 
+                { nameof(EditAdditionalPayoutWalletsModalWindow.additionalpayout), p }, 
+                { nameof(EditAdditionalPayoutWalletsModalWindow.customerid),project.CustomerId},
+                { nameof(EditAdditionalPayoutWalletsModalWindow.project),project},
+                { nameof(EditAdditionalPayoutWalletsModalWindow.blockchainselector), GlobalFunctions.ConvertToBlockchain(p.Coin.ToEnum<Coin>()).ToString() }
+
+            };
+            DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+            var dialog = await DialogService.ShowAsync<EditAdditionalPayoutWalletsModalWindow>(@_loc["Edit additional payout wallet"], parameters, maxWidth);
+            var result = await dialog.Result;
+
+            if (result != DialogResult.Cancel())
+            {
+                await ReloadData();
+            }
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private async Task Add()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        Nftprojectsadditionalpayout pl = new() { NftprojectId = project.Id };
+
+        var parameters = new DialogParameters { 
+            { nameof(EditAdditionalPayoutWalletsModalWindow.additionalpayout), pl }, 
+            { nameof(EditAdditionalPayoutWalletsModalWindow.customerid),project.CustomerId},
+            { nameof(EditAdditionalPayoutWalletsModalWindow.project),project}
+            
+        };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<EditAdditionalPayoutWalletsModalWindow>(@_loc["Add additional payout wallet"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+            await ReloadData();
+        }
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+    private async Task CreatePayButton(Nftprojectsadditionalpayout addpayout)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        PaybuttonClass? model = new(project);
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var _prices = await (from a in db.Pricelists
+                             where a.NftprojectId == project.Id && a.State == "active"
+                             orderby a.Countnftortoken
+                             select a).ToListAsync();
+
+        if (_prices.Any())
+        {
+            model.Pricelist = _prices.First();
+            model.BlockchainString = _prices.First().Currency.ToEnum<Coin>() switch
+            {
+                Coin.SOL => Blockchain.Solana.ToString(),
+                Coin.ETH => Blockchain.Ethereum.ToString(),
+                Coin.ADA => Blockchain.Cardano.ToString(),
+                Coin.APT => Blockchain.Aptos.ToString(),
+                _ => Blockchain.Cardano.ToString()
+            };
+        }
+        model.Custompropertycondition = addpayout.Custompropertycondition;
+
+        var parameters = new DialogParameters {
+            { nameof(CreatePayButtonModalWindow.model), model },
+            { nameof(CreatePayButtonModalWindow.Project),project}
+        };
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<CreatePayButtonModalWindow>(@_loc["Create Windows Button"], parameters, maxWidth);
+        var result = await dialog.Result;
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+}

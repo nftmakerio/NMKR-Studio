@@ -1,0 +1,1135 @@
+﻿@using NMKR.Shared.Functions.Api
+@using NMKR.Shared.Functions.Extensions
+@using NMKR.Shared.Functions.Metadata
+@using NMKR.RazorSharedClassLibrary.Components.MenuButtons
+@using NMKR.RazorSharedClassLibrary.Components.Paywindow
+@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.Nfts
+@inject ISnackbar Snackbar
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManager
+@inject IConnectionMultiplexer _redis;
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Indeterminate="true" />
+</MudOverlay>
+@if (project != null)
+{
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Manage NFT (@project.Id - @project.Projectname)</MudText>
+    <MudTable MultiSelection="@(project.Maxsupply == 1)" @bind-SelectedItems="selectedItems1" Hover="true" Bordered="true" Striped="false" Elevation="0" Loading="isLoading"
+              HorizontalScrollbar="true" T="Nft"
+              ServerData="LoadTodos" @ref="table" OnRowClick="@(args => OnRowClicked(args))">
+        <ToolBarContent>
+
+
+            @if (project.Maxsupply == 1)
+            {
+                <MudSelect T="string" @bind-Value="SelectedOption" Class="mt-5" Immediate="true">
+                    <MudSelectItem Value="@("all")">All (@project.Total1)</MudSelectItem>
+                    <MudSelectItem Value="@("free")">Free (@project.Free1)</MudSelectItem>
+                    <MudSelectItem Value="@("reserved")">Reserved (@project.Reserved1)</MudSelectItem>
+                    <MudSelectItem Value="@("sold")">Sold (@project.Sold1)</MudSelectItem>
+                    <MudSelectItem Value="@("error")">Error (@project.Error1)</MudSelectItem>
+                    <MudSelectItem Value="@("blocked")">Blocked (@project.Blocked1) </MudSelectItem>
+                    <MudSelectItem Value="@("burned")">Burned </MudSelectItem>
+                </MudSelect>
+            }
+            else
+            {
+                <MudSelect T="string" @bind-Value="SelectedOption" Class="mt-5" Immediate="true">
+                    <MudSelectItem Value="@("all")">All (@project.Total1)</MudSelectItem>
+                    <MudSelectItem Value="@("sold")">Sold (@project.Sold1)</MudSelectItem>
+                </MudSelect>
+            }
+            <MudSpacer/>
+            <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@switch_ShowImages" Label="Show images" Color="Color.Primary"/>
+
+            <MudSpacer/>
+
+            <MudTextField DebounceInterval="500" Variant="Variant.Outlined" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-5" Immediate="true" Clearable="true"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>IsActive</MudTh>
+            @if (switch_ShowImages)
+            {
+                <MudTh>Image</MudTh>
+            }
+            <MudTh>Details</MudTh>
+            @if (project.Maxsupply == 1)
+            {
+                <MudTh>Sale date</MudTh>
+            }
+            <MudTh Style="Width: 350px;">Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Name">
+                <MudText Typo="Typo.subtitle1">@context.Id</MudText>
+
+                @if (!context.Isroyaltytoken)
+                {
+                    @if (((project.Tokennameprefix ?? "") + context.Name).Length > 32)
+                    {
+                        <MudText Color="Color.Error">@project.Tokennameprefix@context.Name</MudText>
+                        <small>Tokenname too long - Mint not possible</small>
+                    }
+                    else
+                    {
+                        @if (GlobalFunctions.FilterTokenname(context.Name) == context.Name)
+                        {
+                            <MudText>@project.Tokennameprefix@context.Name</MudText>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Error">@project.Tokennameprefix@context.Name</MudText>
+                            <small>Tokenname contains invalid characters - Name not recommended</small>
+                        }
+                    }
+
+                    <MudText Typo="Typo.body2">@context.Mimetype</MudText>
+                }
+                else
+                {
+                    <MudText>Royalty Token</MudText>
+                }
+                <small>UID: @context.Uid</small><br/>
+                @if (context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                {
+                    <small>Policy: <ShowPolicyId PolicyId="@project.Policyid"></ShowPolicyId></small>
+                    <br/>
+                }
+                @if (context.Mintedonblockchain == Blockchain.Solana.ToString() && !string.IsNullOrEmpty(project.Solanacollectiontransaction))
+                {
+                    <small>Collection: <ShowCollection Blockchain="@(context.Mintedonblockchain.ToEnum<Blockchain>())" Collection="@project.Solanacollectiontransaction"></ShowCollection></small>
+                    <br/>
+                }
+                @if (context.Mintedonblockchain == Blockchain.Aptos.ToString() && !string.IsNullOrEmpty(project.Aptoscollectiontransaction))
+                {
+                    <small>Collection: <ShowCollection Blockchain="@(context.Mintedonblockchain.ToEnum<Blockchain>())" Collection="@project.Aptoscollectiontransaction"></ShowCollection></small>
+                    <br/>
+                }
+                <small>Hex: @GlobalFunctions.ToHexString(project.Tokennameprefix + context.Name)</small>
+            </MudTd>
+
+            <MudTd DataLabel="State">
+                @if (project.Maxsupply == 1)
+                {
+                    @if (!context.Isroyaltytoken)
+                    {
+                        @switch (context.State)
+                        {
+                            case "free":
+                                <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Free</NMKRChip>
+                                break;
+                            case "reserved":
+                                <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Reserved</NMKRChip>
+                                break;
+                            case "sold":
+                                <ShowBlockchainIcon Blockchain="@(context.Mintedonblockchain.ToEnum<Blockchain>())"></ShowBlockchainIcon>
+                                <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Sold @(context.Soldcount + " of " + project.Maxsupply)</NMKRChip>
+                                break;
+                            case "error":
+                                <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">
+                                    Error
+                                </NMKRChip>
+                                break;
+                            case "burned":
+                                <ShowBlockchainIcon Blockchain="@(context.Mintedonblockchain.ToEnum<Blockchain>())"></ShowBlockchainIcon>
+                                <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Burned @(context.Soldcount > 0 ? context.Soldcount : "")</NMKRChip>
+                                break;
+                            case "blocked":
+                                <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Blocked</NMKRChip>
+                                break;
+                        }
+
+                        @if (context.Cipversion == "cip68")
+                        {
+                            <br/>
+                            <NMKRChip Color="Color.Tertiary" Size="Size.Small" Variant="Variant.Outlined">CIP68</NMKRChip>
+                        }
+                    }
+                    else
+                    {
+                        <NMKRChip Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Royalty</NMKRChip>
+                    }
+
+                    @if (context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                    {
+                        @if (context.Minted)
+                        {
+                            <br/>
+                            <a href="https://pool.pm/@context.Fingerprint" target="_blank">
+                                <NMKRChip Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">Mint confirmed</NMKRChip>
+                            </a>
+                        }
+
+                        @if (context.Burncount > 0 && context.State != "burned")
+                        {
+                            <br/>
+
+                            @*    <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">@context.Burncount x Burned</NMKRChip>*@
+                            <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Burned</NMKRChip>
+                        }
+                    }
+                }
+                else
+                {
+                    @if (project.Maxsupply == context.Soldcount)
+                    {
+                        <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Sold @(GlobalFunctions.FormatMultiplier(context.Soldcount, project.Multiplier) + " of " + GlobalFunctions.FormatMultiplier(project.Maxsupply, project.Multiplier))</NMKRChip>
+                    }
+                    else
+                    {
+                        @if (!context.Isroyaltytoken)
+                        {
+                            <MudText Typo="Typo.body2">Total: @(GlobalFunctions.FormatMultiplier(project.Maxsupply, project.Multiplier))</MudText>
+                            <MudText Typo="Typo.body2">Free: @(GlobalFunctions.FormatMultiplier(project.Maxsupply - context.Soldcount - context.Reservedcount - context.Errorcount, project.Multiplier))</MudText>
+                            <MudText Typo="Typo.body2">Sold: @(GlobalFunctions.FormatMultiplier(context.Soldcount, project.Multiplier))</MudText>
+                            <MudText Typo="Typo.body2">Reserved: @(GlobalFunctions.FormatMultiplier(context.Reservedcount, project.Multiplier))</MudText>
+                            <MudText Typo="Typo.body2">Error: @(GlobalFunctions.FormatMultiplier(context.Errorcount, project.Multiplier))</MudText>
+                        }
+
+                    }
+                }
+            </MudTd>
+            @if (switch_ShowImages)
+            {
+                <MudTd DataLabel="Image">
+                    @if (!context.Isroyaltytoken)
+                    {
+                        <a href="@(GeneralConfigurationClass.IPFSGateway + context.Ipfshash)" target="_blank"> <img src="@(GeneralConfigurationClass.IPFSGateway + context.Ipfshash)" height="50"></a>
+                    }
+                </MudTd>
+            }
+            <MudTd DataLabel="IPFS">
+                @if (!context.Isroyaltytoken)
+                {
+                    <MudText>IPFS:</MudText>
+                    <MudLink Href="@(GeneralConfigurationClass.IPFSGateway + context.Ipfshash)" Target="_blank">@GlobalFunctions.GetStartAndEnd(context.Ipfshash, 6)</MudLink>
+                    <CopyToClipboard name="IPFS Hash" content="@context.Ipfshash"></CopyToClipboard>
+                }
+
+                @if (context.Mintedonblockchain == Blockchain.Cardano.ToString() && project.Enabledcoins.Contains(Coin.ADA.ToString()) == true && (context.State == "sold" || context.Soldcount > 0))
+                {
+                    <br/>
+                    <span>AssetId: </span>
+
+                    <ShowAssetIdFromNft Nft="@context" Project="@project"></ShowAssetIdFromNft>
+                   @* <ShowAssetId AssetId="@context.Assetid" Cip68="@project.Cip68"></ShowAssetId>*@
+
+                   @if (!string.IsNullOrEmpty(context.Fingerprint))
+                    {
+                        <br/>
+                        <span> Fingerprint: </span>
+                        <ShowFingerprint Fingerprint="@context.Fingerprint"></ShowFingerprint>
+                    }
+
+
+                    @if (project.Maxsupply == 1)
+                    {
+                        @if (context.State == "reserved" && context.Nfttonftaddresses.Any())
+                        {
+                            <br/>
+                            <br/>
+                            <span style="display: block;"> Reserved on address:</span>
+                            <span style="display: block;">
+                                <ShowAddress Address="@context.Nfttonftaddresses.First()?.Nftaddresses.Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+                            </span>
+                        }
+                    }
+                }
+                <ShowSolanaTokenAddress Nft="@context" Project="@project"></ShowSolanaTokenAddress>
+            </MudTd>
+
+            @if (project.Maxsupply == 1)
+            {
+                <MudTd DataLabel="Sale date">
+                    @if (context.State == "reserved")
+                    {
+                        <span style="display: block;">Reserved until (UTC):</span>
+                        <span style="display: block;">@(context.Reserveduntil?.ToShortDateString() + " - " + context.Reserveduntil?.ToShortTimeString())</span>
+                    }
+                    @if (context.State == "sold" || context.State == "error")
+                    {
+                        @(context.Selldate?.ToShortDateString() + " - " + context.Selldate?.ToLongTimeString())
+                    }
+                    @if (context.State == "error")
+                    {
+                        <span style="display: block;">Marked as error (UTC):</span>
+                        <span style="display: block;">@(context.Markedaserror?.ToShortDateString() + " - " + context.Markedaserror?.ToShortTimeString())</span>
+                    }
+                </MudTd>
+            }
+
+            @if (IsAdmin)
+            {
+                <MudTd Style="text-align: right">
+                    <MudNavMenu Class="mud-width-full">
+                        <MudNavGroup Title="Metadata" Icon="@Icons.Material.Filled.Fingerprint">
+                            <ShowMetadataMenuButton NftId="context.Id" Project="project" ShowTextButton="true"/>
+                            <CheckMetadataMenuButton NftId="@context.Id" ShowTextButton="true"></CheckMetadataMenuButton>
+                            <VisualizeMetadataMenuButton NftId="@context.Id" ShowTextButton="true" Project="project"></VisualizeMetadataMenuButton>
+                        </MudNavGroup>
+                        <MudNavGroup Title="Sell NFT" Icon="@Icons.Material.Outlined.Sell">
+                            <MudNavLink @onclick="(() => CreatePaywindowLink(context.Id))">Sell with NMKR Pay</MudNavLink>
+                            <MudNavLink @onclick="(() => MintAndSend(context.Id))" Disabled="((context.State != free && context.State != burned && context.Burncount < context.Soldcount) || context.Isroyaltytoken)">Mint & Send</MudNavLink>
+                            @if (context.State == "sold" && context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                            {
+                                <MudNavLink @onclick="(() => RemintAndBurn2(context.Id))">Remint & Burn</MudNavLink>
+                            }
+                        </MudNavGroup>
+                        <MudNavGroup Title="Manage NFT" Icon="@Icons.Material.Outlined.Settings">
+                            @if (context.State == "error")
+                            {
+                                <MudNavLink @onclick="(() => ReleaseToFree(context.Id))">Release to free</MudNavLink>
+                                <MudNavLink @onclick="(() => ShowBugReport(context.Buildtransaction))">Show Bugreport</MudNavLink>
+                            }
+                            <MudNavLink @onclick="(() => CheckNfts(context.Id))">Check against Blockchain</MudNavLink>
+                            <MudNavLink @onclick="() => DuplicateNft(context.Id)">Duplicate NFT</MudNavLink>
+                        </MudNavGroup>
+                        <MudNavLink Href="@("/editnft/" + customerid + "/" + context.Id)" Icon="@NMKRIcons.Edit">Edit NFT</MudNavLink>
+                        <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete" Disabled="@((context.Minted == true && context.State != "burned") || context.Isroyaltytoken)">Delete NFT</MudNavLink>
+                    </MudNavMenu>
+                </MudTd>
+            }
+            else
+            {
+                <MudTd Style="text-align: right">
+                    <MudNavMenu Class="mud-width-full">
+                        <MudNavGroup Title="Metadata" Icon="@Icons.Material.Filled.Fingerprint">
+                            <ShowMetadataMenuButton NftId="context.Id" Project="project" ShowTextButton="true"/>
+                            <CheckMetadataMenuButton NftId="@context.Id" ShowTextButton="true"></CheckMetadataMenuButton>
+                            <VisualizeMetadataMenuButton NftId="@context.Id" ShowTextButton="true" Project="project"></VisualizeMetadataMenuButton>
+                        </MudNavGroup>
+                        <MudNavGroup Title="Sell NFT" Icon="@Icons.Material.Outlined.Sell">
+                            <MudNavLink @onclick="(() => CreatePaywindowLink(context.Id))">Sell with NMKR Pay</MudNavLink>
+                            <MudNavLink @onclick="(() => MintAndSend(context.Id))" Disabled="(context.State != free || context.Isroyaltytoken)">Mint & Send</MudNavLink>
+                            @if (context.State == "sold" && context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                            {
+                                <MudNavLink @onclick="(() => RemintAndBurn2(context.Id))">Update Token</MudNavLink>
+                            }
+                        </MudNavGroup>
+                        <MudNavGroup Title="Manage NFT" Icon="@Icons.Material.Outlined.Settings">
+                            @if (context.State == "error")
+                            {
+                                <MudNavLink @onclick="(() => ReleaseToFree(context.Id))">Set to Free</MudNavLink>
+                            }
+                            else
+                            {
+                                <MudNavLink @onclick="(() => CheckNfts(context.Id))">Check Status against Blockchain</MudNavLink>
+                            }
+                            <MudNavLink @onclick="() => DuplicateNft(context.Id)">Duplicate NFT</MudNavLink>
+                        </MudNavGroup>
+                        <MudNavLink Href="@("/editnft/" + context.Id)" Icon="@NMKRIcons.Edit">Edit NFT</MudNavLink>
+                        <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete" Disabled="@((context.Minted == true && context.State != "burned") || context.Isroyaltytoken)">Delete NFT</MudNavLink>
+                    </MudNavMenu>
+                </MudTd>
+            }
+        </RowTemplate>
+
+        <ChildRowContent>
+            @if (context.Id == DetailsId && context.InverseMainnft.Any())
+            {
+                <MudTr>
+                    <td colspan="@(switch_ShowImages ? 7 : 6)">
+                        <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                        <MudCard Elevation="0">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.body1">Subfiles for <strong>@project.Tokennameprefix@context.Name</strong></MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent Class="pa-0">
+                                <MudTable Items="@context.InverseMainnft" Context="nftContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>IPFS Hash</MudTh>
+                                        @if (switch_ShowImages)
+                                        {
+                                            <MudTh>Image</MudTh>
+                                        }
+                                        @if (context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                                        {
+                                            <MudTh>Fingerprint</MudTh>
+                                        }
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>
+                                            <MudLink Href="@(GeneralConfigurationClass.IPFSGateway + nftContext.Ipfshash)" Target="_blank">@GlobalFunctions.GetStartAndEnd(nftContext.Ipfshash, 6)</MudLink>
+                                            <CopyToClipboard name="IPFS Hash" content="@nftContext.Ipfshash"></CopyToClipboard>
+                                        </MudTd>
+                                        @if (switch_ShowImages)
+                                        {
+                                            <MudTd>
+                                                @if (nftContext.Mimetype.StartsWith("image/"))
+                                                {
+                                                    <img src="@(GeneralConfigurationClass.IPFSGateway + nftContext.Ipfshash)" height="50">
+                                                }
+                                                else
+                                                {
+                                                    <ShowMimetypePlaceholder Mimetype="@nftContext.Mimetype"></ShowMimetypePlaceholder>
+                                                }
+                                            </MudTd>
+                                        }
+                                        @if (context.Mintedonblockchain == Blockchain.Cardano.ToString())
+                                        {
+                                            <MudTd>
+                                                <ShowFingerprint Fingerprint="@nftContext.Fingerprint"></ShowFingerprint>
+                                            </MudTd>
+                                        }
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudCardContent>
+                        </MudCard>
+                        <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090"/>
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
+
+
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="false" @ref="TablePager"/>
+        </PagerContent>
+    </MudTable>
+}
+@if (project!=null && project.Maxsupply == 1)
+{
+    <MudGrid Class="mb-5">
+        <MudItem xs="4">
+            <MudSelect T="int" Class="mt-5" Label="Selected items" @bind-Value="@selector">
+                <MudSelectItem Value="1">Block NFTS (only when free)</MudSelectItem>
+                <MudSelectItem Value="2">Unblock NFTS</MudSelectItem>
+                <MudSelectItem Value="3">Delete NFTS (only when free)</MudSelectItem>
+                <MudSelectItem Value="4">Remint & Burn(only sold nfts)</MudSelectItem>
+            </MudSelect>
+
+        </MudItem>
+        <MudItem xs="8">
+            <MudButton DropShadow="false" Class="mt-10 mb-5 rounded-pill px-6 py-3"
+                       Variant="Variant.Filled"
+                       Color="Color.Default" Size="Size.Small" Disabled="@(_processingMultiSelect || selectedItems1.Count == 0)"
+                       @onclick="ExecuteMultiSelect">
+
+                @if (_processingMultiSelect)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Processing</MudText>
+                }
+                else
+                {
+                    <MudText>Execute</MudText>
+                }
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+}
+
+@if (project!=null && (project.Policyexpire == null || project.Policyexpire > DateTime.Now))
+{
+    <MudButton DropShadow="false" HtmlTag="label"
+               Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               StartIcon="@Icons.Material.Filled.CloudUpload"
+               Href="@("/uploadfiles/" +(IsAdmin? customerid + "/":"") + projectid)">
+        Upload & Pin new NFT
+    </MudButton>
+    <MudButton DropShadow="false" HtmlTag="label"
+               Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               StartIcon="@Icons.Material.Filled.CloudUpload"
+               Href="@("/bulkupload/" + projectid)">
+        Bulk upload NFTs
+    </MudButton>
+}
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public int customerid { get; set; }
+
+    [Parameter]
+    public int nocache { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+
+    private bool switch_ShowImages { get; set; }
+
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private Nftproject? project;
+    private bool isSubmitting;
+    private bool isLoading;
+    private readonly string free = "free";
+    private readonly string burned = "burned";
+
+    private int? DetailsId { get; set; }
+    private bool OverlayIsVisible { get; set; }
+    private MudTable<Nft> table { get; set; }
+    private MudTablePager TablePager { get; set; }
+    private int selector = 1;
+    private bool _processingMultiSelect = false;
+    private HashSet<Nft> selectedItems1 = new();
+
+    private int tablecount = 0;
+    private int selectedPage = 1;
+
+    private string _searchstring = "";
+    private string searchString
+    {
+        get { return _searchstring; }
+        set
+        {
+            _searchstring = value.Trim();
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+    private string _selectedOption = "all";
+    public string SelectedOption
+    {
+        get { return _selectedOption; }
+        set
+        {
+            _selectedOption = value;
+            table.NavigateTo(Page.First);
+            table.ReloadServerData();
+        }
+    }
+
+    int PageNo = 0;
+    int PageSize = 10;
+
+    private async Task ExecuteMultiSelect()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        if (!selectedItems1.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select at least one NFTs", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        _processingMultiSelect = true;
+        StateHasChanged();
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        int reminted = 0;
+        foreach (var nftx in selectedItems1)
+        {
+            var nft = await (from a in db.Nfts
+                             where a.Id == nftx.Id && a.NftprojectId == projectid
+                             select a).FirstOrDefaultAsync();
+
+            if (nft == null)
+                continue;
+
+            if (selector == 1) // Block
+            {
+                if (nft.State == "free")
+                {
+                    nft.State = "blocked";
+                }
+            }
+            if (selector == 2) // Unblock
+            {
+                if (nft.State == "blocked")
+                {
+                    nft.State = "free";
+                }
+            }
+            if (selector == 3) // Delete
+            {
+                if (nft.State == "burned")
+                    nft.State = "deleted";
+                else if (nft.State == "free")
+                {
+                    try
+                    {
+                        db.Nfts.Remove(nft); // Remove from Database
+                        await db.SaveChangesAsync();
+                    }
+                    catch
+                    {
+                        await db.Entry(nft).ReloadAsync();
+                        nft.State = "deleted";
+                    }
+                }
+            }
+            if (selector == 4)  // Remint and burn
+            {
+                var b = await ApiFunctions.CallApiRemintAndBurnAsync(project.Uid, nft.Uid);
+                if (b)
+                    reminted++;
+            }
+            await db.SaveChangesAsync();
+        }
+        if (selector == 4)
+        {
+            if (reminted == 0)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"No NFTs queued for reminting", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"{reminted} NFTs queued for reminting", Severity.Success);
+            }
+        }
+
+
+        isSubmitting = false;
+        DontUseCache = true;
+        _processingMultiSelect = false;
+        await table.ReloadServerData();
+        StateHasChanged();
+    }
+
+    private async Task CreatePaywindowLink(int nftid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = (from a in db.Nfts
+            .Include(a => a.Nftproject)
+            .ThenInclude(a => a.Pricelists).AsSplitQuery()
+                   where a.Id == nftid && a.Nftproject.CustomerId == customerid
+                   select a).FirstOrDefault();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            isSubmitting = false;
+            await db.Database.CloseConnectionAsync();
+            return;
+        }
+
+        if (nft.Nftproject.Policyexpire != null && nft.Nftproject.Policyexpire < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Policy is locked now. Minting is not longer possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (nft.Isroyaltytoken)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You can not sell the royaltiy token", Severity.Error);
+            isSubmitting = false;
+            await db.Database.CloseConnectionAsync();
+            return;
+        }
+
+        if (nft.Price == null && nft.Nftproject.Pricelists.FirstOrDefault(x => x.State == "active") == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have not specified a price for this nft. You can either create a pricelist on the project or set a price for this single nft", Severity.Error);
+            isSubmitting = false;
+            await db.Database.CloseConnectionAsync();
+            return;
+        }
+
+
+        var parameters = new DialogParameters { { nameof(ShowPaywindowlinkModalWindow.nft), nft } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<ShowPaywindowlinkModalWindow>("Show Payment Gateway Link", parameters, maxWidth);
+        var result = await dialog.Result;
+        isSubmitting = false;
+
+    }
+
+    private void OnRowClicked(TableRowClickEventArgs<Nft> trans)
+    {
+        if (trans == null || trans.Item == null)
+            return;
+
+        if (DetailsId == trans.Item.Id)
+        {
+            DetailsId = null;
+        }
+        else
+        {
+            DetailsId = trans.Item.Id;
+        }
+        StateHasChanged();
+    }
+
+    private async Task CheckNfts(int nftid)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(CheckPolicysModalWindow.projectid), project.Id }, { nameof(CheckPolicysModalWindow.nftid), nftid } };
+
+        var dialog = await DialogService.ShowAsync<CheckPolicysModalWindow>("Check Policies", parameters, maxWidth);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            GlobalFunctions.DeleteProjectsRedisKeys(_redis, "Admin", project.Id);
+
+        DontUseCache = true;
+        await table.ReloadServerData();
+        isSubmitting = false;
+    }
+
+    private async Task RemintAndBurn2(int nftid)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = await (from a in db.Nfts
+            .Include(a => a.Nftproject)
+            .ThenInclude(a => a.Customer)
+            .AsSplitQuery()
+            .Include(a => a.Instockpremintedaddress)
+            .Include(a => a.Nftproject)
+            .ThenInclude(a => a.Settings)
+            .AsSplitQuery()
+            .Include(a => a.InverseMainnft)
+            .ThenInclude(a => a.Metadata)
+            .AsSplitQuery()
+            .Include(a => a.Metadata)
+            .AsSplitQuery()
+                         where a.Id == nftid && a.Nftproject != null && a.Nftproject.Customer != null
+                         select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (nft.Isroyaltytoken)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You can not mint and send the royaltiy token", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GetMetadataClass gmc = new(nft.Id, "",true);
+
+        // Check on which Tokenname we have minted the NFT
+        var as1 = await ConsoleCommand.GetAssetFromBlockchainAsync(nft,nft.Nftproject);
+        if (as1 == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT can not be confirmed as minted. Please check state", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        // var check= nft.Name.Replace(" ", "");
+
+        MintManuallyClass mmc1 = new() { BurnResult = true, Metadata = (await gmc.MetadataResultAsync()).Metadata, PolicyId = nft.Nftproject.Policyid, Prefix = nft.Nftproject.Tokennameprefix, ReceiverAddress = "", Tokenname = nft.Name, Projectid = nft.NftprojectId };
+
+        if (IsAdmin)
+        {
+            DialogOptions maxWidth = new() {MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false};
+            var parameters = new DialogParameters {{nameof(ToolsMintModalWindowAdmin.mmc1), mmc1}, {nameof(ToolsMintModalWindowAdmin.project), nft.Nftproject}};
+            var dialog = await DialogService.ShowAsync<ToolsMintModalWindowAdmin>("Mint manually", parameters, maxWidth);
+            var result = await dialog.Result;
+        }
+        else
+        {
+            DialogOptions maxWidth = new() {MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false};
+            var parameters = new DialogParameters {{nameof(ToolsMintModalWindowStudio.mmc1), mmc1}, {nameof(ToolsMintModalWindowStudio.project), nft.Nftproject}};
+            var dialog = await DialogService.ShowAsync<ToolsMintModalWindowStudio>("Mint manually", parameters, maxWidth);
+            var result = await dialog.Result;
+        }
+        isSubmitting = false;
+    }
+
+    private async Task ShowBugReport(string log)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(ShowBugReportModalWindow.Log), log } };
+        var dialog = await DialogService.ShowAsync<ShowBugReportModalWindow>("Bug Report", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        isSubmitting = false;
+    }
+
+    private async Task ReleaseToFree(int nftid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = await (from a in db.Nfts
+            .Include(a => a.Nftproject).AsSplitQuery()
+                         where a.Id == nftid
+                         select a).FirstOrDefaultAsync();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (nft.State != "error")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT not in Error state", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        var as1 = await ConsoleCommand.GetAssetFromBlockchainAsync(nft,nft.Nftproject);
+        if (as1 != null)
+        {
+            if (as1.Quantity >= nft.Nftproject.Maxsupply)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("NFT is already sold (Checked on Blockfrost) - setting state to 'sold'", Severity.Error);
+                isSubmitting = false;
+
+                nft.Errorcount = 0;
+                nft.State = "sold";
+                await db.SaveChangesAsync();
+                isSubmitting = false;
+                return;
+            }
+            if (nft.Nftproject.Maxsupply > 1 && as1.Quantity < nft.Nftproject.Maxsupply)
+            {
+                nft.Errorcount = 0;
+                nft.State = "free";
+                nft.Soldcount = as1.Quantity ?? 0;
+                await db.SaveChangesAsync();
+                isSubmitting = false;
+                return;
+            }
+        }
+
+        // Release to free
+        await db.Database.ExecuteSqlRawAsync("delete from nfttonftaddresses where nft_id=" + nftid);
+        nft.Errorcount = 0;
+        nft.State = "free";
+        nft.Soldcount = 0;
+        nft.Reservedcount = 0;
+        await db.SaveChangesAsync();
+        DontUseCache = true;
+        await table.ReloadServerData();
+        GlobalFunctions.DeleteProjectsRedisKeys(_redis, "Admin", project.Id);
+        StateHasChanged();
+        isSubmitting = false;
+    }
+
+    private async Task DuplicateNft(int nftid)
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = (from a in db.Nfts
+            .Include(a => a.Nftproject).AsSplitQuery()
+                   where a.Id == nftid
+                   select a).FirstOrDefault();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            isSubmitting = false;
+            await db.Database.CloseConnectionAsync();
+            return;
+        }
+        if (nft.Nftproject.Policyexpire != null && nft.Nftproject.Policyexpire < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Policy is locked now. Duplicating is not longer possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (nft.Isroyaltytoken)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You can not mint and send the royaltiy token", Severity.Error);
+            isSubmitting = false;
+            await db.Database.CloseConnectionAsync();
+            return;
+        }
+
+        var parameters = new DialogParameters { { nameof(DuplicateNftModalWindow.project), project }, { nameof(DuplicateNftModalWindow.NftId), nftid } };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<DuplicateNftModalWindow>("Duplicate NFT", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            DontUseCache = true;
+            await table.ReloadServerData();
+        }
+        isSubmitting = false;
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (projectid != 0)
+        {
+
+            _usePreserved = true;
+
+            DontUseCache = nocache == 1;
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            await LoadProject(db);
+        }
+    }
+
+    private async Task LoadProject(EasynftprojectsContext db)
+    {
+        string redisKey = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_Admin_LoadProject_{projectid}";
+        var project1 = RedisFunctions.GetData<Nftproject>(_redis, redisKey);
+
+        if (project1 == null)
+        {
+            project = await (from a in db.Nftprojects
+                             where a.Id == projectid
+                             select a).AsNoTracking().FirstOrDefaultAsync();
+
+            RedisFunctions.SetData(_redis, redisKey, project, 20);
+        }
+        else
+            project = project1;
+
+        if (project == null)
+            NavigationManager.NavigateTo("/");
+    }
+
+    private bool _usePreserved;
+    private bool DontUseCache;
+   
+    public async Task<TableData<Nft>> LoadTodos(TableState state, CancellationToken cancellationToken)
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        selectedItems1.Clear();
+
+        tablecount = 0;
+        if (_usePreserved)
+        {
+            var savedtable = RedisFunctions.GetData<PreserveTableStateClass>(_redis, $"ManageNft_Table_{customerid}_{projectid}");
+            if (savedtable != null)
+            {
+                _searchstring = savedtable.Search;
+                _selectedOption = savedtable.Parameter1;
+                state.Page = savedtable.PageNumber;
+                state.PageSize = savedtable.EntriesPerPage;
+                state.SortLabel = savedtable.SortOrder;
+                state.SortDirection = savedtable.Direction;
+            }
+        } 
+     
+        string sort = (state.SortLabel ?? "id") + (state.SortDirection == SortDirection.Descending ? " DESC" : "");
+
+        // Read from Cache (if available)
+        string redisKey1 = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_{(IsAdmin ? "Admin" : "Studio")}_LoadTodos_Nfts_Data_{projectid}_{_selectedOption}_{searchString}_{state.PageSize}_{state.Page}_{sort}";
+        string redisKey2 = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_{(IsAdmin ? "Admin" : "Studio")}_LoadTodos_Nfts_Counts_{projectid}_{_selectedOption}_{searchString}_{state.PageSize}_{state.Page}_{sort}";
+        var nfts1 = RedisFunctions.GetData<List<Nft>>(_redis, redisKey1);
+        var count1 = RedisFunctions.GetData<int?>(_redis, redisKey2);
+        if (nfts1 != null && count1 != null && DontUseCache == false)
+        {
+            isLoading = false;
+            StateHasChanged();
+            if (_usePreserved)
+                table.CurrentPage = state.Page;
+            _usePreserved = false;
+            return new() { Items = nfts1, TotalItems = (int)count1 };
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        await LoadProject(db);
+        DontUseCache = false;
+
+        var nfts = db.Nfts.FromSqlRaw("Call SearchNfts(@nftprojectid,@state,@searchstring, @skip, @take,@sort)",
+            new MySqlParameter("nftprojectid", projectid),
+            new MySqlParameter("state", _selectedOption),
+            new MySqlParameter("searchstring", searchString),
+            new MySqlParameter("skip", state.PageSize * state.Page),
+            new MySqlParameter("take", state.PageSize),
+            new MySqlParameter("sort", sort)
+            ).ToList();
+
+        var c1 = db.Counttotals.FromSqlRaw("Call SearchNftsGetCount(@nftprojectid,@state,@searchstring)",
+            new MySqlParameter("nftprojectid", projectid),
+            new MySqlParameter("state", _selectedOption),
+            new MySqlParameter("searchstring", searchString)
+            ).ToList();
+        tablecount = c1.First().Counttotal1;
+
+
+        List<Nft> nfts2 = new();
+
+        foreach (var nft in nfts)
+        {
+            var n = await (from a in db.Nfts
+                .Include(a => a.InverseMainnft).AsSplitQuery()
+                           where a.Id == nft.Id
+                           select a).FirstOrDefaultAsync();
+            if (n != null)
+                nfts2.Add(n);
+        }
+
+        if (_usePreserved)
+            table.CurrentPage = state.Page;
+            
+        
+        PreserveTableStateClass nftTable = new() { EntriesPerPage = 10, PageNumber = 0, Parameter1 = "all", Search = " ", SortOrder = "id" };
+        nftTable.SetState(state, searchString, _selectedOption, projectid);
+        RedisFunctions.SetData(_redis, $"ManageNft_Table_{customerid}_{projectid}", nftTable, 600);
+
+        _usePreserved = false;
+
+        // Save Cache
+        RedisFunctions.SetData(_redis, redisKey1, nfts2, 30);
+        RedisFunctions.SetData(_redis, redisKey2, tablecount, 30);
+
+        isLoading = false;
+        StateHasChanged();
+
+        return new() { Items = nfts2, TotalItems = tablecount };
+    }
+
+
+
+    private async Task MintAndSend(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var nft = (from a in db.Nfts
+            .Include(a => a.Nftproject).AsSplitQuery()
+                   where a.Id == id
+                   select a).FirstOrDefault();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        long available = 1;
+
+        if (nft.Nftproject.Maxsupply > 1)
+        {
+            available = nft.Nftproject.Maxsupply - (nft.Reservedcount + nft.Soldcount);
+        }
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters {
+            {nameof(AskForMintingAddress.NftId), id},
+            {nameof(AskForMintingAddress.Title), nft.Minted ? "Send NFT" : "Mint and send NFT"},
+            {nameof(AskForMintingAddress.project),nft.Nftproject},
+            {nameof(AskForMintingAddress.isAdmin),IsAdmin},
+            {nameof(AskForMintingAddress.Available), available}};
+        var dialog = await DialogService.ShowAsync<AskForMintingAddress>("Mint and send NFT", parameters, maxWidth);
+        var result = await dialog.Result;
+        DontUseCache = true;
+        await table.ReloadServerData();
+        isSubmitting = false;
+    }
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        bool? result = await DialogService.ShowMessageBox(
+       "Warning",
+       "Deleting this NFT can not be undone! The NFT may still be pinned in the IPFS Filesystem",
+       yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var nft = (from a in db.Nfts
+                       where a.Id == id
+                       select a).FirstOrDefault();
+
+            if (nft == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error - please contact support", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (nft.State != "free" && nft.State != "burned" && nft.State != "error")
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("NFT is not free or burned - delete not possible", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            string nftname = nft.Name;
+            bool failed = false;
+            if (nft.State == "free")
+            {
+                db.Nfts.Remove(nft); // Remove from Database
+                try
+                {
+                    await db.SaveChangesAsync();
+                    DontUseCache = true;
+                    await table.ReloadServerData();
+                }
+                catch
+                {
+                    await db.Entry(nft).ReloadAsync();
+                    failed = true;
+                }
+            }
+            if (nft.State == "burned" || nft.State == "error" || failed)
+            {
+                nft.State = "deleted";
+                await db.SaveChangesAsync();
+                DontUseCache = true;
+                await table.ReloadServerData();
+            }
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT " + nftname + " deleted", Severity.Success);
+
+            GlobalFunctions.DeleteProjectsRedisKeys(_redis, "Admin", project.Id);
+
+        }
+        isSubmitting = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,34 @@
+﻿<EditForm Model="@Value" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <MudGrid Class="mb-10 pa-5 mr-3 ml-1 mt-5" Style="border-radius: 0rem; border-width: 1px; border-color: #d2d2d2;">
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Color="Color.Dark">Bitcoin</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <SelectWallet @bind-Value="Value.BitcoinWalletId" Coin="Coin.BTC" Blockchain="Blockchain.Bitcoin" IsAdmin="@IsAdmin" CustomerId="@CustomerId"></SelectWallet>
+        </MudItem>
+    </MudGrid>
+
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="OnPreviousClick" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+    </MudContainer>
+
+</EditForm>
+@code {
+    [Parameter]
+    public CreateNewProjectBlockchainsClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateNewProjectBlockchainsClass> ValueChanged { get; set; }
+
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool iagonenabled { get; set; }
+    [Parameter] public List<Activeblockchain> activeblockchains { get; set; }
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnPreviousClick { get; set; }
+
+    [Parameter] public bool isSubmitting { get; set; }
+    [Parameter] public CreateNewProjectClass model { get; set; }
+}

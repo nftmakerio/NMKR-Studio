@@ -1,0 +1,162 @@
+﻿@using BlazorDownloadFile
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Airdrop Log</MudText>
+
+<MudTable Class="border" Elevation="0" Style="border-color:#E0E0E0" Items="@airdrops" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Airdrop">
+    <HeaderContent>
+        <MudTh>Created</MudTh>
+        <MudTh>Receiver</MudTh>
+        <MudTh>Message</MudTh>
+        <MudTh>Mint State</MudTh>
+        <MudTh>Executed</MudTh>
+        <MudTh>TX-Hash</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>
+            @context.Created.ToShortDateString() @context.Created.ToShortTimeString()
+        </MudTd>
+        <MudTd>
+            @if (context.Recevieraddress.Length < 20)
+            {
+                @context.Recevieraddress
+            }
+            else
+            {
+                <ShowAddress Address="@context.Recevieraddress" Blockchain="Blockchain.Cardano"></ShowAddress>
+                <br />
+                <small>
+                    <ShowAddress Address="@Bech32Engine.GetStakeFromAddress(context.Recevieraddress)" Blockchain="Blockchain.Cardano"></ShowAddress>
+                </small>
+            }
+        </MudTd>
+        <MudTd>
+            @context.Message
+        </MudTd>
+        <MudTd>
+            @if (context.Mintandsend != null)
+            {
+                @switch (context.Mintandsend.State)
+                {
+                    case "execute":
+                        <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Execute</NMKRChip>
+                        break;
+                    case "success":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Success</NMKRChip>
+                        break;
+                    case "error":
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Error</NMKRChip>
+                        break;
+                    case "canceled":
+                        <NMKRChip Color="Color.Dark" Size="Size.Small" Variant="Variant.Filled">Canceled</NMKRChip>
+                        break;
+                }
+            }
+        </MudTd>
+        <MudTd>
+            @if (context.Mintandsend != null && context.Mintandsend.Executed != null)
+            {
+                @context.Mintandsend.Executed.Value.ToShortDateString() @context.Mintandsend.Executed.Value.ToShortTimeString()
+            }
+        </MudTd>
+        <MudTd>
+            @if (context.Mintandsend != null && context.Mintandsend.Transactionid != null)
+            {
+                <ShowTransactionHash TxId="@context.Mintandsend.Transactionid" Blockchain="@(Blockchain.Cardano)"></ShowTransactionHash>
+            }
+        </MudTd>
+    </RowTemplate>
+
+    <PagerContent>
+        <MudTablePager HideRowsPerPage="true" />
+    </PagerContent>
+</MudTable>
+<MudButton DropShadow="false" HtmlTag="label2" Class="mb-5 mt-5 rounded-xl px-6 py-3"
+           Variant="Variant.Filled"
+           Color="Color.Tertiary" OnClick="Export">
+    Export protocol
+</MudButton>
+
+@code {
+    [Parameter] public string uid { get; set; }
+    [Parameter] public int projectid { get; set; }
+
+    private bool isloading { get; set; } = false;
+    private bool isSubmitting { get; set; }
+    private bool OverlayIsVisible { get; set; }
+
+    private List<Airdrop> airdrops = new();
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+        new("Show Airdrop protocol", href: null, disabled:true),
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+    }
+    private async Task ReloadData()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+        StateHasChanged();
+        airdrops = await (from a in db.Airdrops
+            .Include(a => a.Mintandsend)
+                          where a.NftprojectId == projectid && a.Uid == uid
+                          select a).AsNoTracking().ToListAsync();
+
+        StateHasChanged();
+    }
+    private async Task Export()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        var transactions = await (from a in db.Airdrops
+            .Include(a => a.Nftproject).AsSplitQuery()
+            .Include(a => a.Mintandsend).AsSplitQuery()
+                                  where a.NftprojectId == projectid && a.Uid == uid
+                                  select new { a.Uid, a.Created, a.NftprojectId, a.Nftproject.Projectname, a.Recevieraddress, a.Message, a.Mintandsend.State, a.Mintandsend.Transactionid, a.Mintandsend.Executed }).AsNoTracking().ToListAsync();
+
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = "airdropprotocol_" + uid;
+        string filename = path + filteredfilename + ".zip";
+        string csvfilename = path + filteredfilename + ".csv";
+        System.IO.Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+        await using (var writer = new StreamWriter(csvfilename))
+        await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            await csv.WriteRecordsAsync(transactions);
+        }
+
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        OverlayIsVisible = false;
+        isSubmitting = false;
+    }
+}

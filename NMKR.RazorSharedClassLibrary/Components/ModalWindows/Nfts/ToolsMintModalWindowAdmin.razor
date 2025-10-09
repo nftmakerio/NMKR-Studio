@@ -1,0 +1,196 @@
+﻿@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+
+
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Class="mr-3" />Mint manually
+                <hr />
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+
+            <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+                <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+                    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+                </MudOverlay>
+
+                <MudGrid Class="mb-3">
+                    <MudItem xs="12">
+                        <MudTextField Variant="Variant.Outlined" Label="PolicyID"
+                                      @bind-Value="mmc.PolicyId" For="@(() => mmc.PolicyId)" ReadOnly="true" />
+                    </MudItem>
+                    <MudItem xs="5">
+                        <MudTextField Variant="Variant.Outlined" Label="Prefix"
+                                      @bind-Value="mmc.Prefix" For="@(() => mmc.Prefix)" />
+                    </MudItem>
+                    <MudItem xs="5">
+                        <MudTextField Variant="Variant.Outlined" Label="Tokenname"
+                                      @bind-Value="mmc.Tokenname" For="@(() => mmc.Tokenname)" />
+                    </MudItem>
+                    <MudItem xs="2">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="@mmc.BurnResult" Color="Color.Primary" Label="Send NFT to Burnaddress" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText>Mint Costs</MudText>
+                        <MudRadioGroup @bind-Value="@SelectedCosts" T="int">
+                            <MudRadio Value=1 Color="Color.Tertiary">NMKR Studio</MudRadio>
+                            <MudRadio Value=2 Color="Color.Secondary">Customer</MudRadio>
+                        </MudRadioGroup>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Variant="Variant.Outlined" Label="Receiver Address (only when not burning)"
+                                      @bind-Value="mmc.ReceiverAddress" For="@(() => mmc.ReceiverAddress)" Disabled="mmc.BurnResult" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Variant="Variant.Outlined" Label="Metdata" Lines="5"
+                                      @bind-Value="mmc.Metadata" For="@(() => mmc.Metadata)" />
+                    </MudItem>
+
+
+                </MudGrid>
+
+
+            </MudContainer>
+        </DialogContent>
+        <DialogActions>
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Close">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="Mint" Color="Color.Tertiary">Mint</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    [Parameter]
+    public MintManuallyClass mmc1 { get; set; }
+
+
+    private bool isSubmitting;
+    private bool isVisible;
+    private int SelectedCosts = 1;
+
+    private MintManuallyClass mmc = new();
+    private readonly EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (mmc1 != null)
+            mmc = mmc1;
+        else
+        {
+            mmc.PolicyId = project.Policyid;
+            mmc.Prefix = project.Tokennameprefix;
+            mmc.Projectid = project.Id;
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task Mint()
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (SelectedCosts == 2)
+        {
+            var customer = await (from a in db.Customers
+                where a.Id == project.CustomerId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+            if (customer == null)
+            {
+                Snackbar.Add("Customer not found - internal error", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            if (customer.Newpurchasedmints < project.Settings.Mintandsendcoupons)
+            {
+                Snackbar.Add("Customer has not enough mint coupons", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+
+         var adminmintingaddress= await GlobalFunctions.GetNmkrPaywalletAndBlockAsync(db,0,"ToolsMintModalWindowAdmin",null);
+
+        if (adminmintingaddress == null)
+        {
+            Snackbar.Add("No minting address is currently available - either all blocked or with no ada on it.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        mmc.SenderAddress = adminmintingaddress.Address;
+        mmc.SenderSKey = Encryption.DecryptString(adminmintingaddress.Privateskey, GeneralConfigurationClass.Masterpassword + adminmintingaddress.Salt);
+        mmc.SenderVKey = Encryption.DecryptString(adminmintingaddress.Privatevkey, GeneralConfigurationClass.Masterpassword + adminmintingaddress.Salt);
+        mmc.LovelaceForReceiver = 2000000;
+
+        if (string.IsNullOrEmpty(mmc.Metadata))
+        {
+            Snackbar.Add("Metadata must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(mmc.Tokenname))
+        {
+            Snackbar.Add("Tokenname must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (mmc.BurnResult)
+        {
+            var be = await GlobalFunctions.CreateBurningAddressAsync(db, mmc.Projectid, DateTime.Now.AddHours(5), Blockchain.Cardano, true);
+            if (be != null)
+                mmc.ReceiverAddress = be.Address;
+        }
+
+        if (string.IsNullOrEmpty(mmc.Tokenname))
+        {
+            Snackbar.Add("Receiver (Burning) Address can not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        isVisible = true;
+        StateHasChanged();
+
+    // Catch the Address for the Minting costs
+        var settings = await (from a in db.Settings
+            where a.Id == 1
+            select a).FirstOrDefaultAsync();
+    //   var s = CardanoSharpFunctions.MintManually(db,_redis, project, mmc, "", GlobalFunctions.IsMainnet(),0,"", out var buildTransaction);
+        var s = ConsoleCommand.MintManually(db, _redis, project, mmc, GlobalFunctions.IsMainnet(), 0, "", out var buildTransaction);
+        if (s != "OK")
+        {
+            Snackbar.Add($"Mint was not successful - {buildTransaction.ErrorMessage}{s}", Severity.Error);
+            await db.Database.ExecuteSqlRawAsync($"update adminmintandsendaddresses set addressblocked=1,blockcounter=0,lasttxhash='' where address='{mmc.SenderAddress}'");
+        }
+        else
+        {
+            Snackbar.Add($"Mint was successful - Tx-Id: {buildTransaction.TxHash}", Severity.Success);
+            if (SelectedCosts == 2)
+            {
+                float mintcosts = project.Settings.Priceupdatenfts;
+                await GlobalFunctions.ReduceMintCouponsAsync(db, project.CustomerId, mintcosts);
+            }
+            await db.Database.ExecuteSqlRawAsync($"update adminmintandsendaddresses set addressblocked=1,blockcounter=0,lasttxhash='{buildTransaction.TxHash}' where address='{mmc.SenderAddress}'");
+        }
+        Close();
+
+        isVisible = false;
+        isSubmitting = false;
+    }
+
+}

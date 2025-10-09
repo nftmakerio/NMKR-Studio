@@ -1,0 +1,6 @@
+@NMKR.CardanoCliApi_HostAddress = http://localhost:5185
+
+GET {{NMKR.CardanoCliApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

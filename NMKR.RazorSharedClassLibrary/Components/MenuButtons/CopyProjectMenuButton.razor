@@ -1,0 +1,112 @@
+﻿@inject ISnackbar Snackbar
+
+<MudNavLink @onclick="(() => CopyProject(NftProjectid))">Copy Project</MudNavLink>
+
+@code {
+    [Parameter] public int NftProjectid { get; set; }
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private async Task CopyProject(int projectid)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Are you sure you want to copy this project?",
+            yesText: "Yes", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var project = await (from a in db.Nftprojects
+                where a.Id == projectid
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            if (project == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+                return;
+            }
+            isSubmitting = true;
+            StateHasChanged();
+
+            project.Projectname += " (copy)";
+            project.Created = DateTime.Now;
+            project.Id = 0;
+            project.Uid = Guid.NewGuid().ToString();
+            project.Total1 = 0;
+            project.Free1 = 0;
+            project.Reserved1 = 0;
+            project.Sold1 = 0;
+            project.Blocked1 = 0;
+            project.Error1 = 0;
+            project.Totaltokens1 = 0;
+            project.Tokenssold1 = 0;
+            project.Tokensreserved1 = 0;
+
+            db.Nftprojects.Add(project);
+            await db.SaveChangesAsync();
+
+            var projectprices = await (from a in db.Pricelists
+                where a.NftprojectId == projectid
+                select a).AsNoTracking().ToListAsync();
+
+            foreach (var projectprice in projectprices)
+            {
+                projectprice.Id = 0;
+                projectprice.NftprojectId = project.Id;
+                db.Pricelists.Add(projectprice);
+            }
+            await db.SaveChangesAsync();
+
+            var projectdiscounts = await (from a in db.Pricelistdiscounts
+                where a.NftprojectId == projectid
+                select a).AsNoTracking().ToListAsync();
+
+            foreach (var projectdiscount in projectdiscounts)
+            {
+                projectdiscount.Id = 0;
+                projectdiscount.NftprojectId = project.Id;
+                db.Pricelistdiscounts.Add(projectdiscount);
+            }
+            await db.SaveChangesAsync();
+
+            var salecondtions = await (from a in db.Nftprojectsaleconditions
+                where a.NftprojectId == projectid
+                select a).AsNoTracking().ToListAsync();
+
+            foreach (var salecondtion in salecondtions)
+            {
+                salecondtion.Id = 0;
+                salecondtion.NftprojectId = project.Id;
+                db.Nftprojectsaleconditions.Add(salecondtion);
+            }
+            await db.SaveChangesAsync();
+
+
+            var additionalpayoutwallets = await (from a in db.Nftprojectsadditionalpayouts
+                where a.NftprojectId == projectid
+                select a).AsNoTracking().ToListAsync();
+
+            foreach (var additionalpayoutwallet in additionalpayoutwallets)
+                {
+                additionalpayoutwallet.Id = 0;
+                additionalpayoutwallet.NftprojectId = project.Id;
+                db.Nftprojectsadditionalpayouts.Add(additionalpayoutwallet);
+            }
+            await db.SaveChangesAsync();
+
+
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Project copied", Severity.Success);
+        }
+        isSubmitting = false
+        ;
+
+    }
+
+}

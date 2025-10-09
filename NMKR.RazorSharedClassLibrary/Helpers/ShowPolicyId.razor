@@ -1,0 +1,16 @@
+﻿
+@if (!string.IsNullOrEmpty(PolicyId))
+{
+    <span style="white-space: nowrap;">
+    <MudLink Typo="Typo.body2" Href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/tokenPolicy/" + PolicyId)" Target="_blank">@GlobalFunctions.GetStartAndEnd(PolicyId, 6)
+    </MudLink>
+    <CopyToClipboard name="PolicyId" content="@PolicyId"></CopyToClipboard>
+    </span>
+    
+}
+
+
+@code {
+    [Parameter]
+    public string PolicyId { get; set; }
+}

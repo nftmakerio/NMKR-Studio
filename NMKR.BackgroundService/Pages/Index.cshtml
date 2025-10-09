@@ -1,0 +1,30 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "BackgroundTask Logs";
+}
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                   Created
+            </th>
+            <th>
+              Text
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.log)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Created)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Logmessage)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

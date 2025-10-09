@@ -1,0 +1,231 @@
+﻿@using NMKR.Shared.Classes.Projects
+@using NMKR.Shared.Functions.Solana
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IConnectionMultiplexer redis
+
+<MudPaper Style="padding: 10px;" Elevation="0">
+
+    <MudStepper @bind-ActiveIndex="actualPage" OnPreviewInteraction="OnPreviewInteraction">
+        <ChildContent>
+            <MudStep Title="Step 1" SecondaryText="Select template" HasError="CheckPage(0)" Style="height: 70vh; overflow-y: auto;">
+                <SelectTemplateForm @bind-Value="model"></SelectTemplateForm>
+            </MudStep>
+            <MudStep Title="Step 2" SecondaryText="Enter project details" HasError="CheckPage(1)" Style="height: 70vh; overflow-y: auto;">
+                <EditProjectDetailsForm IsAdmin="@IsAdmin" CustomerId="@CustomerId" @bind-Value="model"></EditProjectDetailsForm>
+            </MudStep>
+            <MudStep Title="Step 3" SecondaryText="Blockchain specific" HasError="CheckPage(2)" Style="height: 70vh; overflow-y: auto;">
+                <BlockchainSpecificDetailsForm IsAdmin="@IsAdmin" CustomerId="@CustomerId" @bind-Value="model"></BlockchainSpecificDetailsForm>
+            </MudStep>
+            <MudStep Title="Step 4" SecondaryText="Summary" HasError="false" Style="height: 70vh; overflow-y: auto;" @bind-Completed="_completed">
+                <EditSummaryDetailsForm IsAdmin="@IsAdmin" CustomerId="@CustomerId" @bind-Value="model"></EditSummaryDetailsForm>
+            </MudStep>
+        </ChildContent>
+        <CompletedContent>
+            Well done!!!
+        </CompletedContent>
+
+
+        <ActionContent Context="stepper">
+            @if (actualPage!=3) {
+                <MudButton OnClick="@(() => stepper.PreviousStepAsync())" Variant="Variant.Text" Disabled="@(actualPage==0)" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowLeft">PREVIOUS</MudButton>
+                <MudSpacer />
+                <MudButton OnClick="@(() => stepper.NextStepAsync())" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowRight">NEXT</MudButton>
+            }
+            else
+            {
+                <MudButton OnClick="@(() => stepper.PreviousStepAsync())" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowLeft">PREVIOUS</MudButton>
+                <MudSpacer />
+                <MudButton OnClick="@SaveProject" Variant="Variant.Text" Color="Color.Primary" Disabled="@isSubmitting">SAVE PROJECT</MudButton>
+            }
+        </ActionContent>
+    </MudStepper>
+</MudPaper>
+
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    private bool isSubmitting;
+    private int actualPage = 0;
+    private CreateProjectFromTemplateClass model = new ();
+    private bool _completed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        model.wallets = await (from a in db.Customerwallets
+                               where a.CustomerId == CustomerId && a.State == "active"
+                               select a).ToListAsync();
+
+        // internal wallets
+        if (!model.wallets.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must setup a wallet first", Severity.Error);
+            SetupWallet();
+        }
+        else
+        {
+            model.CardanoWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.ADA.ToString())?.Id) ?? 0;
+            model.SolanaWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.SOL.ToString())?.Id) ?? 0;
+            model.AptosWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.APT.ToString())?.Id) ?? 0;
+            model.BitcoinWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.BTC.ToString())?.Id) ?? 0;
+        }
+        model.DataChanged+=ModelOnDataChanged;
+
+        StateHasChanged();
+    }
+
+    private void ModelOnDataChanged(object? sender, EventArgs e)
+    { 
+        StateHasChanged();
+    }
+
+
+    private void SetupWallet()
+    {
+        if (IsAdmin)
+            NavigationManager.NavigateTo("/wallets/"+CustomerId);
+        else
+            NavigationManager.NavigateTo("/wallets");
+    }
+    private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+    {
+        arg.Cancel = actualPage != 3 && CheckPage(actualPage);
+    }
+
+
+
+    private async Task SaveProject()
+    {
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var customer=await (from a in db.Customers
+                              where a.Id == CustomerId
+                              select a).AsNoTracking().FirstOrDefaultAsync();
+        if (customer==null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Customer not found", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        var cn = ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+        var keyhash = ConsoleCommand.GetKeyhash(cn.privatevkey);
+        PolicyScript ps = new() {Type = "all"};
+        List<PolicyScriptScript> ls = new();
+        ls.Add(new() {KeyHash = keyhash, Type = "sig"});
+        long? slot = null;
+
+        if (model.PolicyExpires && model.PolicyExpiration != null)
+        {
+            var qt = await ConsoleCommand.GetSlotAsync();
+            var diffInSeconds = (((DateTime) (model.PolicyExpiration)).Date.AddMinutes(1) - DateTime.Now).TotalSeconds;
+            slot = (long) qt + (long) diffInSeconds;
+            ls.Add(new() {Type = "before", Slot = slot});
+        }
+        ps.Scripts = ls;
+        var policscript =JsonConvert.SerializeObject(ps);
+        var policyid = ConsoleCommand.GetPolicyId(policscript);
+        var solanaaddress = SolanaFunctions.CreateNewWallet();
+
+
+        Nftproject pro = new()
+        {
+            CustomerId = CustomerId,
+            Password = model.Password,
+            Description = model.Description,
+            Minutxo = nameof(MinUtxoTypes.minutxo),
+            State = "active",
+            Projectname = model.Projectname,
+            Projecturl = model.Projecturl,
+            Policyexpire = model.PolicyExpires ? model.PolicyExpiration : null,
+            Policyaddress = cn.Address,
+            Policyskey = Encryption.EncryptString(cn.privateskey, model.Password),
+            Policyvkey = Encryption.EncryptString(cn.privatevkey, model.Password),
+            Policyscript = policscript,
+            Policyid = policyid,
+            Maxsupply = model.MaxNftSupply,
+            Version = "1.0",
+            CustomerwalletId = model.CardanoWalletId == 0 ? null : model.CardanoWalletId,
+            Tokennameprefix = "",
+            Metadata = JsonFormatter.FormatJson(model.Template.Metadatatemplate1),
+            Expiretime = 20,
+            Created = DateTime.Now,
+            Enablefiat = false,
+            Enablecrosssaleonpaywindow = false,
+            SettingsId = customer.DefaultsettingsId, // Default Settings
+            Uid = model.Uid,
+            Projectlogo = "",
+            Lockslot = slot,
+            Twitterhandle = "",
+            Cip68 = false,
+            Cip68referenceaddress = "",
+            Storage = model.StorageProvider,
+            Solanapublickey = solanaaddress.Address,
+            Solanaseedphrase = Encryption.EncryptString(solanaaddress.SeedPhrase, model.Password),
+            Solanasymbol = model.SolanaSymbol,
+            SolanacustomerwalletId = model.SolanaWalletId == 0 ? null : model.SolanaWalletId,
+            Enablecardano = model.cardano,
+            Enablesolana = model.solana,
+                Enabledcoins = (model.cardano ? Coin.ADA + " " : "") + (model.solana ? Coin.SOL + " " : "") + (model.aptos ? Coin.APT + " " : "") + (model.bitcoin ? Coin.BTC + " " : ""),
+            SellerFeeBasisPoints = model.SellerFeeBasisPoints,
+            Solanacollectioncreated = null,
+            Solanacollectiontransaction = "<PENDING>",
+            Solanacollectionimage = model.SolanaCollectionImage?.UriWithGateway,
+            Solanacollectionimagemimetype = model.SolanaCollectionImage?.MimeType,
+            IntegratecardanopolicyIdinmetadata = false,
+            Integratesolanacollectionaddressinmetadata = false,
+            Solanacollectionfamily = model.Solanacollectionfamily,
+            Metadatatemplatename = model.Template.Title,
+            BitcoincustomerwalletId = model.BitcoinWalletId == 0 ? null : model.BitcoinWalletId,
+            AptoscustomerwalletId = model.AptosWalletId == 0 ? null : model.AptosWalletId,
+                Aptoscollectionname = model.AptosCollectionName,
+                Aptoscollectionimage = model.AptosCollectionImage?.UriWithGateway,
+        };
+        await db.Nftprojects.AddAsync(pro);
+        await db.SaveChangesAsync();
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Project created", Severity.Success);
+        isSubmitting = false;
+        MudDialog.Close();
+    }
+
+    private bool CheckPage(int page)
+    {
+        switch (page)
+        {
+            case 0 when model.Template != null:
+            case 1 when  actualPage < 1 || (!string.IsNullOrEmpty(model.Projectname) && (model.cardano || model.solana)):
+                return false;
+            case 2:
+                if (actualPage < 2)
+                    return false;
+                if (model.cardano && (model.CardanoWalletId == 0 || (model.PolicyExpires == true && model.PolicyExpiration == null) || (!model.IsNftProject && model.MaxNftSupply == 0)))
+                    return true;
+                if (model.solana && (model.SolanaWalletId == 0 || string.IsNullOrEmpty(model.SolanaSymbol) || model.SolanaCollectionImage == null ))
+                    return true;
+                if (model is { bitcoin: true, BitcoinWalletId: 0 } )
+                    return true;
+                if (model.aptos && (model.AptosWalletId == 0 || string.IsNullOrEmpty(model.AptosCollectionName) || model.AptosCollectionImage == null ))
+                    return true;
+                return false;
+            case 3:
+                return false;
+            default:
+                return true;
+        }
+    }
+
+}

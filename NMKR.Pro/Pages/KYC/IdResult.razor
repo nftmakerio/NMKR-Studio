@@ -1,0 +1,107 @@
+﻿@page "/idresult"
+@using Newtonsoft.Json
+@using Yoti.Auth.DocScan.Session.Retrieve
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+ 
+<MudPaper Class="pa-16 ma-2" Elevation="3">
+    <MudText Typo="Typo.h4"  Class="mb-4">@message</MudText>
+    @if (ShowStartAgainButton)
+    {
+        <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Href="/kycyoti" Class="mt-5 mb-5 rounded-xl px-6 py-3">@_loc["Restart Identification Process"]</MudButton>
+    }
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Href="/" Class="mt-5 mb-5 rounded-xl px-6 py-3">@_loc["Back to Dashboard"]</MudButton>
+</MudPaper>
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new();
+    protected override void OnInitialized()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Verify Account"], href: "/kyc", disabled: true));
+        message = @_loc["Checking Identification state...Please wait..."];
+    }
+
+    private string message { get; set; }
+    private bool ShowStartAgainButton { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var customer = await (from a in db.Customers
+            where a.Id == settings.UserId
+            select a).FirstOrDefaultAsync();
+
+        if (customer == null)
+            NavigationManager.NavigateTo("/login", true);
+
+            if (string.IsNullOrEmpty(customer.Kycaccesstoken))
+                NavigationManager.NavigateTo("/kycyoti", true);
+
+        YotiClasses yc = new();
+        try
+        {
+            GetSessionResult getSessionResult = yc.GetSessionResult(customer.Kycaccesstoken);
+            if (getSessionResult == null)
+            {
+                return;
+            }
+
+            yc.SetKycState(db,settings);
+            var res=  JsonConvert.SerializeObject(getSessionResult);
+            customer.Kycresultmessage = res;
+
+            if (getSessionResult.State == "EXPIRED")
+            {
+                message = @_loc["Your session for identification is expired. Please start the Identification process again"];
+                customer.Kycstatus = "YELLOW";
+                ShowStartAgainButton = true;
+            }
+            if (getSessionResult.State == "ONGOING")
+            {
+                message = @_loc["Your identity is being verified. Please wait a little while longer."];
+                customer.Kycstatus = "YELLOW";
+                ShowStartAgainButton = true;
+            }
+
+            bool check = true;
+            if (getSessionResult.State == "COMPLETED")
+            {
+                foreach (var checkResponse in getSessionResult.Checks)
+                {
+                    if (checkResponse.Report.Recommendation.Value == "REJECT")  // APPROVE OR REJECT
+                    {
+                        message = @_loc["Your identity could not be confirmed for the following reason: "] + @_loc[checkResponse.Report.Recommendation.Reason];
+                        check = false;
+                        customer.Kycstatus = "RED";
+                        ShowStartAgainButton = true;
+                        break;
+                    }
+                }
+            }
+            if (check)
+            {
+                message = @_loc["Your identity has been successfully confirmed. You can now access all the features of NMKR Studio."];
+                customer.Kycstatus = "GREEN";
+                await yc.DownloadMediaData(getSessionResult, customer.Kycaccesstoken);
+            }
+
+
+            await db.SaveChangesAsync();
+            StateHasChanged();
+
+        }
+        catch (Exception)
+        {
+            message = @_loc["Your identity could not be confirmed. Please go through the Identification process again or contact customer support."];
+            customer.Kycstatus = "RED";
+            ShowStartAgainButton = true;
+            await db.SaveChangesAsync();
+        }
+    }
+}

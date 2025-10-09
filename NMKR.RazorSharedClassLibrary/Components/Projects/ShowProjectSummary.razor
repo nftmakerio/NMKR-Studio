@@ -1,0 +1,139 @@
+﻿<br/>
+@if (!Project.Pricelists.Any())
+{
+    <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Error" Class="mb-4">
+        <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+        No pricelist found
+    </MudText>
+    <br />
+}
+else
+{
+    @if (Project.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+    {
+        if (Project.Pricelists.FirstOrDefault(x => x.Currency != Coin.SOL.ToString()) == null)
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Error" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                Cardano pricelist NOT found
+            </MudText>
+            <br />
+        }
+        else
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Success" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Color="Color.Success" />
+                Cardano pricelist found
+            </MudText>
+            <br />
+        }
+    }
+    @if (Project.Enabledcoins.Contains(Coin.SOL.ToString()) == true)
+    {
+        if (Project.Pricelists.FirstOrDefault(x => x.Currency != Coin.ADA.ToString()) == null)
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Error" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                Solana pricelist NOT found
+            </MudText>
+            <br />
+        }
+        else
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Success" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Color="Color.Success" />
+                Solana pricelist found
+            </MudText>
+            <br />
+        }
+    }
+}
+@if (Project.Enabledcoins.Contains(Coin.ADA.ToString()))
+{
+    @if (Project.Hasroyality)
+    {
+        <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Success" Class="mb-4">
+            <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Color="Color.Success"/>
+            Cardano Royality Token created
+        </MudText>
+        <br/>
+    }
+    else
+    {
+        <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Warning" Class="mb-4">
+            <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning"/>
+            Cardano Royality Token not created
+        </MudText>
+        <br/>
+    }
+}
+@if (Project.Enabledcoins.Contains(Coin.SOL.ToString()))
+{
+    @if (Project.Solanacollectioncreated!=null)
+    {
+        <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Success" Class="mb-4">
+            <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Color="Color.Success"/>
+            Solana Verified Collection created
+        </MudText>
+        <br/>
+        <MudText Typo="Typo.inherit">Solana Collection NFT: </MudText> <ShowAddress Address="@Project.Solanacollectiontransaction" Blockchain="Blockchain.Solana"></ShowAddress>
+        <br/>
+    }
+    else
+    {
+        @if (Project.Solanacollectiontransaction == "<PENDING>")
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Warning" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning"/>
+                Solana Verified Collection Pending
+            </MudText>
+            <br/>
+        }
+        else
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Warning" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning"/>
+                Solana Verified Collection NOT created
+            </MudText>
+            <br/>
+        }
+    }
+}
+
+@if (Project.Enabledcoins.Contains(Coin.APT.ToString()))
+{
+    @if (Project.Aptoscollectioncreated != null)
+    {
+        <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Success" Class="mb-4">
+            <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" Color="Color.Success" />
+            Aptos Collection created
+        </MudText>
+        <br />
+        <MudText Typo="Typo.inherit">AptosCollection NFT: </MudText> <ShowAddress Address="@Project.Aptoscollectiontransaction" Blockchain="Blockchain.Aptos"></ShowAddress>
+        <br/>
+    }
+    else
+    {
+        @if (Project.Aptoscollectiontransaction == "<PENDING>")
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Warning" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                Aptos Collection Pending
+            </MudText>
+            <br />
+        }
+        else
+        {
+            <MudText Style="vertical-align:middle" Typo="Typo.inherit" Color="Color.Warning" Class="mb-4">
+                <MudIcon Style="vertical-align:middle" Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                Aptos Collection NOT created
+            </MudText>
+            <br />
+        }
+    }
+}
+
+@code {
+    [Parameter]
+    public Nftproject Project { get; set; }
+}

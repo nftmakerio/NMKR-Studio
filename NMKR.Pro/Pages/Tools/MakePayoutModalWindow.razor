@@ -1,0 +1,165 @@
+﻿@inject ISnackbar Snackbar
+@inject AppSettings settings
+@inject IDialogService DialogService
+
+
+<MudDialog >
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-3" />Payout from internal wallet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <h5 class="mb-3 mt-2">Available ADA: @AdaAmount</h5>
+        <MudSelect @bind-Value="selectedWallet" T="int" Label="Select your Wallet" Variant="Variant.Outlined" Class="mb-3">
+            @foreach (var w in wallets)
+            {
+                <MudSelectItem Value="@w.Id">@(w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")")</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="PayAda" Disabled="isSubmitting">Make Payout</MudButton>
+    </DialogActions>
+</MudDialog>
+<TwoFactorCheck Message="The Code for the requested payout is:" @ref="_twoFactorCheck" />
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Customer customer { get; set; }
+
+    [Parameter]
+    public long AvailableLovelace { get; set; }
+
+    private string AdaAmount { get; set; }
+    private List<Customerwallet> wallets = new();
+    //  private EasynftprojectsContext db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+    private int selectedWallet { get; set; }
+    private bool isSubmitting;
+
+    void Cancel() => MudDialog.Cancel();
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        if (!wallets.Any())
+        {
+            wallets = await (from a in db.Customerwallets
+                             where a.CustomerId == customer.Id && a.State == "active"
+                             select a).ToListAsync();
+        }
+
+        selectedWallet = wallets.First().Id;
+        AdaAmount = ((double) AvailableLovelace / (double) 1000000).ToString();
+    }
+
+    private async Task PayAda()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        var utxo = await ConsoleCommand.GetNewUtxoAsync(customer.Adaaddress);
+        if (utxo.TxIn != null && utxo.TxIn.Length > 50)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("There are currently "+utxo.TxIn.Length+" TX-IN  in your internal wallet. This is too much for a single payout. Please wait, until wie have consolidated them.", Severity.Error);
+            MudDialog.Close(DialogResult.Ok(true));
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        bool ok = true;
+
+
+        var payreq = await (from a in db.Payoutrequests
+                            where a.CustomerId == settings.UserId && (a.State == "active" || a.State == "execute")
+                            select a).FirstOrDefaultAsync();
+
+        if (payreq != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("There is already a payout request. Please check your mail and confirm the payout. If you don't got the mail, wait a few minutes and try again later.", Severity.Error);
+            ok = false;
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+
+        if (!ok)
+        {
+            isSubmitting = false;
+            return;
+        }
+        if (AvailableLovelace < 2000000)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have to less ADA in your Account. You can not start a payout request.", Severity.Error);
+            ok = false;
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+
+        if (!ok)
+        {
+            isSubmitting = false;
+            return;
+        }
+
+        ok = await _twoFactorCheck.CheckTwoFactor(settings.UserId ?? 0, TwoFactorCases.None);
+
+
+        if (!ok)
+        {
+            isSubmitting = false;
+            return;
+        }
+
+        string confirmationcode = GlobalFunctions.GetGuid();
+
+        Payoutrequest pr = new()
+        {
+            Ada = AvailableLovelace, Confirmationcode = confirmationcode,
+            Confirmationexpire = DateTime.Now.AddMinutes(30), Created = DateTime.Now, CustomerId = customer.Id,
+            WalletId = selectedWallet, Payoutinitiator = "website", State = "active", Confirmationipaddress = ""
+        };
+
+        await db.Payoutrequests.AddAsync(pr);
+        await db.SaveChangesAsync();
+
+        var w = wallets.Find(x => x.Id == selectedWallet);
+        if (w != null)
+        {
+            string payoutwallet = w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")";
+
+            SendEmail(confirmationcode, customer.Email, customer.Id, payoutwallet, w.Id);
+        }
+
+        await GlobalFunctions.LogMessageAsync(db,"Payout request startet " + w.Walletaddress + " ");
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Payoutrequest started. Please confirm the payout by clicking the link in the confirmation email", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+
+        isSubmitting = false;
+    }
+
+
+    public void SendEmail(string code, string email, int userid, string payoutwallet, int walletid)
+    {
+        Dictionary<string, string> d = new()
+        {
+            {"{confirmationcode}", System.Web.HttpUtility.UrlEncode(code)},
+            {"{payoutwallet}", payoutwallet},
+            {"{walletid}", walletid.ToString()}
+        };
+        SendMailClass smc = new();
+        smc.SendConfirmationMail(ConfirmationTypes.ConfirmPayout, email, d, userid);
+    }
+}
+

@@ -1,0 +1,31 @@
+﻿ @inject ISnackbar Snackbar
+
+<MudNavLink @onclick="(() => CreateBurningEndpoint(NftProjectid))">Create Burning endpoint</MudNavLink>
+
+@code {
+    [Parameter] public int NftProjectid { get; set; }
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private async Task CreateBurningEndpoint(int projectid)
+    {
+        if (isSubmitting)
+            return;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var project = await (from a in db.Nftprojects
+            where a.Id == projectid
+            select a).AsNoTracking().FirstOrDefaultAsync();
+        if (project == null)
+        {
+            Snackbar.Add("Project not found", Severity.Error);
+            return;
+        }
+        var parameters = new DialogParameters { { nameof(CreateBurningEndpointModalWindow.project), project },
+        };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<CreateBurningEndpointModalWindow>("Create Burning Endpoint", parameters, maxWidth);
+        var result = await dialog.Result;
+        isSubmitting = false;
+    }
+
+}

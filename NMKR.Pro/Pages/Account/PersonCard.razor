@@ -1,0 +1,180 @@
+﻿@inject TimerServices Timer
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+@implements IDisposable
+@inject IStringLocalizer _loc
+<MudItem xs="12" sm="6" md="3">
+
+<MudCard Elevation="0" Square="true" Class="border" Style="border-color:#E0E0E0">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h5">Welcome, @Name!</MudText>
+            @if (settings.ShowKycAlert)
+            {
+                @if (settings.KycState=="GREEN")
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Tertiary">@_loc["Verified"]</MudText>
+                    <br/>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error">@_loc["NOT Verified"]</MudText>
+                    <br/>
+                }
+            }
+            <MudText Typo="Typo.caption">@_loc["Customer-Id:"] @settings.UserId</MudText><br />
+                <MudText Typo="Typo.caption">@Newpurchasedmints.ToString("F2") @_loc["Mints"]</MudText>
+            <br/>
+            <MudText Typo="Typo.caption">@_loc["Default Price level:"]</MudText><br/>
+            <MudText Typo="Typo.body2">@tier</MudText><br/>
+        </CardHeaderContent>
+    </MudCardHeader>
+</MudCard>
+</MudItem>
+
+@code {
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Style { get; set; }
+
+    private string Name { get; set; }
+    public float Newpurchasedmints { get; set; } = 0;
+    private string tier = "";
+    private bool isVerified { get; set; } = false;
+    private Customer customer { get; set; }
+    private Websitesetting websitesettings;
+    private string RemainingTime { get; set; }
+
+    protected override void OnInitialized()
+    {
+        settings.OnChange += StateHasChanged;
+        Timer.SetTimer(1000);
+        Timer.OnElapsed += TimerElapsedHandler;
+        Timer.Start();
+    }
+    public void Dispose()
+    {
+        Timer.Stop();
+        settings.OnChange -= StateHasChanged;
+        Timer.OnElapsed -= TimerElapsedHandler;
+    } 
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        customer = await (from a in db.Customers
+                          where a.Id == (int)settings.UserId
+                          select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (customer == null)
+            return;
+
+        var p = (from a in db.Settings
+            .Include(a => a.InverseMastersettings).AsSplitQuery()
+                 where a.Id == customer.DefaultsettingsId
+                 select a).FirstOrDefault();
+
+        if (p == null)
+            return;
+
+
+        long sold = 0;
+        var v = (from a in db.Nftprojects
+                 where a.CustomerId == customer.Id
+                 select a.Sold1).Sum();
+        sold = (long)v;
+
+        tier = p.Description;
+        Name = customer.Firstname + " " + customer.Lastname;
+
+        foreach (var ms in p.InverseMastersettings)
+        {
+            if (sold < ms.Minimumtxcount) continue;
+            tier = ms.Description;
+        }
+
+        Newpurchasedmints = customer.Newpurchasedmints;
+
+    }
+
+    private async Task CheckAccess(EasynftprojectsContext db)
+    {
+        var h = await (from a in db.Loggedinhashes
+                       where a.CustomerId== (int)settings.UserId && a.Hash==settings.hash
+                       select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (h == null || h.Validuntil < DateTime.Now)
+        {
+            navigationManager.NavigateTo("/login/", true);
+            return;
+        }
+            await settings.ExtendLoginTime();
+    }
+
+    private void TimerElapsedHandler()
+    {
+        this.InvokeAsync(() => CheckAmount());
+    }
+
+    private async Task CheckAmount()
+    {
+      //  RemainingTime = settings.GetRemainingTime();
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        try
+        {
+            Timer.Stop();
+
+            await CheckAccess(db);
+          //  await CheckKycState(db);
+
+             customer = await (from a in db.Customers
+                where a.Id == (int) settings.UserId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            if (customer != null)
+            {
+                Newpurchasedmints = customer.Newpurchasedmints;
+            }
+    // Check for Notifications
+
+            var noti = await (from a in db.Onlinenotifications
+                where a.CustomerId == (int) settings.UserId && a.State == "new"
+                select a).FirstOrDefaultAsync();
+
+            if (noti != null)
+            {
+                noti.State = "hasread";
+                await db.SaveChangesAsync();
+
+
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                switch (noti.Color)
+                {
+                    case "error":
+                        Snackbar.Add(noti.Notificationmessage, Severity.Error);
+                        break;
+
+                    case "success":
+                        Snackbar.Add(noti.Notificationmessage, Severity.Success);
+                        break;
+
+                    default:
+                        Snackbar.Add(noti.Notificationmessage, Severity.Info);
+                        break;
+                }
+            }
+            StateHasChanged();
+
+        }
+        catch (Exception)
+        {
+
+        }
+        finally
+        {
+            Timer.Start();
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+
+}

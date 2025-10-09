@@ -1,0 +1,304 @@
+﻿@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+@if (storeSettings!=null && storeSettings.Any() && values.Count == storeSettings.Length)
+{
+    <table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+        <tr>
+            <td><MudText Typo="Typo.h4" Color="Color.Dark" Class="mb-4">@storeSettings.First().Category</MudText></td>
+            <td align="right">
+
+                <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="NextButtonPressed" Color="Color.Tertiary" Disabled="@(!success1 || isSubmitting)">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                        <MudText Class="ms-2">Processing</MudText>
+                    }
+                    else
+                    {
+                        <MudText>SAVE & NEXT</MudText>
+                    }
+                </MudButton>
+            </td>
+        </tr>
+    </table>
+
+   @* <MudDivider Class="mt-5 mb-10"/>*@
+    
+        @foreach (var group in storeSettings.GroupBy(a => a.Subcategory))
+        {
+        <MudDivider Class="mb-10"/>
+        <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4 pt-4 pb-4 pr-4 pl-4">@group.Key</MudText>
+            @foreach (var settings in storeSettings.Where(a => a.Subcategory == group.Key))
+            {
+                var search=values.Last(x => x.Id==settings.Id);
+                var i1 = values.IndexOf(search);
+                
+                switch (settings.Settingstype)
+                {
+                    case "color":
+                        <WhiteLabelSettingTemplateColor Setting="@settings" @bind-ColorValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateColor>
+                        break;
+                    case "string":
+                    <WhiteLabelSettingTemplateString Setting="@settings" @bind-StringValue="values[i1].Value" Type="string" >
+                        </WhiteLabelSettingTemplateString>
+                        break;
+                    case "url":
+                    <WhiteLabelSettingTemplateString Setting="@settings"@bind-StringValue="values[i1].Value" Type="url" >
+                        </WhiteLabelSettingTemplateString>
+                        break;
+                    case "boolean":
+                        <WhiteLabelSettingTemplateBoolean Setting="@settings" @bind-BooleanStringValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateBoolean>
+                        break;
+                    case "image":
+                        <WhiteLabelSettingTemplateImage Setting="@settings" @bind-ImageValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateImage>
+                        break;
+                    case "collectionlist":
+                        break;
+                    case "list":
+                        <WhiteLabelSettingTemplateList Setting="@settings" @bind-SelectValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateList>
+                        break;
+                    case "fontlist":
+                        <WhiteLabelSettingTemplateFontList Setting="@settings" @bind-SelectValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateFontList>
+                        break;
+                    case "favicon":
+                        <WhiteLabelSettingTemplateFavicon Setting="@settings" @bind-ImageValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateFavicon>
+                        break;
+                    case "int":
+                        <WhiteLabelSettingTemplateInt Setting="@settings" @bind-IntValue="values[i1].Value" >
+                        </WhiteLabelSettingTemplateInt>
+                        break;
+                    case "twitterhandle":
+                        break;
+                }
+            }
+           
+        }
+
+        <MudGrid Class="mb-3 pt-4 pb-4 pr-4 pl-4">
+
+        </MudGrid>
+}
+
+@code {
+   [Parameter]
+   public int? WhiteLabelStoreId { get; set; }
+    [Parameter]
+    public int PageId { get; set; } = 2;
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public CreateNewWhitelabelClass Model { get; set; }
+    [Parameter]
+    public EventCallback<int> OnNextButtonClicked { get; set; }
+
+    private bool isSubmitting { get; set; }
+
+    private Storesetting[]? storeSettings { get; set; }
+    private bool success1 = false;
+
+    private List<KeyValueClass> values = new List<KeyValueClass>();
+    private int _actualPage = 0;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    
+    {
+        if (!firstRender && _actualPage==PageId)
+            return;
+
+        _actualPage = PageId;
+
+        isSubmitting = true;
+        values.Clear();
+        StateHasChanged();
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+       storeSettings= await (from a in db.Storesettings
+            where a.Page == PageId
+                orderby a.Sortorder
+            select a).AsNoTracking().ToArrayAsync();
+
+        if (!storeSettings.Any())
+        {
+            NavigationManager.NavigateTo("/managewhitelabelstores");
+            return;
+        }
+
+        int i = 0;
+        foreach (var s in storeSettings)
+        {
+            i++;
+            var vx = new KeyValueClass(s.Id, s.Settingsname, await GetValue(db, s.Id));
+            vx.OnValueChanged+=Vx_OnValueChanged;
+
+            if (values.Count < i)
+                values.Add(vx);
+        }
+        CheckResults(false);
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+    private void Vx_OnValueChanged()
+    {
+        CheckResults(false);
+    }
+
+    private async Task<string> GetValue(EasynftprojectsContext db, int settingsId)
+    {
+      var value=  await (from a in db.Whitelabelstoresettings
+            where a.NftprojectId == WhiteLabelStoreId && a.StoresettingsId == settingsId
+            select a.Value).AsNoTracking().FirstOrDefaultAsync();
+        if (value != null)
+            return value;
+        
+        return "";
+    }
+
+    private async Task NextButtonPressed()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (CheckResults(true))
+        {
+            isSubmitting = true;
+            StateHasChanged();
+            await SaveValues(db);
+            await OnNextButtonClicked.InvokeAsync((int)WhiteLabelStoreId);
+            isSubmitting = false;
+            StateHasChanged();
+        }
+
+    }
+
+    private async Task SaveValues(EasynftprojectsContext db)
+    {
+        foreach (var keyValueClass in values)
+        {
+            if (keyValueClass.Key == "font_family_url")
+            {
+                await SaveFontFamilyName(db,keyValueClass);
+            }
+            await SaveSettingAsync(db,keyValueClass.Id,keyValueClass.Value);
+        } 
+    }
+
+    private async Task SaveSettingAsync(EasynftprojectsContext db, int id, string value)
+    {
+        var v=await (from a in db.Whitelabelstoresettings
+            where a.NftprojectId == WhiteLabelStoreId && a.StoresettingsId == id
+            select a).FirstOrDefaultAsync();
+        if (v != null)
+        {
+            v.Value = value;
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            try
+            {
+                Whitelabelstoresetting wss = new Whitelabelstoresetting() {NftprojectId = (int) WhiteLabelStoreId, Value = value, StoresettingsId = id};
+                await db.Whitelabelstoresettings.AddAsync(wss);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                db.ChangeTracker.Clear();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Error while saving properties", Severity.Error);
+            }
+        }
+    }
+
+    private async Task SaveFontFamilyName(EasynftprojectsContext db, KeyValueClass keyValueClass)
+    {
+       var storeSettingFontUrl= await (from a in db.Storesettings
+            where a.Id == keyValueClass.Id
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        var storeSettingFontFamilyname=await (from a in db.Storesettings
+        where a.Settingsname=="font_family_name"
+        select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (storeSettingFontFamilyname==null || storeSettingFontUrl==null)
+            return;
+
+        using var reader = new StringReader(storeSettingFontUrl.Listvalues);
+        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        var fonts = csv.GetRecords<FontListClass>().ToList();
+
+        var familyName = fonts.FirstOrDefault(x => x.FontUrl == keyValueClass.Value)?.FamilyName;
+        if (familyName != null) await SaveSettingAsync(db, storeSettingFontFamilyname.Id, familyName);
+    }
+
+    private bool CheckResults(bool ShowError)
+    {
+        foreach (var storesetting in storeSettings)
+        {
+            var search = values.Last(x => x.Id == storesetting.Id);
+            var i1 = values.IndexOf(search);
+
+            if (storesetting.Mandantory)
+            {
+                if (string.IsNullOrEmpty(values[i1].Value))
+                {
+                    if (ShowError)
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add("Please fill in all mandantory fields", Severity.Error);
+                    }
+                    success1 = false;
+                    return false;
+                }
+            }
+            switch (storesetting.Settingstype)
+            {
+                case "string":
+                    if (!string.IsNullOrEmpty(values[i1].Value) &&  storesetting.Maxlength != null && storesetting.Maxlength != 0 && storesetting.Maxlength < values[i1].Value.Length)
+                    {
+                        if (ShowError)
+                        {
+                            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                            Snackbar.Add("String is too long", Severity.Error);
+                        }
+                        success1 = false;
+                        return false;
+                    }
+                    break;
+                case "url":
+                    if (!string.IsNullOrEmpty(values[i1].Value) && !GlobalFunctions.IsUrlValid(values[i1].Value))
+                    {
+                        if (ShowError)
+                        {
+                            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                            Snackbar.Add("Enter a valid url", Severity.Error);
+                        }
+                        success1 = false;
+                        return false;
+                    }
+                    break;
+                case "int":
+                    if (!string.IsNullOrEmpty(values[i1].Value) && !int.TryParse(values[i1].Value, out _))
+                    {
+                        if (ShowError)
+                        {
+                            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                            Snackbar.Add("Please fill in a valid number", Severity.Error);
+                        }
+                        success1 = false;
+                        return false;
+                    }
+                    break;
+            }
+        }
+        success1 = true;
+        return true;
+    }
+
+
+}

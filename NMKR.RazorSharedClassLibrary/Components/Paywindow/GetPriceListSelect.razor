@@ -1,0 +1,69 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject IConnectionMultiplexer redis
+
+<MudSelect T="Pricelist" Label="Price" @bind-Value="_value">
+    @foreach (var p in _prices)
+    {
+        @if (p.Currency == Coin.BTC.ToString())
+        {
+            <MudSelectItem Value="p">@p.Countnftortoken Tokens/Nft - (@GlobalFunctions.FormatCurrency(p.Priceinlovelace, 8, p.Currency.ToEnum<Coin>()) @p.Currency)</MudSelectItem>
+        }
+        else
+        {
+            <MudSelectItem Value="p">@p.Countnftortoken Tokens/Nft - (@GlobalFunctions.FormatCurrency(p.Priceinlovelace, 2, p.Currency.ToEnum<Coin>()) @p.Currency)</MudSelectItem>
+        }
+    }
+</MudSelect>
+
+
+
+@code {
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public Pricelist Value { get; set; }
+
+    [Parameter]
+    public EventCallback<Pricelist> ValueChanged { get; set; }
+
+    [Parameter]
+    public Blockchain Blockchain { get; set; }
+
+    private Blockchain? _blockchain;
+
+    private List<Pricelist> _prices = new();
+
+    private Pricelist _value
+    {
+        get => Value;
+        set
+        {
+            Value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Blockchain == _blockchain && _prices.Any())
+        {
+            return;
+        }
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        _prices = await (from a in db.Pricelists
+                         where a.NftprojectId == ProjectId && 
+                               a.State == "active" && 
+                               (a.Currency == GlobalFunctions.ConvertToCoin(Blockchain).ToString() || a.Currency == "EUR" || a.Currency == "USD" || a.Currency == "JPY")
+            orderby a.Countnftortoken
+            select a).ToListAsync();
+        if (_prices.Any())
+        {
+            _value = _prices.First();
+        }
+        _blockchain = Blockchain;
+        StateHasChanged();
+    }
+
+}

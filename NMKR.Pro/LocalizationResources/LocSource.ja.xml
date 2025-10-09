@@ -1,0 +1,295 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root">
+      <xsd:complexType>
+        <xsd:sequence>
+          <xsd:element name="data" maxOccurs="unbounded" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="key">
+                  <xsd:complexType>
+                    <xsd:simpleContent>
+                      <xsd:extension base="xsd:string">
+                        <xsd:attribute type="xsd:string" name="isActive" use="optional" />
+                      </xsd:extension>
+                    </xsd:simpleContent>
+                  </xsd:complexType>
+                </xsd:element>
+                <xsd:element type="xsd:string" name="value" />
+                <xsd:element type="xsd:string" name="comment" />
+              </xsd:sequence>
+              <xsd:attribute type="xsd:string" name="isActive" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data isActive="false">
+    <key>Dashboard</key>
+    <value>ダッシュボード</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Account</key>
+    <value>アカウント</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Delete Picture</key>
+    <value>写真を削除する</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>The Code for the Password change is:</key>
+    <value>パスワード変更のコードは次のとおりです。</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>General</key>
+    <value>一般</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>2-Factor</key>
+    <value>2要素</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Save Changes</key>
+    <value>変更を保存</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Company (Read only)</key>
+    <value>会社（読み取り専用）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>First Name (Read only)</key>
+    <value>名（読み取り専用）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Last Name (Read only)</key>
+    <value>姓（読み取り専用）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Street</key>
+    <value>町名</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Zip</key>
+    <value>ZIP 圧縮</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Email (Read only)</key>
+    <value>メールアドレス（読み取り専用）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Dont worry, we shall not spam!</key>
+    <value>ご安心ください。スパムは行いません！</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>UST-ID (Read only)</key>
+    <value>UST - ID （読み取り専用）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>If your company is located within the EU - please submit your UST-ID</key>
+    <value>会社がEU圏内にある場合は、UST - IDを提出してください</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Germany</key>
+    <value>ドイツ</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Password</key>
+    <value>パスワード</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Welcome to NMKR</key>
+    <value>ようこそ</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Every journey starts with a single step. Let's take that step together.</key>
+    <value>すべての旅は、1つのステップから始まります。一緒にその一歩を踏み出しましょう。</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>No-Code</key>
+    <value>無記入</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Get Started by creating your first NFT project</key>
+    <value>最初のプロジェクトを作成して始めましょう</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>API</key>
+    <value>API</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Learn how to integrate the NMKR API into your products</key>
+    <value>NMKR APIを製品に統合する方法を学ぶ</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Tokens Sold</key>
+    <value>販売済みトークン合計</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Income</key>
+    <value>総収入</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>User ID</key>
+    <value>ユーザーID</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mint Coupons</key>
+    <value>新品クーポン</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Learn how to create your own NFT / Token project with NMKR Studio easily &amp; quickly.</key>
+    <value>NMKR Studioで独自のNFT/トークンプロジェクトを簡単に作成する方法を学ぶ</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>We're here to help!</key>
+    <value>お手伝いにここ </value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Reach out to us directly.</key>
+    <value>直接お問い合わせください。</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Customer Support</key>
+    <value>カスタマーサポート</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Business Development</key>
+    <value>事業開発</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Create Project</key>
+    <value>プロジェクトの作成</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Discover the API</key>
+    <value>メガフードイベントで</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Download Invoices</key>
+    <value>請求書をダウンロード</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Buy Mint Coupons</key>
+    <value>ミントクーポンを購入</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Open Docs</key>
+    <value>オープン・ドキュメント</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Schedule Call</key>
+    <value>通話のスケジュール</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Date/Time (UTC)</key>
+    <value>日付/時刻（ UTC ）</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Project</key>
+    <value>プロジェクト</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Paid</key>
+    <value>決済済</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Costs</key>
+    <value>総額</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Income</key>
+    <value>収入</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tx-Id</key>
+    <value>Tx - Id</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Payout Wallet</key>
+    <value>支払いウォレット</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>internal Wallet</key>
+    <value>内部ウォレット</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Policy snapshot</key>
+    <value>ポリシースナップショット</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Enter policyid</key>
+    <value>ポリシーIDを入力してください</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Search</key>
+    <value>検索する</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>...Please wait...</key>
+    <value>しばらくお待ちください…</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cumulate stake addresses</key>
+    <value>ステークアドレスを累積する</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>With Minting Information</key>
+    <value>鋳造情報付き</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+</root>

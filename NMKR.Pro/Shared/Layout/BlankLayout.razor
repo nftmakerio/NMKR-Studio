@@ -1,0 +1,15 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="MyCustomTheme.Theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+   
+                @Body
+   
+</MudLayout>
+@code {
+    readonly MudblazorTheme MyCustomTheme = new MudblazorTheme();
+}

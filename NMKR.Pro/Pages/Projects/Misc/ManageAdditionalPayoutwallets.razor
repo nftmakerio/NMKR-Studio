@@ -1,0 +1,53 @@
+﻿@page "/additionalpayoutwallets/{projectid:int}/{projectuid}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+
+<BreadCrumb Items="_items"></BreadCrumb>
+@if (project != null)
+{
+    <ShowAdditionalPayoutWallets project="@project"></ShowAdditionalPayoutWallets>
+}
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public string projectuid { get; set; }
+    private Nftproject? project = new();
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+    };
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+        if (projectid != 0)
+        {
+            _items.Add(new($"Project ({project.Projectname})", href: $"/projects/{projectuid}", disabled: false));
+            _items.Add(new("Additional Payoutwallets (" + project.Projectname + ")", href: "/additionalpayoutwallets/" + projectid, disabled: true));
+        }
+    }
+
+    private async Task ReloadData()
+    {
+        if (projectid == 0)
+            return;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        project = await (from a in db.Nftprojects
+                         where a.Id == projectid && a.CustomerId == (int)settings.UserId
+                         select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+        if (project == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            return;
+        }
+        StateHasChanged();
+    }
+}

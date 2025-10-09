@@ -1,0 +1,334 @@
+﻿@using System.Text.RegularExpressions
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+
+<table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+    <tr>
+        <td><MudText Typo="Typo.h4" Color="Color.Dark" Class="mb-4">General info</MudText></td>
+        <td align="right">
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="NextButtonPressed" Color="Color.Tertiary" Disabled="@(!check1 || !check2  || isSubmitting)">
+                @if (isSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                    <MudText Class="ms-2">Processing</MudText>
+                }
+                else
+                {
+                    <MudText>SAVE & NEXT</MudText>
+                }
+            </MudButton>
+        </td>
+    </tr>
+</table>
+
+<MudDivider class="mb-10"/>
+<MudGrid Class="mb-3" Spacing="0">
+    
+    <table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Name your Store</MudText>
+                <MudTextField Variant="Variant.Outlined" Label="Store name" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(CheckName))" @ref="TextfieldName" T="string"
+                              HelperText="@GlobalFunctions.CharHelper("Min. 1 characters, max. 64 characters", Model.Projectname ?? "")" MaxLength="64"
+                              @bind-Value="Model.Projectname"/>
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        Your name will be shown throughout your store
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+    
+    <MudDivider Class="mt-10 mb-10"/>
+    
+    <table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Store URL</MudText>
+                <table>
+                    <tr>
+                        <td>https://</td>
+                        <td>
+                            <MudTextField Variant="Variant.Outlined" Label="Store url" Immediate="true" MaxLength=32 @ref="TextfieldUrl" T="string"
+                                          Validation="@(new Func<string, IEnumerable<string>>(CheckUrl))"
+                                          @bind-Value="Model.Projecturl"/></td>
+                        <td>.nmkr.store</td>
+                    </tr>
+                </table>
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        Your store will be hosted under brandname.nmkr.store.
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <MudDivider Class="mt-10 mb-10"/>
+    <table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Description</MudText>
+                <MudTextField Variant="Variant.Outlined" Label="Description" Immediate="true" HelperText="@GlobalFunctions.CharHelper("max. 100 characters", Model.Description ?? "")" MaxLength="100"
+                             
+                              @bind-Value="Model.Description"/>
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        Describe your store. Internal use only.
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <MudDivider Class="mt-10 mb-10"/>
+  @*  <table width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Add Twitter profile</MudText>
+                <MudTextField Variant="Variant.Outlined" Label="Twitter profile link" HelperText="(optional)"
+                              @bind-Value="Model.Twitterhandle"/>
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        The Twitter profile link can be displayed in the Paywindow
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <MudDivider Class="mt-10 mb-10"/>*@
+    <table Class="pt-4 pb-4 pr-4 pl-4" width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Store commission</MudText>
+                <MudNumericField Immediate="false" Label="Your commission in %" Format="N2" T="float" @bind-Value="Model.MarketplaceWhitelabelFee" Min="0f" Max="100f" />
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        You earn a percentage-based commission for every sale on your store. The commission will be sent to your wallet automatically
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <MudDivider Class="mt-10 mb-10"/>
+    <table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+        <tr>
+            <td width="60%">
+                <MudText Typo="Typo.h5" Color="Color.Dark" Class="mb-4">Payout wallet</MudText>
+                <MudSelect T="int" Label="Payout wallet" @bind-Value="Model.WalletId">
+                    @foreach (var w in wallets)
+                    {
+                        <MudSelectItem Value="@w.Id">@(w.Comment + " (" + GlobalFunctions.GetStartAndEnd(w.Walletaddress, 6) + ")")</MudSelectItem>
+
+                    }
+                </MudSelect>
+            </td>
+            <td>
+                <div class="ml-10">
+                    <MudText Typo="Typo.body1">
+                        The profit of your store will be payed out to this wallet.
+                    </MudText>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+
+   
+</MudGrid>
+
+@code {
+    [Parameter]
+    public int? WhiteLabelStoreId { get; set; }
+    [Parameter]
+    public int PageId { get; set; } = 1;
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public CreateNewWhitelabelClass Model { get; set; } 
+    [Parameter]
+    public EventCallback<int> OnNextButtonClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> WhiteLabelStoreIdChanged { get; set; }
+
+    private List<Customerwallet> wallets = new();
+    private bool isSubmitting = false;
+    private bool check1 = false;
+    private bool check2 = false;
+
+    private readonly IMask tagMask = new RegexMask(@"^[a-zA-Z]+[a-z0-9A-Z]*$");
+    private MudTextField<string> TextfieldName;
+    private MudTextField<string> TextfieldUrl;
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        wallets = await (from a in db.Customerwallets
+                         where a.CustomerId == CustomerId && a.State == "active"
+                         select a).ToListAsync();
+
+        if (!wallets.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must setup a wallet first", Severity.Error);
+            NavigationManager.NavigateTo("/wallets");
+        }
+        else
+        {
+            Model.WalletId = wallets.First().Id;
+            StateHasChanged();
+        }
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        await TextfieldName.Validate();
+        await TextfieldUrl.Validate();
+        StateHasChanged();
+    }
+    private IEnumerable<string> CheckUrl(string subdomain)
+    {
+        check2 = false;
+        if (string.IsNullOrEmpty(subdomain))
+        {
+            yield return "Project url is required";
+            yield break;
+        }
+        if (subdomain.Length < 2)
+            yield return "Subdomain must be at least of length 2";
+        if (!Regex.IsMatch(subdomain, @"^[a-zA-Z]+[a-z0-9A-Z]*$"))
+            yield return "Subdomain can only contain letters and numbers";
+
+        using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var checkurl = (from a in db.Nftprojects
+                        where a.Projecturl == subdomain.ToLower() && a.Id != WhiteLabelStoreId && a.Projecttype == "marketplace-whitelabel" && a.State=="active"
+            select a).AsNoTracking().FirstOrDefault();
+
+        if (checkurl!=null)
+            yield return "Subdomain already taken. Please use another one";
+
+        check2 = true;
+    }
+
+    private IEnumerable<string> CheckName(string name)
+    {
+        check1 = false;
+        if (string.IsNullOrEmpty(name))
+        {
+            yield return "Project name is required";
+        }
+        check1 = true;
+    }
+
+
+    private async Task NextButtonPressed()
+    {
+        isSubmitting = true;
+        StateHasChanged();
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            if (check1 && check2)
+            {
+
+                if (string.IsNullOrEmpty(Model.Projecturl))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Enter the project url", Severity.Error);
+                    return;
+                }
+
+                if (!GlobalFunctions.IsAllLettersOrDigits(Model.Projecturl))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Only letters or digits allowed on the project url", Severity.Error);
+                    return;
+                }
+
+                var checkurl=await (from a in db.Nftprojects
+                                  where a.Projecturl == Model.Projecturl.ToLower() && a.Id != WhiteLabelStoreId && a.Projecttype == "marketplace-whitelabel" && a.State == "active" 
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+                if (checkurl != null)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Project url already taken. Please use another one", Severity.Error);
+                    return;
+                }
+
+                if (Model.WalletId == 0)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Select a payout wallet", Severity.Error);
+                    return;
+                }
+
+
+                if (WhiteLabelStoreId.HasValue)
+                {
+                    var project = await (from a in db.Nftprojects
+                        where a.Id == WhiteLabelStoreId
+                        select a).FirstOrDefaultAsync();
+                    if (project == null)
+                        return;
+                    project.Projectname = Model.Projectname;
+                    project.Projecturl = Model.Projecturl;
+                    project.Description = Model.Description;
+                    project.Twitterhandle = Model.Twitterhandle;
+                    project.Marketplacewhitelabelfee = Model.MarketplaceWhitelabelFee;
+                    project.CustomerwalletId = Model.WalletId;
+                    project.Projectlogo = Model.ProjectLogo;
+                    await db.SaveChangesAsync();
+                }
+                else
+                {
+                    CryptographyProcessor cp = new();
+                    string password = cp.CreateSalt(30);
+                    var project = new Nftproject()
+                        {
+                            Projectname = Model.Projectname,
+                            Description = Model.Description,
+                            Twitterhandle = Model.Twitterhandle,
+                            Marketplacewhitelabelfee = Model.MarketplaceWhitelabelFee,
+                            CustomerwalletId = Model.WalletId,
+                            Projectlogo = Model.ProjectLogo,
+                            CustomerId = CustomerId,
+                            Projecturl = Model.Projecturl,
+                            State = "notactive",
+                            Created = DateTime.Now,
+                            Password = password,
+                            Minutxo = nameof(MinUtxoTypes.twoadaeverynft),
+                            SettingsId = 1,
+                            Expiretime = 20,
+                            Maxsupply = 0,
+                            Lastupdate = DateTime.Now,
+                            Hasroyality = false,
+                            Hasidentity = false,
+                            Royalitypercent = 0,
+                            Activatepayinaddress = false,
+                            Uid = Guid.NewGuid().ToString(),
+                            Projecttype = "marketplace-whitelabel" ,
+                            
+                            
+                        };
+                    await db.Nftprojects.AddAsync(project);
+                    await db.SaveChangesAsync();
+                    WhiteLabelStoreId = project.Id;
+                    await WhiteLabelStoreIdChanged.InvokeAsync(project.Id);
+                }
+            await OnNextButtonClicked.InvokeAsync((int)WhiteLabelStoreId);
+            }
+            else
+            {
+                isSubmitting = false;
+                StateHasChanged();
+            }
+    }
+}

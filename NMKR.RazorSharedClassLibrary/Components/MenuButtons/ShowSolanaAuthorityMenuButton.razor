@@ -1,0 +1,50 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.Projects
+@using NMKR.Shared.Functions.Solana
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@if (NftProject.Enabledcoins.Contains(Coin.SOL.ToString()) )
+{
+    <MudNavLink @onclick="(() => ShowAuthority(NftProject.Id))">Solana mint authority</MudNavLink>
+}
+
+@code {
+    [Parameter] public Nftproject NftProject { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+    private async Task ShowAuthority(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var nftproject = await (from ax in db.Nftprojects
+            .Include(a => a.Customer).AsSplitQuery()
+            where ax.Id == id
+            select ax).FirstOrDefaultAsync();
+
+        if (nftproject == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        var metadata = SolanaFunctions.GetSolanaCollectionMetadata(nftproject.Description, nftproject.Solanacollectionimage, "", nftproject.Projectname, nftproject.SellerFeeBasisPoints ?? 0, nftproject.Solanasymbol, nftproject.Projecturl);
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(ShowSolanaAuthorityModalWindow.MintAuth), nftproject.Solanapublickey },
+            { nameof(ShowSolanaAuthorityModalWindow.CollectionAddress), nftproject.Solanacollectiontransaction },
+            { nameof(ShowSolanaAuthorityModalWindow.CollectionMetadata), JsonConvert.SerializeObject(metadata, Formatting.Indented)},
+            { nameof(ShowSolanaAuthorityModalWindow.customer),nftproject.Customer},
+            { nameof(ShowSolanaAuthorityModalWindow.IsAdmin),IsAdmin},
+            { nameof(ShowSolanaAuthorityModalWindow.project), nftproject},
+        };
+        var dialog = await DialogService.ShowAsync<ShowSolanaAuthorityModalWindow>("Show mint authority", parameters, maxWidth);
+        await dialog.Result;
+        isSubmitting = false;
+    }
+}

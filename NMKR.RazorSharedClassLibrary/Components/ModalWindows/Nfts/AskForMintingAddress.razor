@@ -1,0 +1,321 @@
+﻿@using NMKR.Shared.Blockchains.BITCOIN
+@using NMKR.Shared.Functions.Metadata
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Color="Color.Tertiary" Indeterminate="true" />
+</MudOverlay>
+
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            @Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <BlockchainSelector project="@project" isAdmin="@isAdmin" @bind-Value="@blockchainselector" ></BlockchainSelector>
+
+        @if (blockchainselector == Blockchain.Cardano.ToString())
+        {
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Enter the Cardano Address or the adahandle" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Cardano Address or the adahandle is required"/>
+        }
+        @if (blockchainselector == Blockchain.Solana.ToString())
+        {
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Enter the Solana Address" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Solana Address is required"/>
+        }
+        @if (blockchainselector == Blockchain.Aptos.ToString())
+        {
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Enter the Aptos Address" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Aptos Address is required"/>
+        }
+        @if (blockchainselector == Blockchain.Bitcoin.ToString())
+        {
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Enter the Bitcoin Address" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Bitcoin Address is required"/>
+
+            <br />
+            <ShowCostsForBitcoinMints NftId="@NftId"></ShowCostsForBitcoinMints>
+        }
+        @if (!string.IsNullOrEmpty(blockchainselector))
+        {
+            @if (isAdmin)
+            {
+                <MudSelect T="int" @bind-Value="payer" Label="Who pays (When Customer, the mintcoupons will be used)" Variant="Variant.Outlined" Clearable>
+                    <MudSelectItem Value="1">Customer</MudSelectItem>
+                    <MudSelectItem Value="2">NMKR</MudSelectItem>
+                </MudSelect>
+            }
+
+            @if (Available > 1)
+            {
+                <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">Tokens available: @(GlobalFunctions.FormatMultiplier(Available, project.Multiplier))</MudText>
+                <MudNumericField T="long" @bind-Value="tokencount" For="@(() => tokencount)" Label="Token Amount" Variant="Variant.Text" Min="1" Max="@(GlobalFunctions.GetFullNumber(Available, project.Multiplier))"/>
+            }
+        }
+
+    </DialogContent>
+    <DialogActions >
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Color="Color.Secondary" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="MintNft" Disabled="isSubmitting">@Title</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public int NftId { get; set; }
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public long Available { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Parameter]
+    public bool isAdmin { get; set; }
+
+    private string blockchainselector { get; set; }
+
+    private string Address { get; set; }
+    private bool isVisible;
+    private bool isSubmitting;
+    private long tokencount { get; set; } = 1;
+    public int payer { get; set; } = 1;
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task MintNft()
+    {
+
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        if (string.IsNullOrEmpty(Address))
+        {
+            isSubmitting = false;
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var valid = ConsoleCommand.CheckIfAddressIsValid(db, Address, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true);
+
+        if (!valid)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Entered address is no valid address or the handle was not found. Please enter a correct one.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        var blockedAddresses = await GlobalFunctions.CheckForBlockedAddresses(db, outaddress);
+        if (blockedAddresses)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("The entered address is blocked. Please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (blockchain != blockchainselector.ToEnum<Blockchain>())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add($"The entered address is not a {blockchainselector} address", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+     
+
+
+        isVisible = true;
+        StateHasChanged();
+        await Task.Delay(200);
+        StateHasChanged();
+
+        var nft = await (from a in db.Nfts
+       .Include(a => a.Nftproject)
+       .ThenInclude(a => a.Customer).AsSplitQuery()
+       .Include(a => a.Instockpremintedaddress).AsSplitQuery()
+       .Include(a => a.Nftproject)
+       .ThenInclude(a => a.Settings).AsSplitQuery()
+       .Include(a => a.InverseMainnft)
+        .ThenInclude(a => a.Metadata).AsSplitQuery()
+        .Include(a => a.Metadata).AsSplitQuery()
+                         where a.Id == NftId
+                         select a).FirstOrDefaultAsync();
+
+        if (nft == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error. Please contact support", Severity.Error);
+            isSubmitting = false;
+            isVisible = false;
+            return;
+        }
+
+        float requiredCoupons = 1;
+        if (blockchain == Blockchain.Bitcoin)
+        {
+            BitcoinBlockchainFunctions btc = new BitcoinBlockchainFunctions();
+            var mintingcosts = await btc.GetMintingCostsAsync(nft, nft.Nftproject, Address);
+            mintingcosts += 1000; // estimated Fees
+
+            if (mintingcosts > 1000)
+                requiredCoupons = await GlobalFunctions.GetRequiredMintCouponsAsync(db, _redis, mintingcosts, Coin.BTC);
+        }
+
+
+
+
+        if (payer == 1)
+        {
+            BuildTransactionClass bt = new();
+            var reserved = (from a in db.Mintandsends
+                where a.CustomerId == nft.Nftproject.CustomerId && a.State == "execute"
+                select a.Requiredcoupons).Sum();
+            if (nft.Nftproject.Customer.Newpurchasedmints < (nft.Nftproject.Settings.Mintandsendcoupons * requiredCoupons) + reserved)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(isAdmin ? 
+                    $"Customer do not have enough Mint coupons. You need {(nft.Nftproject.Settings.Mintandsendcoupons * requiredCoupons):N1} coupons" : 
+                    $"You do not have enough Mint coupons. You need {(nft.Nftproject.Settings.Mintandsendcoupons * requiredCoupons):N1} coupons", Severity.Error);
+                isSubmitting = false;
+                isVisible = false;
+                return;
+            }
+        }
+
+
+        if (nft.Nftproject.Maxsupply == 1)
+        {
+            if (nft.State == "sold" && nft.Soldcount >= nft.Burncount)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("NFT is already minted and sold", Severity.Error);
+                isSubmitting = false;
+                isVisible = false;
+                return;
+            }
+            if (nft.State == "reserved")
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("NFT is reserved. Minting not possible. Please try again later", Severity.Error);
+                isSubmitting = false;
+                isVisible = false;
+                return;
+            }
+            if (nft.State != "free")
+            {
+                if (nft.State != "sold" && nft.State!="burned")
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("NFT is not available or Minting Server is offline", Severity.Error);
+                    isSubmitting = false;
+                    isVisible = false;
+                    return;
+                }
+
+            }
+        }
+        else
+        {
+            // Calculate new - if in the meantime has someone reserved or bought one
+            Available = nft.Nftproject.Maxsupply - (long)(nft.Reservedcount + nft.Soldcount - nft.Burncount);
+            if (tokencount > Available)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("There are not so many tokens available", Severity.Error);
+                isSubmitting = false;
+                isVisible = false;
+
+                return;
+            }
+        }
+
+        string guid = GlobalFunctions.GetGuid();
+
+        var selectedreservations=await NftReservationClass.ReserveSpecificNft(db,_redis, guid, nft.NftprojectId,
+            new ReserveNftsClass[] {new() {NftId = NftId, Tokencount = tokencount, Multiplier = nft.Multiplier}}, nft.Nftproject.Expiretime,
+            true, false, blockchain.ToCoin());
+
+
+        if (selectedreservations.Count() != 1)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("NFT is not available or Minting Server is offline", Severity.Error);
+            isSubmitting = false;
+            isVisible = false;
+            return;
+        }
+
+        string meta = ConsoleCommand.CreateMetadataNew( new NftWithMintingAddressClass[] { new NftWithMintingAddressClass(nft,Address) },true);
+
+        if (string.IsNullOrEmpty(meta))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Metadata can not be created - Please check your Metadata", Severity.Error);
+            isSubmitting = false;
+            isVisible = false;
+            await NftReservationClass.ReleaseAllNftsAsync(db,_redis, guid);
+
+            return;
+        }
+
+        if (blockchain == Blockchain.Cardano)
+        {
+            if (project is {Cip68: false })
+            {
+                var chk1 = new CheckMetadataForCip25Fields();
+                var checkmetadata = chk1.CheckMetadata(meta, project.Policyid, "", true, false);
+                if (!checkmetadata.IsValid)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add(checkmetadata.ErrorMessage, Severity.Error);
+                    isSubmitting = false;
+                    isVisible = false;
+                    await NftReservationClass.ReleaseAllNftsAsync(db, _redis, guid);
+                    return;
+                }
+                meta = checkmetadata.FormatedMetadata;
+            }
+
+
+            if (!nft.Nftproject.Cip68)
+            {
+                string tokennamex = GlobalFunctions.FilterTokenname((nft.Nftproject.Tokennameprefix ?? "") + nft.Name);
+                if (!meta.Contains("\"" + tokennamex + "\":", StringComparison.InvariantCultureIgnoreCase) &&
+                    !meta.Contains("\"" + GlobalFunctions.ToHexString(tokennamex) + "\":", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Metadata does not contain the correct Tokenname (Prefix of project + Nft name). We recommend to use the <asset_name> placeholder. Without the correct tokenname, the metadata of the NFT will not work correctly", Severity.Error);
+                    isSubmitting = false;
+                    isVisible = false;
+                    await NftReservationClass.ReleaseAllNftsAsync(db, _redis, guid);
+                    return;
+                }
+            }
+        }
+
+
+        await db.Mintandsends.AddAsync(new() {Created = DateTime.Now, CustomerId = nft.Nftproject.CustomerId, NftprojectId = nft.NftprojectId, 
+            Receiveraddress = outaddress, Reservationtoken = guid, State = "execute", Onlinenotification = false, Requiredcoupons = requiredCoupons, Usecustomerwallet = payer==1,
+                Reservelovelace = 0,
+                Coin = blockchain.ToCoin().ToString()
+            });
+        await db.SaveChangesAsync();
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("NFT is queued for minting", Severity.Success);
+        isSubmitting = false;
+        isVisible = false;
+        MudDialog.Close();
+
+    }
+
+}

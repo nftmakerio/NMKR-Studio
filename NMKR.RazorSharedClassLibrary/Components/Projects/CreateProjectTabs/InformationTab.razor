@@ -1,0 +1,101 @@
+﻿<EditForm Model="@Value" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    @if (activeblockchains.Any())
+    {
+        <MudGrid Class="mb-10 pa-5 mr-3 ml-1 mt-5" Style="border-radius: 0rem; border-width: 1px; border-color: #d2d2d2;">
+
+            <BlockchainToggle @bind-Value="Value.Blockchainselection" ft_nonft_project="@Value.ft_nonft_project" />
+     
+            <MudItem xs="12">
+                <MudText Typo="Typo.h5" Color="Color.Dark">Select Project Type</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudRadioGroup @bind-Value="@Value.ft_nonft_project" T="int">
+                    <MudRadio Color="Color.Dark" Value="0">Non fungible token (NFT) project</MudRadio>
+                    <MudRadio Color="Color.Dark" Value="1" Disabled="@(Value.solana || Value.aptos || Value.bitcoin)">Fungible token (FT) project (Currently only available on cardano-only projects)</MudRadio>
+                </MudRadioGroup>
+            </MudItem>
+
+            <MudItem xs="6">
+                @if (Value.ft_nonft_project == 1)
+                {
+                    <MudNumericField @bind-Value="Value.MaxNftSupply" For="@(() => Value.MaxNftSupply)" Label="Max Token supply" HelperText="The max. supply of one Token (on NFT projects always 1)" Variant="Variant.Text" Min="1" Max="@Int64.MaxValue"/>
+                }
+            </MudItem>
+
+
+            <MudItem xs="10">
+                <MudTextField Variant="Variant.Outlined" Label="Project Name" HelperText="@GlobalFunctions.CharHelper("Min. 1 characters, max. 64 characters", Value?.Projectname ?? "")"
+                              @bind-Value="Value.Projectname" For="@(() => Value.Projectname)" Immediate="true"/>
+            </MudItem>
+            <MudItem xs="2">
+                <UploadProjectImage @bind-Image="@Value.ProjectLogo"/>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField Variant="Variant.Outlined" Label="Project URL" HelperText="The URL of the project (optional)"
+                              @bind-Value="Value.Projecturl" For="@(() => Value.Projecturl)"/>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Label="Description" HelperText="@GlobalFunctions.CharHelper("max. 255 characters (optional)", Value?.Description ?? "")"
+                              @bind-Value="Value.Description" For="@(() => Value.Description)" Immediate="true"/>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Label="Twitter handle" HelperText="(optional)"
+                              @bind-Value="Value.Twitterhandle" For="@(() => Value.Twitterhandle)" Immediate="true"/>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Label="TokenName Prefix" HelperText="@GlobalFunctions.CharHelper("Max. 15 characters (optional)", Value?.TokennamePrefix ?? "")"
+                              @bind-Value="Value.TokennamePrefix" For="@(() => Value.TokennamePrefix)" Immediate="true"/>
+                <small>
+                    Please use the prefix only if the name of the token is not already given during upload.<br/>
+                    Upload file name "401.png" using prefix "Cool" will result in nft name "Cool401"
+                </small>
+            </MudItem>
+
+
+            @if (iagonenabled)
+            {
+                <MudItem xs="3">
+                    <MudSelect T="string" Label="Storage Provider" @bind-Value="Value.StorageProvider">
+                        <MudSelectItem Value="@("ipfs")">IPFS</MudSelectItem>
+                        <MudSelectItem Value="@("iagon")" Disabled="true">Iagon</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            }
+
+            <MudItem xs="3">
+                <MudSelect T="int" Label="NFT reservation time" @bind-Value="Value.ExpireTime">
+                    <MudSelectItem Value="10">10 Minutes</MudSelectItem>
+                    <MudSelectItem Value="20">20 Minutes</MudSelectItem>
+                    <MudSelectItem Value="30">30 Minutes</MudSelectItem>
+                    <MudSelectItem Value="40">40 Minutes</MudSelectItem>
+                    <MudSelectItem Value="50">50 Minutes</MudSelectItem>
+                    <MudSelectItem Value="60">60 Minutes</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+
+
+
+        </MudGrid>
+    }
+    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+        <MudButton Disabled="true" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled"  Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+    </MudContainer>
+</EditForm>
+@code {
+    [Parameter]
+    public CreateNewProjectClass Value { get; set; }
+    [Parameter]
+    public EventCallback<CreateNewProjectClass> ValueChanged { get; set; }
+
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool iagonenabled { get; set; }
+    [Parameter] public List<Activeblockchain> activeblockchains { get; set; }
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public bool isSubmitting { get; set; }
+}

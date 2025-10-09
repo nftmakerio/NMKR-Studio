@@ -1,0 +1,17 @@
+﻿<MudLink OnClick="SearchFieldClicked">
+<MudTextField Variant="Variant.Outlined" Label="Search" T="string" Lines="1"  Class="mb-5 ml-5 mr-5 mt-5" ReadOnly="true" />
+</MudLink>
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+    private async Task SearchFieldClicked()
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<NmkrHelpModalWindow>("Search",  maxWidth);
+        var result = await dialog.Result;
+
+        if (result != DialogResult.Cancel())
+        {
+        }
+    }
+}

@@ -1,0 +1,39 @@
+﻿@inject ISnackbar Snackbar
+@if (AskForAdditionalInformationsForFiatPayment != null)
+{
+    <MudDialog Style="padding: 20px; ">
+        <TitleContent>
+            <MudText Typo="Typo.h3">
+                To enable FIAT Payments fill out the following fields
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Twitter Url" Immediate="true" @bind-Value="AskForAdditionalInformationsForFiatPayment.Twitter" Lines="1" Required="true" RequiredError="Twitter URL is necessary"/>
+            <MudTextField Class="mb-4" Variant="Variant.Outlined" T="string" Label="Discord Url" Immediate="true" @bind-Value="AskForAdditionalInformationsForFiatPayment.Discord" Lines="1"/>
+        </DialogContent>
+        <DialogActions>
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
+            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Save">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public AskForAdditionalInformationsForFiatPaymentClass? AskForAdditionalInformationsForFiatPayment { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    private void Save() {
+        if (string.IsNullOrEmpty(AskForAdditionalInformationsForFiatPayment?.Twitter))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter Twitter URL", Severity.Error);
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(AskForAdditionalInformationsForFiatPayment));
+    }
+
+}

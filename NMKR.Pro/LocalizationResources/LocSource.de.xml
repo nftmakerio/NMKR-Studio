@@ -1,0 +1,1525 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root">
+      <xsd:complexType>
+        <xsd:sequence>
+          <xsd:element name="data" maxOccurs="unbounded" minOccurs="0">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="key">
+                  <xsd:complexType>
+                    <xsd:simpleContent>
+                      <xsd:extension base="xsd:string">
+                        <xsd:attribute type="xsd:string" name="isActive" use="optional" />
+                      </xsd:extension>
+                    </xsd:simpleContent>
+                  </xsd:complexType>
+                </xsd:element>
+                <xsd:element type="xsd:string" name="value" />
+                <xsd:element type="xsd:string" name="comment" />
+              </xsd:sequence>
+              <xsd:attribute type="xsd:string" name="isActive" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data isActive="false">
+    <key>Dashboard</key>
+    <value>Dashboard</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Account</key>
+    <value>Konto</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Delete Picture</key>
+    <value>Bild löschen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>The Code for the Password change is:</key>
+    <value>Der Code für die Passwortänderung lautet:</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>General</key>
+    <value>Allgemein</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>2-Factor</key>
+    <value>2-Faktor</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Save Changes</key>
+    <value>Änderungen speichern</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Company (Read only)</key>
+    <value>Firma (schreibgeschützt)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>First Name (Read only)</key>
+    <value>Vorname (schreibgeschützt)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Last Name (Read only)</key>
+    <value>Nachname (schreibgeschützt)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Street</key>
+    <value>Straße</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Zip</key>
+    <value>Plz</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Email (Read only)</key>
+    <value>E-Mail (schreibgeschützt)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Dont worry, we shall not spam!</key>
+    <value>Keine Sorge, wir werden nicht spammen!</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>UST-ID (Read only)</key>
+    <value>USt-ID (schreibgeschützt)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>If your company is located within the EU - please submit your UST-ID</key>
+    <value>Wenn sich Ihr Unternehmen innerhalb der EU befindet - reichen Sie bitte Ihre USt-ID ein</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Germany</key>
+    <value>Deutschland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Afghanistan</key>
+    <value>Afghanistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Albania</key>
+    <value>Albanien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Algeria</key>
+    <value>Algerien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>American Samoa</key>
+    <value>Amerikanisch-Samoa</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Andorra</key>
+    <value>Andorra</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Angola</key>
+    <value>Angola</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Anguilla</key>
+    <value>Anguilla</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Antarctica</key>
+    <value>Antarktika</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Antigua and Barbuda</key>
+    <value>Antigua und Barbuda</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Argentina</key>
+    <value>Argentinien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Armenia</key>
+    <value>Armenien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Aruba</key>
+    <value>Aruba</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Australia</key>
+    <value>Australien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Austria</key>
+    <value>Österreich</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Azerbaijan</key>
+    <value>Aserbaidschan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bahamas</key>
+    <value>Bahamas</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bahrain</key>
+    <value>Bahrain</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bangladesh</key>
+    <value>Bangladesch</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Barbados</key>
+    <value>Barbados</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Belarus</key>
+    <value>Belarus/Weißrussland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Belgium</key>
+    <value>Belgien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Belize</key>
+    <value>Belize</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Benin</key>
+    <value>Benin</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bermuda</key>
+    <value>Bermuda</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bhutan</key>
+    <value>Bhutan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bolivia</key>
+    <value>Bolivien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bosnia and Herzegovina</key>
+    <value>Bosnien und Herzegowina</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Botswana</key>
+    <value>Botswana</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bouvet Island</key>
+    <value>Bouvetinsel</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Brazil</key>
+    <value>Brasilien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>British Indian Ocean Territory</key>
+    <value>Britisches Territorium im Indischen Ozean</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Brunei Darussalam</key>
+    <value>Brunei Darussalam</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Bulgaria</key>
+    <value>Bulgarien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Burkina Faso</key>
+    <value>Burkina Faso</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Burundi</key>
+    <value>Burundi</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cambodia</key>
+    <value>Kambodscha</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cameroon</key>
+    <value>Kamerun</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Canada</key>
+    <value>Kanada</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cape Verde</key>
+    <value>Kap Verde</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cayman Islands</key>
+    <value>Cayman Islands</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Central African Republic</key>
+    <value>Zentralafrikanische Republik</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Chad</key>
+    <value>Tschad</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Chile</key>
+    <value>Chile</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>China</key>
+    <value>China</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Christmas Island</key>
+    <value>Weihnachtsinsel</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cocos (Keeling) Islands</key>
+    <value>Kokosinseln/Keelinginseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Colombia</key>
+    <value>Kolumbien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Comoros</key>
+    <value>Komoren</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Congo</key>
+    <value>Republik Kongo</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Congo, the Democratic Republic of the</key>
+    <value>Demokratische Republik Kongo</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cook Islands</key>
+    <value>Cookinseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Costa Rica</key>
+    <value>Costa Rica</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cote D'Ivoire</key>
+    <value>Elfenbeinküste</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Croatia</key>
+    <value>Kroatien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cuba</key>
+    <value>Kuba</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cyprus</key>
+    <value>Zypern</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Czech Republic</key>
+    <value>Tschechische Republik</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Denmark</key>
+    <value>Dänemark</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Djibouti</key>
+    <value>Dschibuti</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Dominica</key>
+    <value>Dominica</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Dominican Republic</key>
+    <value>Dominikanische Republik</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Ecuador</key>
+    <value>Ecuador</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Egypt</key>
+    <value>Ägypten</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>El Salvador</key>
+    <value>El Salvador</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Equatorial Guinea</key>
+    <value>Republik Äquatorialguinea</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Eritrea</key>
+    <value>Eritrea</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Estonia</key>
+    <value>Estland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Ethiopia</key>
+    <value>Äthiopien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Falkland Islands (Malvinas)</key>
+    <value>Falklandinseln (Malwinen)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Faroe Islands</key>
+    <value>Färöer</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Fiji</key>
+    <value>Fidschi</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Finland</key>
+    <value>Finnland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>France</key>
+    <value>Frankreich</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>French Guiana</key>
+    <value>Französisch-Guayana</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>French Polynesia</key>
+    <value>Französisch-Polynesien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>French Southern Territories</key>
+    <value>Französischen Süd- und Antarktisgebiete</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Gabon</key>
+    <value>Gabun</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Gambia</key>
+    <value>Gambia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Georgia</key>
+    <value>Georgia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Ghana</key>
+    <value>Ghana</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Gibraltar</key>
+    <value>Gibraltar</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Greece</key>
+    <value>Griechenland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Greenland</key>
+    <value>Grönland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Grenada</key>
+    <value>Grenada</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guadeloupe</key>
+    <value>Guadeloupe</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guam</key>
+    <value>Guam</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guatemala</key>
+    <value>Guatemala</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guinea</key>
+    <value>Guinea</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guinea-Bissau</key>
+    <value>Guinea-Bissau</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Guyana</key>
+    <value>Guyana</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Haiti</key>
+    <value>Haiti</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Heard Island and Mcdonald Islands</key>
+    <value>Heard- und McDonald-Inseln </value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Holy See (Vatican City State)</key>
+    <value>Vatikanstadt</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Honduras</key>
+    <value>Honduras</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Hong Kong</key>
+    <value>Hong Kong</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Hungary</key>
+    <value>Ungarn</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Iceland</key>
+    <value>Island</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>India</key>
+    <value>Indien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Indonesia</key>
+    <value>Indonesien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Iran, Islamic Republic of</key>
+    <value>Islamische Republik Iran</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Iraq</key>
+    <value>Republik Irak</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Ireland</key>
+    <value>Irland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Israel</key>
+    <value>Israel</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Italy</key>
+    <value>Italien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Jamaica</key>
+    <value>Jamaika</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Japan</key>
+    <value>Japan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Jordan</key>
+    <value>Jordanien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Kazakhstan</key>
+    <value>Kasachstan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Kenya</key>
+    <value>Kenia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Kiribati</key>
+    <value>Kiribati</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Korea, Democratic People's Republic of</key>
+    <value>Nordkorea (Volksrepublik)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Korea, Republic of</key>
+    <value>Korea</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Kuwait</key>
+    <value>Kuwait</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Kyrgyzstan</key>
+    <value>Kirgisistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Lao People's Democratic Republic</key>
+    <value>Laos</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Latvia</key>
+    <value>Lettland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Lebanon</key>
+    <value>Libanon</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Lesotho</key>
+    <value>Lesotho</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Liberia</key>
+    <value>Liberia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Libyan Arab Jamahiriya</key>
+    <value>Libyen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Liechtenstein</key>
+    <value>Liechtenstein</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Lithuania</key>
+    <value>Litauen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Luxembourg</key>
+    <value>Luxemburg</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Macao</key>
+    <value>Macau</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Macedonia</key>
+    <value>Mazedonien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Madagascar</key>
+    <value>Madagaskar</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Malawi</key>
+    <value>Malawi</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Malaysia</key>
+    <value>Malaysia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Maldives</key>
+    <value>Malediven</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mali</key>
+    <value>Mali</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Malta</key>
+    <value>Malta</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Marshall Islands</key>
+    <value>Marshallinseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Martinique</key>
+    <value>Martinique</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mauritania</key>
+    <value>Mauretanien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mauritius</key>
+    <value>Mauritius</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mayotte</key>
+    <value>Mayotte</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mexico</key>
+    <value>Mexiko</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Micronesia, Federated States of</key>
+    <value>Mikronesien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Moldova, Republic of</key>
+    <value>Republik Moldau</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Monaco</key>
+    <value>Monaco</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mongolia</key>
+    <value>Mongolei</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Montserrat</key>
+    <value>Montserrat</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Morocco</key>
+    <value>Marokko</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mozambique</key>
+    <value>Mosambik</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Myanmar</key>
+    <value>Myanmar</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Namibia</key>
+    <value>Namibia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Nauru</key>
+    <value>Nauru</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Nepal</key>
+    <value>Nepal</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Netherlands</key>
+    <value>Niederlande</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Netherlands Antilles</key>
+    <value>Niederländische Antillen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>New Caledonia</key>
+    <value>Neukaledonien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>New Zealand</key>
+    <value>Neuseeland</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Nicaragua</key>
+    <value>Nicaragua</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Niger</key>
+    <value>Niger</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Nigeria</key>
+    <value>Nigeria</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Niue</key>
+    <value>Niue</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Norfolk Island</key>
+    <value>Norfolkinsel</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Northern Mariana Islands</key>
+    <value>Nördliche Marianen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Norway</key>
+    <value>Norwegen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Oman</key>
+    <value>Oman</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Pakistan</key>
+    <value>Pakistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Palau</key>
+    <value>Palau</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Palestinian Territory, Occupied</key>
+    <value>Palästinensische Autonomiegebiete</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Panama</key>
+    <value>Panama</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Papua New Guinea</key>
+    <value>Papua-Neuguinea</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Paraguay</key>
+    <value>Paraguay</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Peru</key>
+    <value>Peru</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Philippines</key>
+    <value>Philippinen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Pitcairn</key>
+    <value>Pitcairninseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Poland</key>
+    <value>Polen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Portugal</key>
+    <value>Portugal</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Puerto Rico</key>
+    <value>Puerto Rico</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Qatar</key>
+    <value>Katar</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Reunion</key>
+    <value>La Réunion</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Romania</key>
+    <value>Rumänien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Russian Federation</key>
+    <value>Russische Föderation (Russland)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Rwanda</key>
+    <value>Ruanda</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saint Helena</key>
+    <value>St. Helena</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saint Kitts and Nevis</key>
+    <value>St. Kitts und Nevis</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saint Lucia</key>
+    <value>St. Lucia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saint Pierre and Miquelon</key>
+    <value>Saint-Pierre und Miquelon</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saint Vincent and the Grenadines</key>
+    <value>Saint Vincent und die Grenadinen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Samoa</key>
+    <value>Samoa</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>San Marino</key>
+    <value>San Marino</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sao Tome and Principe</key>
+    <value>São Tomé und Príncipe</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Saudi Arabia</key>
+    <value>Saudi-Arabien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Senegal</key>
+    <value>Senegal</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Serbia</key>
+    <value>Serbien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Seychelles</key>
+    <value>Seychellen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sierra Leone</key>
+    <value>Sierra Leone</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Singapore</key>
+    <value>Singapur</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Slovakia</key>
+    <value>Slowakei</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Slovenia</key>
+    <value>Slowenien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Solomon Islands</key>
+    <value>Salomon-Inseln/Salomonen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Somalia</key>
+    <value>Somalia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>South Africa</key>
+    <value>Südafrika</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>South Georgia and the South Sandwich Islands</key>
+    <value>Südgeorgien und Südliche Sandwichinseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Spain</key>
+    <value>Spanien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sri Lanka</key>
+    <value>Sri Lanka</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sudan</key>
+    <value>Republik Sudan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Suriname</key>
+    <value>Suriname</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Svalbard and Jan Mayen</key>
+    <value>Svalbard und Jan Mayen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Swaziland</key>
+    <value>Königreich Eswatini (ehemals Swaziland)</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sweden</key>
+    <value>Schweden</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Switzerland</key>
+    <value>Schweiz</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Syrian Arab Republic</key>
+    <value>Arabische Republik Syrien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Taiwan, Province of China</key>
+    <value>Taiwan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tajikistan</key>
+    <value>Tadschikistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tanzania, United Republic of</key>
+    <value>Vereinigte Republik Tansania</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Thailand</key>
+    <value>Thailand</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Timor-Leste</key>
+    <value>Timor-Leste/Osttimor</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Togo</key>
+    <value>Togo</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tokelau</key>
+    <value>Tokelau</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tonga</key>
+    <value>Tonga</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Trinidad and Tobago</key>
+    <value>Trinidad und Tobago</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tunisia</key>
+    <value>Tunesien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Turkey</key>
+    <value>Türkei</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Turkmenistan</key>
+    <value>Turkmenistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Turks and Caicos Islands</key>
+    <value>Turks- und Caicosinseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tuvalu</key>
+    <value>Tuvalu</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Uganda</key>
+    <value>Uganda</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Ukraine</key>
+    <value>Ukraine</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>United Arab Emirates</key>
+    <value>Vereinigte Arabische Emirate</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>United Kingdom</key>
+    <value>Vereinigtes Königreich</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>United States</key>
+    <value>USA</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>United States Minor Outlying Islands</key>
+    <value>United States Minor Outlying Islands</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Uruguay</key>
+    <value>Uruguay</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Uzbekistan</key>
+    <value>Usbekistan</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Vanuatu</key>
+    <value>Vanuatu</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Venezuela</key>
+    <value>Venezuela</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Viet Nam</key>
+    <value>Vietnam</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Virgin Islands, British</key>
+    <value>Britische Jungferninseln</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Virgin Islands, U.s.</key>
+    <value>Amerikanische Jungferninseln.</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Wallis and Futuna</key>
+    <value>Wallis und Futuna</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Western Sahara</key>
+    <value>Westsahara</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Yemen</key>
+    <value>Jemen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Zambia</key>
+    <value>Sambia</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Zimbabwe</key>
+    <value>Simbabwe</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Montenegro</key>
+    <value>Montenegro</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>North Macedonia</key>
+    <value>Nordmazedonien</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Welcome to NMKR</key>
+    <value>Herzlich willkommen bei</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Every journey starts with a single step. Let's take that step together.</key>
+    <value>Jede Reise beginnt mit einem einzigen Schritt. Gehen wir diesen Schritt gemeinsam.</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>No-Code</key>
+    <value>Kein Code</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Get Started by creating your first NFT project</key>
+    <value>Beginnen Sie mit der Erstellung Ihres ersten Projekts</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>API</key>
+    <value>API</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Learn how to integrate the NMKR API into your products</key>
+    <value>Erfahren Sie, wie Sie die NMKR-API in Ihre Produkte integrieren</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Tokens Sold</key>
+    <value>Gesamt Belohungen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Income</key>
+    <value>Gesamteinkommen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>User ID</key>
+    <value>Benutzer ID</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Mint Coupons</key>
+    <value>Mint-Gutscheine</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Learn how to create your own NFT / Token project with NMKR Studio easily &amp; quickly.</key>
+    <value>Erfahren Sie, wie Sie Ihr eigenes NFT / Token-Projekt mit NMKR Studio einfach erstellen können</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>We're here to help!</key>
+    <value>Dann können wir Ihnen helfen!</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Reach out to us directly.</key>
+    <value>Wenden Sie sich direkt an uns.</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Customer Support</key>
+    <value>Kunden Support</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Business Development</key>
+    <value>Geschäftsentwicklung</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Create Project</key>
+    <value>Projekt erstellen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Discover the API</key>
+    <value>Entdecken Sie die API</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Download Invoices</key>
+    <value>Rechnung zur Bestellung</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Buy Mint Coupons</key>
+    <value>Kaufen Sie Mintgutscheine</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Open Docs</key>
+    <value>Doku anzeigen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Schedule Call</key>
+    <value>Vorgeplante Anrufe</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Date/Time (UTC)</key>
+    <value>Datum/Zeit-UTC</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Project</key>
+    <value>Projekt</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Paid</key>
+    <value>Bezahlt</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Total Costs</key>
+    <value>Gesamtkosten</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Income</key>
+    <value>Einkommen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Tx-Id</key>
+    <value>Steuer-ID</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Payout Wallet</key>
+    <value>Auszahlungs-Wallet</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>internal Wallet</key>
+    <value>internes Wallet</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Password</key>
+    <value>Passwort</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Policy snapshot</key>
+    <value>Richtlinien-Snapshot</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Enter policyid</key>
+    <value>Richtlinien-ID eingeben</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Search</key>
+    <value>Suche</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>...Please wait...</key>
+    <value>Bitte warten...</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Cumulate stake addresses</key>
+    <value>Stake-Adressen kumulieren</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>With Minting Information</key>
+    <value>Mit Prägeinformationen</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>The Code for the Login is:</key>
+    <value>Der Code für die Anmeldung lautet:</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sign In</key>
+    <value>Anmelden</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>NMKR Studio – Login</key>
+    <value>Studio-Anmeldung</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Sign Up</key>
+    <value>Registrieren</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>E-mail</key>
+    <value>E-Mail</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+  <data isActive="false">
+    <key>Forgot password?</key>
+    <value>Passwort vergessen?</value>
+    <comment>Created by XLocalizer</comment>
+  </data>
+</root>

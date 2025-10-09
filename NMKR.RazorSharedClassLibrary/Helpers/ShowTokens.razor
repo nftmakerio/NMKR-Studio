@@ -1,0 +1,20 @@
+﻿@((MarkupString)token)
+
+@code {
+    [Parameter]
+    public string Address { get; set; }
+    private string token { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        token = "";
+        var utxo = await ConsoleCommand.GetNewUtxoAsync(Address);
+        foreach (var txInClass in utxo.TxIn.OrEmptyIfNull())
+        {
+            foreach (var token1 in txInClass.Tokens.OrEmptyIfNull())
+            {
+                token+="<br/>"+token1.Token();
+            }
+        }
+    }
+}

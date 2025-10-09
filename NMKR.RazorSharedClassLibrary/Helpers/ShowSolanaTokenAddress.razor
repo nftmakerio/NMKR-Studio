@@ -1,0 +1,13 @@
+﻿@if (Nft != null && !string.IsNullOrEmpty(Nft.Solanatokenhash) && Nft.Mintedonblockchain == Blockchain.Solana.ToString() && Project != null && Project.Enabledcoins.Contains(Coin.SOL.ToString()))
+{
+    <br/>
+    <span>NFT: </span>
+    <ShowSolanaToken Token="@Nft.Solanatokenhash"/>
+}
+
+@code {
+    [Parameter]
+    public Nft? Nft { get; set; }
+    [Parameter]
+    public Nftproject? Project { get; set; }
+}

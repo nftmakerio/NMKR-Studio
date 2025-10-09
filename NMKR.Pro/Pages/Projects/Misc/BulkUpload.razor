@@ -1,0 +1,58 @@
+﻿@page "/bulkupload/{projectid:int}"
+@inject AppSettings settings
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+
+<BreadCrumb Items="_items"></BreadCrumb>
+@if (project != null)
+{
+    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+        <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Bulk upload (@project.Id - @project.Projectname)</MudText>
+        <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+
+
+            <MudTabs Outlined="true" Position="@Position.Top" Rounded="true" Border="true"
+                     ApplyEffectsToContainer="true" PanelClass="pa-6">
+                <MudTabPanel Text="Upload via Drag and Drop">
+                    <BulkUploadDragAndDrop projectid="projectid"></BulkUploadDragAndDrop>
+                </MudTabPanel>
+                <MudTabPanel Text="Upload via SFTP">
+                    <ShowUploadSftpInstructions projectid="projectid"/>
+                </MudTabPanel>
+
+            </MudTabs>
+        </MudCard>
+    </MudContainer>
+}
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private readonly List<BreadcrumbItem> _items = new();
+    private Nftproject project = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        project = await (from a in db.Nftprojects
+                         where a.Id == projectid && a.CustomerId == settings.UserId
+                         select a).FirstOrDefaultAsync();
+        if (project == null)
+        {
+            LogClass.LogMessage(db, "WARNING: User tried to get Access to a foreign account: " + settings.UserId + " - Project id:" + projectid);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact support", Severity.Error);
+            NavigationManager.NavigateTo("/projects");
+            return;
+        }
+        _items.Add(new("Dashboard", href: "/"));
+        _items.Add(new("NFT Projects", href: "/projects"));
+        _items.Add(new("Manage NFT (" + project.Projectname + ")", "/managenft/" + projectid));
+        _items.Add(new("Bulk Upload", href: "/bulkupload/" + projectid, disabled: true));
+    }
+}

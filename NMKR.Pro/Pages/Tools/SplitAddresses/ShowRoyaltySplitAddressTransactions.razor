@@ -1,0 +1,27 @@
+﻿@page "/royaltysplitaddresstransactions/{splitaddressid:int}"
+@inject AppSettings settings
+
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Transactions</MudText>
+   <ShowRoyaltySplitAddressTransactionsList splitaddressid="@splitaddressid" CustomerId="@((int)settings.UserId)"></ShowRoyaltySplitAddressTransactionsList>
+</MudContainer>
+
+
+@code {
+    [Parameter] public int splitaddressid { get; set; }
+    private readonly List<BreadcrumbItem> _items = new();
+   
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _items.Add(new("Dashboard", href: "/"));
+        _items.Add(new("Manage royalty split addresses", href: "/royaltysplitaddresses"));
+        _items.Add(new("Royalty split address transactions", href: "/royaltysplitaddresstransactions/" + splitaddressid, disabled: true));
+    }
+
+
+}

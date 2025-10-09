@@ -1,0 +1,10 @@
+﻿@if (!string.IsNullOrEmpty(Address))
+{
+    <MudLink Href="@("https://" + (GlobalFunctions.IsMainnet() ? "" : "preprod.") + "cardanoscan.io/stakekey/" + Address)" Target="_blank">@GlobalFunctions.GetStartAndEnd(Address, 6)</MudLink>
+    <CopyToClipboard content="@Address" name="Stakekey"></CopyToClipboard>
+}
+
+@code {
+    [Parameter]
+    public string Address { get; set; }
+}

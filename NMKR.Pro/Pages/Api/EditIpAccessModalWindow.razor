@@ -1,0 +1,136 @@
+﻿@using System.Net
+@using NetTools
+@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+        @_loc["Add/Edit API IP Access"]
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudGrid>
+                <MudItem xs="12" md="12">
+                    <MudTextField Variant="Variant.Outlined" Label="@_loc["Ip Access rule"]" @bind-Value="access.AccessFrom" For="(() => access.AccessFrom)" />
+                </MudItem>
+                <MudItem xs="12" md="12">
+                    <MudTextField Variant="Variant.Outlined" Label="@_loc["Description"]" @bind-Value="access.Description" For="(() => access.Description)" />
+                </MudItem>
+                <MudItem xs="12" md="12">
+                <MudRadioGroup @bind-Value="access.State" T="string">
+                    <MudRadio Value="@("allowed")" Color="Color.Success" >@_loc["Allow"]</MudRadio>
+                    <MudRadio Value="@("forbidden")" Color="Color.Error" >@_loc["Deny"]</MudRadio>
+                </MudRadioGroup>
+</MudItem>
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">@_loc["Cancel"]</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="SavePrice" Disabled="isSubmitting">@_loc["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+<TwoFactorCheck Message="The Code for the new wallet address is:" @ref="_twoFactorCheck" />
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public AddIpLimitClass access { get; set; }
+
+    private bool isSubmitting;
+
+    bool success;
+    string[] errors = { };
+    MudForm form;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task SavePrice()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        if (string.IsNullOrEmpty(access.AccessFrom))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Provide an IP Address or an IP Network"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        bool wrongip = false;
+        try
+        {
+            var z = IPAddress.Parse(access.AccessFrom);
+        }
+        catch
+        {
+            wrongip = true;
+        }
+        if (wrongip)
+        {
+            try
+            {
+                var z = IPAddressRange.Parse(access.AccessFrom);
+                wrongip = false;
+            }
+            catch
+            {
+                wrongip = true;
+            }
+        }
+        if (wrongip)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["The entered IP Address or IP Address Range is invalid"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        bool ok = await _twoFactorCheck.CheckTwoFactor(access.CustomerId, TwoFactorCases.CreateEditApikey);
+        if (!ok)
+        {
+            isSubmitting = false;
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Two factor authentication failed. Please try again.", Severity.Error);
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (access.Id == null)
+        {
+
+            await db.Apikeyaccesses.AddAsync(new() {Accessfrom = access.AccessFrom, ApikeyId = access.ApiKeyId, State = access.State, Description = access.Description, Order = access.Order});
+        }
+        else
+        {
+            var z = await (from a in db.Apikeyaccesses
+                where a.Id == access.Id
+                select a).FirstOrDefaultAsync();
+            if (z != null)
+            {
+                z.Accessfrom = access.AccessFrom;
+                z.State = access.State;
+                z.Description = access.Description;
+            }
+        }
+        await db.SaveChangesAsync();
+
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+}

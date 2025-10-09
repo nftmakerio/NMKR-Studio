@@ -1,0 +1,177 @@
+﻿@inject ClipboardService ClipboardService
+@inject ISnackbar Snackbar
+
+<MudSwitch UncheckedColor="Color.Dark" class="mt-5" T="bool" @bind-Value="payinActivated" Color="Color.Primary">Pay-in Address activated</MudSwitch>
+<div class="mt-5 mb-5">
+    <MudText Typo="Typo.h5" Class="mb-10">Buyers can send payments to purchase NFTs during a sale to the pay-in address.</MudText>
+    <MudText Typo="Typo.h6">Purchasing NFT:</MudText>
+    <ul style="list-style-type: circle;" Class="ml-10">
+        <li>If a person pays the amount specified in the pricelist, they will receive the specified amount of that NFT.</li>
+        <li>If no more NFTs are available, the amount will be returned.</li>
+        <li>If the amount paid is too small, it will be returned.</li>
+        <li>If the amount paid is too large or does not fit any entry of the pricelist, the amount will be returned.</li>
+        <li>If the amount paid fits an entry in the pricelist, we will send the NFT to the purchaser's wallet address.</li>
+        <li>All NFTs will be created randomly, and there is no way to show which NFT the customer got since this pay-in address has no corresponding identifier.</li>
+    </ul>
+    <br/>
+    <MudText Typo="Typo.h6">Deactivating Pay-in Address:</MudText>
+    <ul style="list-style-type: circle;" Class="ml-10">
+        <li>If you don't use the address, please deactivate it.</li>
+        <li>If there is no transaction on this address within 7 days (no pay-in), we will deactivate the address automatically.</li>
+        <li>When the address is deactivated, no NFTs will be created, nor will any refunds go out.</li>
+    </ul>
+</div>
+<h2 class="mt-5 mb-5">@(project.Activatepayinaddress ? (string.IsNullOrEmpty(project.Alternativeaddress)?project.Policyaddress:project.Alternativeaddress) : "Address not activated")</h2>
+<MudButton DropShadow="false" Class="rounded-xl px-6 py-3" StartIcon="@Icons.Material.Filled.ContentCopy" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="CopyToClipboard" Disabled="project.Activatepayinaddress == false">Copy address to clipboard</MudButton>
+
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    private bool _payinActivated = false;
+    private bool payinActivated
+    {
+        get { return _payinActivated; }
+        set
+        {
+            _payinActivated = value;
+            SwitchChanged();
+        }
+    }
+
+    // private MudSwitch<bool> switchx { get; set; }
+    protected override void OnParametersSet()
+    {
+        _payinActivated = project.Activatepayinaddress;
+    }
+
+    private async Task ShowMessageDialog()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Are you sure?",
+            "When you disable the project address, we will not longer monitor the address. Even refunds are not processed any longer from this address.",
+            yesText: "Yes", cancelText: "No");
+        if (result == null)
+        {
+            _payinActivated = true;
+        }
+        if (result == true)
+        {
+            _payinActivated = false;
+        }
+        StateHasChanged();
+        SaveState();
+    }
+
+
+    private void SwitchChanged()
+    {
+        if (_payinActivated == false)
+        {
+            InvokeAsync(() => {
+                                  ShowMessageDialog();
+
+            });
+            return;
+        }
+        using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (string.IsNullOrEmpty(project.Policyaddress))
+        {
+            var pvkey = Encryption.DecryptString(project.Policyvkey, project.Password);
+            var address = ConsoleCommand.CreatePaymentAddressFromKeyfile(pvkey, GlobalFunctions.IsMainnet());
+            var p1 = (from a in db.Nftprojects
+                where a.Id == project.Id
+                select a).FirstOrDefault();
+            if (p1 != null)
+            {
+                p1.Policyaddress = address;
+                db.SaveChanges();
+            }
+
+            project.Policyaddress = address;
+        }
+
+
+        var pricelist = (from a in db.Pricelists
+            where a.NftprojectId == project.Id && a.State == "active"
+            select a).Count();
+        if (pricelist == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You do not have a pricelist. Please enter the prices for your NFT first", Severity.Error);
+            _payinActivated = false;
+        }
+
+
+        if (string.IsNullOrEmpty(project.Alternativeaddress))
+        {
+            var u = (from a in db.Nftprojects
+                where a.Policyaddress == project.Policyaddress && a.Id != project.Id && a.Activatepayinaddress == true
+                select a).ToList();
+
+            if (u.Any())
+            {
+                var newpaymentadress = ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+
+                if (newpaymentadress.ErrorCode != 0)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Pay in address could not be created", Severity.Error);
+                    _payinActivated = false;
+                }
+                else
+                {
+                    var p1 = (from a in db.Nftprojects
+                        where a.Id == project.Id
+                        select a).FirstOrDefault();
+                    if (p1 != null)
+                    {
+                        p1.Alternativeaddress = newpaymentadress.Address;
+                        p1.Alternativepayskey = Encryption.EncryptString(newpaymentadress.privateskey, p1.Password);
+                        p1.Alternativepayvkey = Encryption.EncryptString(newpaymentadress.privatevkey, p1.Password);
+                        db.SaveChanges();
+                        project.Alternativeaddress = p1.Alternativeaddress;
+                    }
+                }
+            }
+        }
+
+        SaveState();
+       
+        StateHasChanged();
+    }
+
+    private void SaveState()
+    {
+        using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var p = (from a in db.Nftprojects
+            where a.Id == project.Id
+            select a).FirstOrDefault();
+        if (p != null)
+        {
+            p.Activatepayinaddress = _payinActivated;
+            p.Lastinputonaddress = DateTime.Now;
+            project.Activatepayinaddress = _payinActivated;
+            db.SaveChanges();
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        // Writing to the clipboard may be denied, so you must handle the exception
+        try
+        {
+            await ClipboardService.WriteTextAsync((string.IsNullOrEmpty(project.Alternativeaddress) ? project.Policyaddress : project.Alternativeaddress));
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Payment Address copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Copy to clipboard was denied", Severity.Error);
+        }
+    }
+}

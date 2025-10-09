@@ -1,0 +1,203 @@
+﻿@using NMKR.Shared.Functions.Extensions
+
+@inject ISnackbar Snackbar
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Wallets</MudText>
+    <MudTable Items="@wallets" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" Class="border" Elevation="0" Style="border-color:#E0E0E0">
+        <HeaderContent>
+            <MudTh>Wallet Address</MudTh>
+            <MudTh>Comment</MudTh>
+            <MudTh>Created</MudTh>
+            <MudTh>Blockchain</MudTh>
+
+            <MudTh Style="Width:200px;">Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Wallet Address">
+                <ShowAddress Address="@context.Walletaddress" Blockchain="@(GlobalFunctions.ConvertToBlockchain(context.Cointype.ToEnum<Coin>()))" />
+            </MudTd>
+            <MudTd DataLabel="Comment">@context.Comment</MudTd>
+
+            <MudTd DataLabel="Created">@context.Created.ToShortDateString() @context.Created.ToShortTimeString()</MudTd>
+            <MudTd>
+                <ShowCoinNameWithImage Cointype="@(context.Cointype.ToEnum<Coin>())" />
+            </MudTd>
+            <MudTd Style="text-align:right">
+
+                <MudNavMenu Class="mud-width-full">
+                    <MudNavLink @onclick="() => Edit(context)" Icon="@NMKRIcons.Edit">Edit</MudNavLink>
+                    <MudNavLink @onclick="() => Delete(context.Id)" Icon="@NMKRIcons.Delete">Delete</MudNavLink>
+                </MudNavMenu>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CreateNewWallet" Class="mt-5 mb-5 rounded-xl px-6 py-3">Enter new Wallet Address</MudButton>
+</MudContainer>
+
+<TwoFactorCheck Message="To delete the wallet address use the following code:" @ref="_twoFactorCheck" />
+@code {
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    [Parameter]
+    public int CustomerId { get; set; }
+
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+    private List<Customerwallet> wallets = new();
+    private Customer? customer = new();
+    private bool isSubmitting;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        customer = await (from a in db.Customers
+                          where a.Id == CustomerId
+                          select a).FirstOrDefaultAsync();
+
+        if (customer == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+            return;
+        }
+
+        await LoadData(db);
+    }
+
+    private async Task Edit(Customerwallet wallet)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(EditWalletModalWindow.wallet), wallet }, {nameof(EditWalletModalWindow.IsAdmin), IsAdmin }};
+        var dialog = await DialogService.ShowAsync<EditWalletModalWindow>("Edit Wallet", parameters, maxWidth);
+        var result = await dialog.Result;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (!result.Canceled)
+        {
+            await LoadData(db);
+        }
+        await db.Database.CloseConnectionAsync();
+        isSubmitting = false;
+
+    }
+
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        var t = await (from a in db.Nftprojects
+                       where a.CustomerId == CustomerId
+                             && a.CustomerwalletId == id
+                       select a).FirstOrDefaultAsync();
+
+        if (t != null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("This wallet address is used in one or more Projects. Please change the wallet address in the projects to delete this address.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Delete can not be undone! Are you sure?",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+
+            bool ok = IsAdmin || await _twoFactorCheck.CheckTwoFactor(CustomerId, TwoFactorCases.CreateWallet);
+
+            if (ok)
+            {
+                var apk = await (from a in db.Customerwallets
+                                 where a.Id == id && a.CustomerId == CustomerId
+                                 select a).FirstOrDefaultAsync();
+
+                if (apk == null)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Internal Error. Please try again later or contact the support.", Severity.Error);
+                    return;
+                }
+                apk.State = "deleted";
+
+                var projects = await (from a in db.Nftprojects
+                                      where a.CustomerwalletId == id && a.CustomerId == CustomerId
+                                      select a).ToListAsync();
+                foreach (var project in projects)
+                {
+                    project.CustomerwalletId = null;
+                }
+
+                await db.SaveChangesAsync();
+            }
+            await LoadData(db);
+
+            StateHasChanged();
+        }
+        isSubmitting = false;
+    }
+
+
+    private async Task CreateNewWallet()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        string address = "";
+        string comment = "My new Wallet";
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters
+        {
+            {nameof(CreateNewWalletModalWindow.customer), customer},
+            {nameof(CreateNewWalletModalWindow.IpAddress), ConnectionInfo.RemoteIpAddress},
+            {nameof(CreateNewWalletModalWindow.walletaddress), address},
+            {nameof(CreateNewWalletModalWindow.IsAdmin), IsAdmin},
+            {nameof(CreateNewWalletModalWindow.comment), comment}
+        };
+        var dialog = await DialogService.ShowAsync<CreateNewWalletModalWindow>("Submit wallet address", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData(db);
+        }
+        isSubmitting = false;
+    }
+
+    private async Task LoadData(EasynftprojectsContext db)
+    {
+        wallets = await (from a in db.Customerwallets
+                         where a.CustomerId == CustomerId && a.State != "deleted"
+                         orderby a.Created descending
+                         select a).AsNoTracking().ToListAsync();
+        StateHasChanged();
+    }
+}

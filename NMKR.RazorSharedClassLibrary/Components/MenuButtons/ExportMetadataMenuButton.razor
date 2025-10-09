@@ -1,0 +1,82 @@
+﻿@using NMKR.Shared.Functions.Metadata
+@using BlazorDownloadFile
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+<MudOverlay Visible="isSubmitting" DarkBackground="true" Absolute="false" ZIndex="9999">
+    <MudProgressCircular Indeterminate="true" />
+    <MudText Typo="Typo.body1">@progress</MudText>
+</MudOverlay>
+<MudNavLink @onclick="(() => ExportMetadata(NftProjectid))">Export Metadata Files as ZIP</MudNavLink>
+
+
+@code {
+    [Parameter] public int NftProjectid { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+    private string progress = "";
+    private async Task ExportMetadata(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var nfts = await (from a in db.Nfts
+                          where a.NftprojectId == id && (a.State != "deleted") &&
+                                a.MainnftId == null && a.Isroyaltytoken == false
+                          select a).AsNoTracking().ToListAsync();
+
+        var project = await (from a in db.Nftprojects
+                             where a.Id == id
+                             select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (project == null)
+        {
+            isSubmitting = false;
+            return;
+        }
+        if (!nfts.Any())
+        {
+            isSubmitting = false;
+            return;
+        }
+
+        progress = "";
+        int i = 0;
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = GlobalFunctions.FilterTokenname(project.Projectname);
+        string filename = path + filteredfilename + "_metadata.zip";
+        Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteOldFiles(path, 1);
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        foreach (var nft in nfts)
+        {
+            i++;
+            string metafilename = path + nft.Name + ".metadata";
+            GetMetadataClass md = new(nft.Id, "",true, db);
+            await File.WriteAllTextAsync(metafilename, (await md.MetadataResultAsync()).Metadata);
+            archive.CreateEntryFromFile(metafilename, Path.GetFileName(metafilename), CompressionLevel.Optimal);
+            GlobalFunctions.DeleteFile(metafilename);
+            progress = $"Saving Metadata {i} of {nfts.Count}";
+            StateHasChanged();
+        }
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+
+
+        isSubmitting = false;
+        StateHasChanged();
+    }
+
+}

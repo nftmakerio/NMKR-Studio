@@ -1,0 +1,29 @@
+﻿@page "/transactions"
+@inject AppSettings settings
+@inject IConnectionMultiplexer _redis;
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Transactions</MudText>
+
+    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" >
+        <MudTabPanel Text="Mints">
+            <TransactionList CustomerId="@settings.UserId" Redis="_redis"></TransactionList>
+        </MudTabPanel>
+        <MudTabPanel Text="Refunds">
+            <RefundList customerid="@settings.UserId" projectid="@null" Redis="_redis"></RefundList>
+        </MudTabPanel>
+    </MudTabs>
+
+</MudContainer>
+
+
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Transactions", href: "/transactions", disabled: true),
+    };
+}

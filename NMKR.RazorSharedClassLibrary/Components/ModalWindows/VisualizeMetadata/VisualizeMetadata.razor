@@ -1,0 +1,86 @@
+﻿@using NMKR.Shared.Functions.Metadata
+@inject ISnackbar Snackbar
+     @if (parsedMetadata != null)
+     {
+         <div style="display: grid; place-items: center;">
+             <MudText Typo="Typo.h3" Style="text-align: center;">@parsedMetadata.TokenName</MudText>
+             @if (parsedMetadata.PreviewImage.Contains("<") && parsedMetadata.PreviewImage.Contains(">"))
+             {
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100px" Height="100px" Class="rounded-lg ma-4" />
+
+             } else {
+             <MudImage Src="@(parsedMetadata.PreviewImage)" Width="100" Alt="@parsedMetadata.TokenName" Elevation="25" Class="rounded-lg ma-4"/>
+             }
+             <br/>
+             @foreach (var file in parsedMetadata.MetadataFiles)
+             {
+                 <ShowMetadataFile File="@file" Tokenname="@parsedMetadata.TokenName"></ShowMetadataFile>
+             }
+             <br />
+             @foreach (var field in parsedMetadata.MetadataFields)
+             {
+                 <ShowMetadataField Field="@field" ProjectName="@ProjectName" ProjectDescription="@ProjectDescription"></ShowMetadataField>
+             }
+             <br/>
+             @if (string.IsNullOrEmpty(CipVersionText))
+             {
+                 <MudText Typo="Typo.body1">Metadata Standard: @parsedMetadata.MetadataStandard.ToString() </MudText>
+             }
+             else
+             {
+                 <MudText Typo="Typo.body1">Metadata Standard: @CipVersionText </MudText>
+             }
+           
+             @if (string.IsNullOrEmpty(parsedMetadata.Version))
+             {
+                 @if (parsedMetadata.MetadataStandard == MetadataStandard.CIP25)
+                 {
+                     <MudText Typo="Typo.body1">Version: Not Specified</MudText>
+                 }
+             }
+             else
+             {
+                 <MudText Typo="Typo.body1">Version: @parsedMetadata.Version</MudText>
+             }
+
+         </div>
+     }
+@code {
+    [Parameter]
+    public string Metadata { get; set; }
+
+    [Parameter]
+    public bool Cip68 { get; set; }
+    [Parameter]
+    public string CipVersionText { get; set; }
+    [Parameter]
+    public string ProjectName { get; set; }
+    [Parameter]
+    public string ProjectDescription { get; set; }
+
+    private ParsedMetadata? parsedMetadata;
+    protected override void OnParametersSet()
+    {
+        IMetadataParserInterface parser;
+        if (Cip68)
+        {
+            parser = new ParseCip68Metadata();
+        }
+        else
+        {
+            parser = new ParseCip25Metadata();
+        }
+        try
+        {
+
+            parsedMetadata = parser.ParseMetadata(Metadata);
+        }
+        catch (Exception e)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+    }
+
+
+}

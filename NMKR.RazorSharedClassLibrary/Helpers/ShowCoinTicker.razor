@@ -1,0 +1,48 @@
+﻿@inject TimerServices Timer
+
+@if (showTicker)
+{
+    @*
+    <MudAlert  ShowCloseIcon="true" Class="page-head__ticker" Severity="Severity.Info" Dense="true" ContentAlignment="HorizontalAlignment.Left" CloseIconClicked="(() => CloseMe())">
+            <p class="msg"><span>@((MarkupString)coins)</span></p>
+            <p class="msg msg--two"><span>@((MarkupString)coins)</span></p>
+    </MudAlert>
+    *@
+    <MudAlert  ShowCloseIcon="true" Severity="Severity.Info" Dense="true" ContentAlignment="HorizontalAlignment.Left" CloseIconClicked="(() => CloseMe())">
+        @((MarkupString)coins)
+    </MudAlert>
+}
+
+@code {
+    private string coins { get; set; }
+    private bool showTicker { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        coins = "";
+
+        var coinsx = await db.Newrates
+            .Select(x => x.Coin)
+            .Distinct()
+            .ToListAsync();
+        foreach (var coin in coinsx)
+        {
+            var latestRates = await (db.Newrates
+                .Where(x => x.Currency == "USD" && x.Coin == coin)
+                .OrderByDescending(x => x.Id)
+                .FirstOrDefaultAsync());
+            if (!string.IsNullOrEmpty(coins))
+                coins += "&nbsp;-&nbsp;&nbsp;";
+            coins += $"{coin}: {latestRates?.Price.Value.ToString("N4")} USD ";
+        }
+
+    }
+
+    private void CloseMe()
+    {
+        showTicker = false;
+    }
+
+
+}

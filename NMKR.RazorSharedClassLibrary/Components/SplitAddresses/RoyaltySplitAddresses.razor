@@ -1,0 +1,259 @@
+﻿@using NMKR.Shared.Classes.RoyaltySplitAddresses
+@using BlazorDownloadFile
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject NavigationManager NavigationManager
+
+    <MudTable Items="@addresses" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" Class="border" Elevation="0" Style="border-color:#E0E0E0">
+        <HeaderContent>
+            <MudTh>Blockchain / Address</MudTh>
+            <MudTh>Comment</MudTh>
+            <MudTh>State</MudTh>
+            <MudTh>ThresholdInAda</MudTh>
+            <MudTh>Balance</MudTh>
+            <MudTh>Created</MudTh>
+            <MudTh Style="width:250px;">Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Key">
+                <ShowBlockchainIcon Blockchain="Blockchain.Cardano" ShowText="true"></ShowBlockchainIcon>
+                <br/>
+            <ShowAddress Address="@context.Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+
+            </MudTd>
+            <MudTd DataLabel="Comment">@context.Comment</MudTd>
+
+                <MudTd DataLabel="State">
+
+                @switch (context.State)
+                {
+                    case "active":
+                        <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Active</NMKRChip>
+                        break;
+                    case "notactive":
+                        <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Not active</NMKRChip>
+                        break;
+                }
+            </MudTd>
+            <MudTd DataLabel="ThresholdInAda">@context.Minthreshold ADA</MudTd>
+            <MudTd DataLabel="Balance">@GlobalFunctions.FormatCurrency(GetBalance(context.Address),2) ADA</MudTd>
+            <MudTd DataLabel="Created">@context.Created.ToShortDateString() @context.Created.ToShortTimeString()</MudTd>
+
+            <MudTd>
+                <MudNavLink @onclick="() => Edit(context.Id)" Icon="@NMKRIcons.Edit">Edit</MudNavLink>
+                <MudNavLink @onclick="() => ExportKeys(context.Id)" Icon="@Icons.Material.Filled.ImportExport">Export Keys</MudNavLink>
+                <MudNavLink @onclick="() => ShowTransactions(context.Id)" Icon="@Icons.Material.Filled.MonetizationOn">Transactions</MudNavLink>
+            </MudTd>
+
+        </RowTemplate>
+        <PagerContent>
+                <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+    <MudText Typo="Typo.body2"><br/>
+        The Royalty Split Address will take 2 ADA for every outgoing transaction.<br/>
+        To keep the cost of the splitting low, please use a high Threshold.<br/>
+        A threshold of 200 ADA means that the incoming funds will be collected till the threshold of 200 ADA is reached.
+    </MudText>
+
+    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CreateNewAddress" Class="mt-5 mb-5 rounded-xl px-6 py-3">Create new split address</MudButton>
+
+    <TwoFactorCheck Message="The Code to download the keys is:" @ref="_twoFactorCheck" />
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter] 
+    public bool IsAdmin { get; set; }
+
+    private List<Splitroyaltyaddress> addresses = new();
+    private bool isSubmitting;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+    
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private long GetBalance(string address)
+    {
+        return ConsoleCommand.GetNewUtxo(address).LovelaceSummary;
+    }
+
+    private void ShowTransactions(int id)
+    {
+        if (IsAdmin)
+            NavigationManager.NavigateTo("/royaltysplitaddresstransactions/" + CustomerId + "/" + id);
+        else
+            NavigationManager.NavigateTo("/royaltysplitaddresstransactions/" + id);
+    }
+
+      private async Task ExportKeys(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        bool ok = true;
+
+
+          var customer = await (from a in db.Customers
+              where a.Id == CustomerId && a.State == "active"
+              select a).FirstOrDefaultAsync();
+
+          if (customer == null)
+          {
+              isSubmitting = false;
+              return;
+          }
+
+          var split = await (from a in db.Splitroyaltyaddresses
+              where a.Id == id
+              select a).FirstOrDefaultAsync();
+          if (split == null)
+          {
+              isSubmitting = false;
+              return;
+          }
+
+          if (IsAdmin)
+              ok = true;
+          else
+            ok = await _twoFactorCheck.CheckTwoFactor(CustomerId, TwoFactorCases.ExportKeys);
+
+        if (!ok)
+        {
+            isSubmitting = false;
+            return;
+        }
+        string filteredfilename = GlobalFunctions.FilterTokenname("RoyaltySplitKeys");
+
+
+        string polskey = Encryption.DecryptString(split.Skey,split.Salt);
+        string polvkey = Encryption.DecryptString(split.Vkey,split.Salt);
+
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".skey", polskey);
+        await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".vkey", polvkey);
+          await File.WriteAllTextAsync(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".address", split.Address);
+
+        string filename = GeneralConfigurationClass.TempFilePath+""+ filteredfilename + "_keys.zip";
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteOldFiles(GeneralConfigurationClass.TempFilePath+"", 1);
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".skey", Path.GetFileName(filteredfilename + ".skey"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".vkey", Path.GetFileName(filteredfilename + ".vkey"), CompressionLevel.Optimal);
+        archive.CreateEntryFromFile(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".address", Path.GetFileName(filteredfilename + ".address"), CompressionLevel.Optimal);
+
+        archive.Dispose();
+
+        File.Delete(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".skey");
+        File.Delete(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".vkey");
+          File.Delete(GeneralConfigurationClass.TempFilePath+"" + filteredfilename + ".address");
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+
+
+        isSubmitting = false;
+    }
+
+    private async Task Edit(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var apk = await (from a in db.Splitroyaltyaddresses
+            .Include(a=>a.Splitroyaltyaddressessplits)
+            where a.Id == id
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+
+        List<CreateSplits> roys = new();
+        foreach (var splitroyaltyaddressessplit in apk.Splitroyaltyaddressessplits)
+        {
+            if (splitroyaltyaddressessplit.IsMainReceiver==true)
+                continue;
+            
+                roys.Add(new(){Address = splitroyaltyaddressessplit.Address, 
+                    IsActive = splitroyaltyaddressessplit.State=="active", 
+                    OptionalValidFromDate = splitroyaltyaddressessplit.Activefrom, 
+                    OptionalValidToDate = splitroyaltyaddressessplit.Activeto, 
+                    Percentage = (double)splitroyaltyaddressessplit.Percentage/100});
+        }
+
+        EditSplitAddressClass asrac = new()
+        {
+            Comment = apk.Comment,
+            CustomerId = apk.CustomerId,
+            Id = apk.Id,
+            ThresholdInAda = apk.Minthreshold,
+            IsActive = apk.State == "active",
+            MainAddress = apk.Splitroyaltyaddressessplits.Where(x => x.IsMainReceiver == true)?.FirstOrDefault()?.Address,
+            Splits = roys
+        };
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters
+        {
+            { nameof(EditRoyaltySplitAddressModalWindow.SplitAddress),asrac },
+            { nameof(EditRoyaltySplitAddressModalWindow.CustomerId),CustomerId },
+
+        };
+        var dialog = await DialogService.ShowAsync<EditRoyaltySplitAddressModalWindow>("Edit royalty split address", parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+        isSubmitting = false;
+    }
+   
+    private async Task CreateNewAddress()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        EditSplitAddressClass sra = new() { CustomerId = CustomerId, ThresholdInAda = 50 };
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters
+        {
+            { nameof(EditRoyaltySplitAddressModalWindow.SplitAddress),sra },
+            { nameof(EditRoyaltySplitAddressModalWindow.CustomerId),CustomerId },
+        };
+        var dialog = await DialogService.ShowAsync<EditRoyaltySplitAddressModalWindow>("Create new royalty split address", parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+        isSubmitting = false;
+    }
+
+    private async Task LoadData()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        addresses = await (from a in db.Splitroyaltyaddresses
+                where a.CustomerId == CustomerId && a.State != "deleted"
+                orderby a.Created descending
+                select a).ToListAsync();
+    }
+}

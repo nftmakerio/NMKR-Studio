@@ -1,0 +1,214 @@
+﻿@using NMKR.Shared.Functions.Koios
+@using NMKR.Shared.Functions.Api
+@using NMKR.Shared.Functions.Blockfrost
+@using NMKR.Shared.Functions.DbSync
+@inject ISnackbar Snackbar
+@inject AppSettings settings
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Add/Edit Smart Contract Secondary Sale
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Variant="Variant.Outlined" Label="Name" @bind-Value="directsale.Name" Lines="1" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudSelect T="int" Label="Smartcontract" @bind-Value="directsale.SmartcontractId" ReadOnly="directsale.Id!=null">
+                        @foreach (var w in smartcontracts)
+                        {
+                            <MudSelectItem Value="@w.Id">@(w.Smartcontractname)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem> 
+                <MudItem xs="3">
+                    <MudNumericField Variant="Variant.Outlined" T="long" @bind-Value="directsale.Count" Immediate="true" Label="Count" Min="1" Max="long.MaxValue" ReadOnly="directsale.Id!=null" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField Variant="Variant.Outlined" Label="Fingerprint of the NFT" @bind-Value="directsale.Fingerprint" Lines="1" ReadOnly="directsale.Id!=null" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudNumericField Variant="Variant.Outlined" T="double" @bind-Value="directsale.Price" Immediate="true" Label="Price in ADA" Min="5" Max="1000000" ReadOnly="directsale.Id!=null" />
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="Save" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public EditDirectsaleClass directsale { get; set; }
+
+
+    private bool isSubmitting;
+
+    private List<Smartcontract> smartcontracts = new List<Smartcontract>();
+
+    void Cancel() => MudDialog.Cancel();
+    protected override async Task OnParametersSetAsync()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        smartcontracts = await (from a in db.Smartcontracts
+            .Include(a=>a.Defaultproject)
+                         where a.State == "active" &&  a.Type=="directsaleV2"
+                             orderby a.Id descending 
+                         select a).AsNoTracking().ToListAsync();
+        if (directsale.SmartcontractId == 0)
+            directsale.SmartcontractId = smartcontracts.First().Id;
+        StateHasChanged();
+    }
+
+    private async Task Save()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(directsale.Name))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter a name (it's just for information)", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (directsale.Price < 5)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Minimum price is 5 ADA", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (string.IsNullOrEmpty(directsale.Fingerprint))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter the Fingerprint of the NFT you want to sell", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (!directsale.Fingerprint.StartsWith("asset"))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Fingerprint is not correct - it must start with 'asset'", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        var policyidandassetname = await DbSyncFunctions.GetPolicyidAndAssetnameFromFingerprintAsync(directsale.Fingerprint);
+
+       // var policyidandassetname = await KoiosFunctions.GetPolicyidAndAssetnameFromFingerprintAsync(directsale.Fingerprint);
+        if (policyidandassetname == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Asset not found - Fingerprint is wrong", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (directsale.Id != null)
+        {
+            var auc = await (from a in db.Directsales
+                             where a.Id == directsale.Id && a.CustomerId == settings.UserId
+                             select a).FirstOrDefaultAsync();
+            if (auc != null)
+            {
+                auc.Name = directsale.Name;
+                await db.SaveChangesAsync();
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Directsale changed", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error. Please contact the support", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        else
+        {
+            Directsale la = new()
+                {
+                    Created = DateTime.Now,
+                    Price = (long)(directsale.Price * 1000000),
+                    State = "waitingforlocknft",
+                    Marketplacefeepercent = 2,
+                    Royaltyaddress = "",
+                    CustomerId = settings.UserId,
+                    Name = directsale.Name,
+                    SmartcontractId = directsale.SmartcontractId, Lockamount = 2000000, Transactionid = ""
+                };
+
+            await db.Directsales.AddAsync(la);
+            await db.SaveChangesAsync();
+
+            DirectsalesNft nft = new DirectsalesNft() {DirectsaleId = la.Id, Policyid = policyidandassetname.PolicyId, 
+                Tokennamehex = policyidandassetname.AssetName, 
+                Tokencount = directsale.Count, 
+                Ipfshash = await BlockfrostFunctions.GetIpfsFromMetadata(policyidandassetname.PolicyId, policyidandassetname.AssetName)??""};
+            await db.DirectsalesNfts.AddAsync(nft);
+            await db.SaveChangesAsync();
+
+            CreatePaymentTransactionClass cptc = new CreatePaymentTransactionClass()
+            {
+                ProjectUid = smartcontracts.First(x => x.Id == directsale.SmartcontractId).Defaultproject.Uid,
+                PaymentTransactionType = PaymentTransactionTypes.smartcontract_directsale, TransactionParameters = new TransactionParametersClass[]
+                {new TransactionParametersClass() {PolicyId = policyidandassetname.PolicyId, 
+                    Tokenname = policyidandassetname.AssetName.FromHex(), Tokencount = directsale.Count, TokennameHex = policyidandassetname.AssetName}},
+                DirectSaleParameters = new DirectSaleParameterClass() {PriceInLovelace = (long) (directsale.Price * 1000000), SmartContractName = smartcontracts.First(x => x.Id == directsale.SmartcontractId).Smartcontractname},
+                CustomerIpAddress = ""
+            };
+
+            var result=await ApiFunctions.CreatePaymentTransactionAsync(cptc);
+
+            if (result == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Error while creating the directsale", Severity.Error);
+                db.Directsales.Remove(la);
+                await db.SaveChangesAsync();
+                return;
+            }
+
+            var royalties = await KoiosFunctions.GetRoyaltiesFromPolicyIdAsync(policyidandassetname.PolicyId);
+            if (royalties != null)
+            {
+                la.Royaltyaddress = royalties.Address;
+                la.Royaltyfeespercent = royalties.Percentage;
+            }
+
+            la.Transactionid = result.PaymentTransactionUid;
+            la.Nmkrpaylink = result.NMKRPayUrl;
+            await db.SaveChangesAsync();
+
+
+
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("New sale created", Severity.Success);
+        }
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+}

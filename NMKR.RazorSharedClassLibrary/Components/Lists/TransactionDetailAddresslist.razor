@@ -1,0 +1,37 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@if (transaction.Coin == Coin.ADA.ToString())
+{
+    <MudText Typo="Typo.inherit">Receiver:</MudText>
+    <ShowAddress Address="@transaction.Receiveraddress" Blockchain="@(transaction.Coin.ToEnum<Coin>().ToBlockchain())" />
+    @if (transaction.Transactiontype != nameof(TransactionTypes.mintfromcustomeraddress) && transaction.Transactiontype != nameof(TransactionTypes.mintfromnftmakeraddress))
+    {
+        @if (transaction.Coin == Coin.ADA.ToString())
+        {
+            <br/>
+            <MudText Typo="Typo.inherit">StakeAddress:</MudText>
+            <ShowAddress Address="@(string.IsNullOrEmpty(transaction.Stakeaddress) ? Bech32Engine.GetStakeFromAddress(transaction.Receiveraddress) : transaction.Stakeaddress)" Blockchain="@(transaction.Coin.ToEnum<Coin>().ToBlockchain())" />
+        }
+
+        <br>
+        <MudText Typo="Typo.inherit">OriginatorAddress:</MudText>
+        <ShowAddress Address="@transaction.Originatoraddress" Blockchain="@(transaction.Coin.ToEnum<Coin>().ToBlockchain())" />
+    }
+    @if (transaction.Transactiontype == nameof(TransactionTypes.paidonftaddress))
+    {
+        <br/>
+        <MudText Typo="Typo.inherit">PayAddress:</MudText>
+        <ShowAddress Address="@transaction.Senderaddress" Blockchain="@(transaction.Coin.ToEnum<Coin>().ToBlockchain())"></ShowAddress>
+    }
+    @if (transaction.Metadatastandard == "cip68" && transaction.Coin == Coin.ADA.ToString())
+    {
+        <br/>
+        <MudText Typo="Typo.inherit">CIP68 Reference Address:</MudText>
+        <ShowAddress Address="@transaction.Cip68referencetokenaddress" Blockchain="@(transaction.Coin.ToEnum<Coin>().ToBlockchain())"></ShowAddress>
+    }
+}
+
+
+@code {
+     [Parameter]
+     public Transaction transaction { get; set; }
+}

@@ -1,0 +1,27 @@
+﻿<small>
+    <MudText Typo="Typo.inherit">Price Tier: </MudText>
+
+    @if (Project.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+    {
+        <MudText Typo="Typo.inherit">@(GlobalFunctions.FormatCurrency(Project.Settings.Mintingcosts, 2, Coin.ADA) + " ADA/Mint")</MudText>
+    }
+    @if (Project.Enabledcoins.Contains(Coin.SOL.ToString()) == true)
+    {
+        @if (Project.Enabledcoins.Contains(Coin.ADA.ToString()) == true)
+    {
+        <MudText Typo="Typo.inherit"> - </MudText>
+    }
+    <MudText Typo="Typo.inherit">@(GlobalFunctions.FormatCurrency(Project.Settings.Mintingcostssolana, 2, Coin.SOL) + " SOL/Mint")</MudText>
+    }
+
+    @if (Project.Settings.Feespercent > 0)
+    {
+        <MudText Typo="Typo.inherit"> or:</MudText>
+        <MudText Typo="Typo.inherit">@Project.Settings.Feespercent</MudText>
+        <MudText Typo="Typo.inherit">%</MudText>
+    }
+</small>
+@code {
+    [Parameter]
+    public Nftproject Project { get; set; }
+}

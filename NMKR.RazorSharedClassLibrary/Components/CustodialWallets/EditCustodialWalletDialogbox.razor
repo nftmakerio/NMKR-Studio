@@ -1,0 +1,55 @@
+﻿@inject ISnackbar Snackbar
+
+
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Edit Managed Wallet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" Label="Walletname"  @bind-Value="wallet.Walletname" Lines="1" Immediate="true" Class="mb-3" />
+        <MudSwitch UncheckedColor="Color.Dark" T="string" @bind-Value="wallet.State" Color="Color.Success" Converter="@(new CustomStringToBoolConverter())">State: "@(wallet.State)"</MudSwitch>
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Custodialwallet wallet { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+
+    private bool isSubmitting;
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var ak = await (from a in db.Custodialwallets
+            where a.Id == wallet.Id
+            select a).FirstOrDefaultAsync();
+
+        if (ak == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Wallet not found", Severity.Error);
+            return;
+        }
+
+        ak.Walletname = wallet.Walletname;
+        ak.State=wallet.State;
+
+        await db.SaveChangesAsync();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Changes saved", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(ak));
+    }
+
+}

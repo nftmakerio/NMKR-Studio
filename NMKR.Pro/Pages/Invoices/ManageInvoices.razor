@@ -1,0 +1,106 @@
+﻿@page "/invoices/"
+@using NMKR.Shared.Invoices
+@using System.Threading
+@inject AppSettings settings
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+@inject IStringLocalizer _loc
+
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4" Style="border-color:#E0E0E0">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">@_loc["Invoices"]</MudText>
+    <MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+        <MudTable Bordered="true" Hover="true" Striped="false" Elevation="0" @ref="table" Style="border-color:#E0E0E0"
+                  HorizontalScrollbar="true" T="Invoice" Loading="isloading"
+                  ServerData="LoadTodos">
+            <HeaderContent>
+                <MudTh>@_loc["Invoice No"]</MudTh>
+                <MudTh>@_loc["Date"]</MudTh>
+                <MudTh>@_loc["Customer ID"]</MudTh>
+                <MudTh>@_loc["Customer"]</MudTh>
+                <MudTh>@_loc["Country"]</MudTh>
+                <MudTh>@_loc["Billing period"]</MudTh>
+                <MudTh>@_loc["Sum ADA"]</MudTh>
+                <MudTh>@_loc["Actions"]</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+
+                <MudTd DataLabel="">@GlobalFunctions.PadInt(context.Invoiceno,8)</MudTd>
+                <MudTd DataLabel="">@context.Invoicedate.ToShortDateString()</MudTd>
+                <MudTd DataLabel="">@context.CustomerId</MudTd>
+                <MudTd DataLabel="">@(context.Firstname + " " + context.Lastname + (!string.IsNullOrEmpty(context.Company) ? " (" + context.Company + ")" : ""))</MudTd>
+                    <MudTd DataLabel="">@context.Country.Name</MudTd>
+                    <MudTd DataLabel="">@context.Billingperiod</MudTd>
+                    <MudTd DataLabel="">@context.Netada.ToString("N2")</MudTd>
+                    <MudTd Style="text-align: right">
+                        <MudNavLink @onclick="() => PrintInvoice(context.Id)" Icon="@Icons.Material.Filled.Print">@_loc["Print Invoice"]</MudNavLink>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager HideRowsPerPage="true" />
+                </PagerContent>
+            </MudTable>
+    </MudCard>
+  
+</MudContainer>
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private bool isSubmitting;
+
+    private readonly List<BreadcrumbItem> _items = new();
+
+    protected override void OnInitialized()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Invoices"], href: "/invoices", disabled: true));
+    }
+
+    private bool isloading { get; set; }
+    private MudTable<Invoice> table { get; set; }
+
+    private async Task<TableData<Invoice>> LoadTodos(TableState state, CancellationToken cancellationToken)
+    {
+        isloading = true;
+        StateHasChanged();
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var invoices = await (from a in db.Invoices
+            .Include(a=>a.Country)
+            where a.CustomerId==(int)settings.UserId
+            orderby a.Id descending
+                              select a).AsNoTracking().Skip(state.PageSize * state.Page).Take(state.PageSize).ToListAsync();
+
+        int c = await (from a in db.Invoices
+            where a.CustomerId==(int)settings.UserId
+                       orderby a.Id descending
+                       select a).AsNoTracking().CountAsync();
+
+
+        isloading = false;
+        StateHasChanged();
+        return new() { Items = invoices, TotalItems = c };
+    }
+   
+   
+    private async Task PrintInvoice(int invoiceid)
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        CreateInvoicePdfClass cipc = new();
+        string filename=await cipc.CreateInvoice(db,invoiceid,false);
+
+        if (!string.IsNullOrEmpty(filename))
+        {
+            byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+            String AsBase64String = Convert.ToBase64String(AsBytes);
+
+            await BlazorDownloadFileService.DownloadFile(filename, AsBase64String, "application/octet-stream");
+        }
+
+
+    }
+
+}

@@ -1,0 +1,30 @@
+﻿@page "/createnewprojectassistant"
+@using NMKR.RazorSharedClassLibrary.Components.Projects.ProjectAssistant
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudButton Class="mb-4" Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateNewProject">Create New Project</MudButton>
+
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+        new("Create new project", href: "/createnewproject", disabled:true),
+    };
+
+
+    private async Task CreateNewProject()
+    {
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = true, CloseButton = true, CloseOnEscapeKey = true};
+        var parameters = new DialogParameters { 
+            { nameof(CreateNewProjectAssistantModalWindow.CustomerId), (int)settings.UserId },
+            { nameof(CreateNewProjectAssistantModalWindow.IsAdmin), false } };
+        var dialog = await DialogService.ShowAsync<CreateNewProjectAssistantModalWindow>("",parameters, maxWidth);
+        var result = await dialog.Result;
+    }
+
+}

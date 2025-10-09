@@ -1,0 +1,92 @@
+﻿@using NMKR.Shared.Functions.Extensions
+
+<MudItem xs="12" sm="12">
+    <MudText Typo="Typo.h6" Color="Color.Dark">Select Blockchains</MudText>
+</MudItem>
+<MudItem xs="12" sm="12">
+    
+    <MudButtonGroup Color="Color.Dark" Variant="Variant.Outlined">
+    @foreach (var blockchain in activeblockchains)
+    {
+        @if (blockchain.Enabled || isAdmin)
+        {
+            @if (_value != null && _value.ToArray().IndexOf(blockchain.Name.ToEnum<Blockchain>()) != -1)
+            {
+                <MudButton Size="Size.Large" 
+                           Style="width:160px" 
+                           OnClick="() => ToggleBlockchain(blockchain.Name)"
+                               Disabled="@((ft_nonft_project == 1 && blockchain.Hasft == false) || (ft_nonft_project == 0 && blockchain.Hasnft == false))"
+                           StartIcon="@Icons.Material.Filled.Check" 
+                           IconColor="Color.Primary">@blockchain.Name</MudButton>
+            }
+            else
+            {
+                <MudButton Size="Size.Large" 
+                           Style="width:160px" 
+                           OnClick="() => ToggleBlockchain(blockchain.Name)"
+                               Disabled="@((ft_nonft_project == 1 && blockchain.Hasft == false) || (ft_nonft_project == 0 && blockchain.Hasnft == false))"
+                           IconColor="Color.Primary">@blockchain.Name</MudButton>
+            }
+        }
+    }
+    </MudButtonGroup>
+    @*
+
+    <MudToggleGroup Style="width: 500px;" T="Blockchain" SelectionMode="SelectionMode.MultiSelection" @bind-Values="_value" CheckMark>
+        @foreach (var blockchain in activeblockchains)
+        {
+            @if (blockchain.Enabled || isAdmin)
+            {
+                <MudToggleItem Value="@(blockchain.Name)" SelectedIcon="@Icons.Material.Filled.Check"/>
+            }
+        }
+    </MudToggleGroup>*@
+</MudItem>
+
+@code {
+    [Parameter]
+    public bool isAdmin { get; set; }
+
+    private IEnumerable<Blockchain> _value
+    {
+        get => Value;
+        set
+        {
+            Value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+    [Parameter]
+    public IEnumerable<Blockchain> Value { get; set; }
+    [Parameter]
+    public EventCallback<IEnumerable<Blockchain>> ValueChanged { get; set; }
+    [Parameter]
+    public string EnabledBlockchains { get; set; }
+
+    [Parameter] public int ft_nonft_project { get; set; } = 0;
+
+
+    private List<Activeblockchain> activeblockchains = new List<Activeblockchain>();
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        activeblockchains = await db.Activeblockchains.Where(x=>x.Enabled).AsNoTracking().ToListAsync();
+
+        if (!string.IsNullOrEmpty(EnabledBlockchains))
+        {
+            var enabledBlockchains = EnabledBlockchains.Split(",");
+            foreach (var bc in activeblockchains.OrEmptyIfNull())
+            {
+                bc.Enabled = enabledBlockchains.Contains(bc.Name);
+            }
+        }
+    }
+
+    private void ToggleBlockchain(string blockchainName)
+    {
+        _value = _value.ToArray().IndexOf(blockchainName.ToEnum<Blockchain>()) != -1 ? 
+            _value.Where(x => x != blockchainName.ToEnum<Blockchain>()).ToArray() : 
+            _value.Append(blockchainName.ToEnum<Blockchain>()).ToArray();
+    }
+
+}

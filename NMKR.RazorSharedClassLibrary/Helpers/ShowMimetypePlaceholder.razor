@@ -1,0 +1,20 @@
+﻿@if (!string.IsNullOrEmpty(svg))
+{
+    <img src="@svg" style='height: 50px; width: 50px; object-fit: contain' />
+}
+
+@code {
+   [Parameter] 
+   public string Mimetype { get; set; }
+
+    private string svg { get; set; }
+    protected override async Task OnParametersSetAsync()
+    {
+        await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+        var mimetype = await db.Mimetypes.FirstOrDefaultAsync(x => x.Mimetype1.ToLower() == Mimetype.ToLower());
+        if (mimetype != null)
+        {
+            svg = mimetype.Placeholderfile;
+        }
+    }
+}

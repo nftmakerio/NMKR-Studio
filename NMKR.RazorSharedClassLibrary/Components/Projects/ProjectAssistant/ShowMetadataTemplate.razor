@@ -1,0 +1,44 @@
+﻿@using BlazorMonaco.Editor
+
+@*
+<MudTabs Outlined="true" Elevation="4" Rounded="true" Border="true"
+         ApplyEffectsToContainer="true" Class="mt-8" PanelClass="pa-6"
+         Position="Position.Bottom">
+    <MudTabPanel Text="Visualisation">
+        <VisualizeMetadataModalWindow Metadata="@Metadata" Cip68="@Cip68"></VisualizeMetadataModalWindow>
+    </MudTabPanel>
+    <MudTabPanel Text="CIP25 Metadata">
+        <StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip25" @ref="editorcip25"/>
+    </MudTabPanel>
+</MudTabs>
+*@
+<StandaloneCodeEditor ConstructionOptions="EditorConstructionOptionsCip25" @ref="editorcip25"/>
+
+@code {
+    [Parameter]
+    public string Metadata { get; set; }
+
+    [Parameter]
+    public bool Cip68 { get; set; }
+    private StandaloneCodeEditor? editorcip25;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptionsCip25(StandaloneCodeEditor editor)
+    {
+     
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = Metadata,
+            ReadOnly = true, 
+            Dimension = new Dimension(){Height = 400},
+            TabSize = 2,
+            FontSize = 14,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            StickyScroll = new EditorStickyScrollOptions
+            {
+                Enabled = false
+            }
+        };
+    }
+}

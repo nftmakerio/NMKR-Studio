@@ -1,0 +1,75 @@
+﻿<MudSelect @bind-Value="@_value" Label="Blockchain" Variant="@Variant">
+    @foreach (var blockchain in activeblockchains)
+    {
+        <MudSelectItem Value="@blockchain.Name">
+            @if (Variant != Variant.Text)
+            {
+                <img style="vertical-align:middle" src="@blockchain.Image" width="25" height="25">
+            }
+            <span style="vertical-align:middle; margin-left: 10px">@blockchain.Name</span>
+        </MudSelectItem>
+    }
+</MudSelect>
+
+  @code {
+      [Parameter]
+      public Nftproject? project { get; set; }
+      [Parameter]
+      public bool isAdmin { get; set; }
+
+      [Parameter]
+      public string Value { get; set; }
+      [Parameter]
+      public string EnabledBlockchains { get; set; }
+      [Parameter]
+      public EventCallback<string> ValueChanged { get; set; }
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Outlined;
+
+      private List<Activeblockchain> activeblockchains = new List<Activeblockchain>();
+
+      private string _value
+      {
+          get => Value;
+          set
+          {
+              Value = value;
+              ValueChanged.InvokeAsync(value);
+          }
+      }
+
+
+      protected override async Task OnInitializedAsync()
+      {
+          await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+          var activeblockchains1 = await db.Activeblockchains.Where(x=>x.Enabled).AsNoTracking().ToListAsync();
+
+          activeblockchains = new List<Activeblockchain>();
+          if (project != null)
+          {
+              foreach (var bc in activeblockchains1)
+              { 
+                  bool add = project.Enabledcoins.Contains(bc.Coinname);
+
+                  if (!string.IsNullOrEmpty(EnabledBlockchains))
+                  {
+                      var enabledBlockchains = EnabledBlockchains.Split(",");  
+                      add = enabledBlockchains.Contains(bc.Name);
+                  }
+
+                  if (add)
+                      activeblockchains.Add(bc);
+
+              }
+          }
+          else
+          {
+            activeblockchains = activeblockchains1;
+          }
+          StateHasChanged();
+      }
+    /*  protected override async Task OnParametersSetAsync()
+      {
+          StateHasChanged();
+      }*/
+}

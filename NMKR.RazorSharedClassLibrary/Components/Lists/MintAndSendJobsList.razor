@@ -1,0 +1,165 @@
+﻿@using BlazorDownloadFile
+@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Indeterminate="true" />
+    </MudOverlay>
+<MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Mint & Send Queue - @project.Id - @project.Projectname</MudText>
+
+<MudTable Elevation="0" Class="border" Style="border-color:#E0E0E0 " Items="@mas" Hover="true" Bordered="true" Striped="false" HorizontalScrollbar="true" T="Mintandsend" Loading="@progressIsVisible">
+    <HeaderContent>
+        <MudTh>Created</MudTh>
+            <MudTh>State</MudTh>
+        <MudTh>Executed</MudTh>
+        <MudTh>Receiver</MudTh>
+        <MudTh>TX-ID</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>
+            @context.Created.ToShortDateString() @context.Created.ToLongTimeString()
+        </MudTd>
+        <MudTd>
+            @switch (context.State)
+            {
+                case "success":
+                    <NMKRChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Success</NMKRChip>
+                    break;
+                case "execute":
+                    <NMKRChip Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Execute</NMKRChip>
+                    break;
+                case "error":
+                    <NMKRChip Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Error</NMKRChip>
+                    break;
+                case "canceled":
+                    <NMKRChip Color="Color.Secondary" Size="Size.Small" Variant="Variant.Filled">Canceled</NMKRChip>
+                    break;
+            }
+        </MudTd>
+        <MudTd>
+            @if (context.Executed != null)
+            {
+                @(context.Executed.Value.ToShortDateString() + " " + context.Executed.Value.ToLongTimeString())
+            }
+        </MudTd>
+        <MudTd>
+                <ShowAddress Address="@context.Receiveraddress" Blockchain="@(context.Coin.ToEnum<Coin>().ToBlockchain())"></ShowAddress>
+        </MudTd>
+        <MudTd>
+            @if (context.Transactionid != null)
+            {
+                <ShowTransactionHash TxId="@context.Transactionid" Blockchain="@((context.Coin.ToEnum<Coin>()).ToBlockchain())"></ShowTransactionHash>
+            }
+        </MudTd>
+
+    </RowTemplate>
+
+    <PagerContent>
+        <MudTablePager HideRowsPerPage="true" />
+    </PagerContent>
+</MudTable>
+<MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="ExportTransactions" Class="mt-5 mb-5 rounded-xl px-6 py-3">Export to CSV</MudButton>
+
+    @code {
+
+        [Parameter]
+        public int customerid { get; set; }
+
+        [Parameter]
+        public int projectid { get; set; }
+
+        [Inject]
+        private IDialogService DialogService { get; set; }
+
+        private bool progressIsVisible { get; set; }
+        private bool isSubmitting;
+        private bool OverlayIsVisible { get; set; }
+        private Nftproject? project = new();
+        private List<Mintandsend> mas = new();
+
+
+        protected override async Task OnParametersSetAsync()
+        {
+            await ReloadData();
+        }
+
+        private async Task ReloadData()
+        {
+            if (projectid == 0)
+                return;
+            await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+
+            progressIsVisible = true;
+            StateHasChanged();
+
+            project = await (from a in db.Nftprojects
+                where a.Id == projectid && a.CustomerId == customerid
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+
+            if (project == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error - please contact support", Severity.Error);
+                return;
+            }
+
+            mas = await (from a in db.Mintandsends
+                where a.NftprojectId == projectid && a.CustomerId == customerid
+                orderby a.Id descending
+                select a).AsNoTracking().ToListAsync();
+
+
+            progressIsVisible = false;
+            StateHasChanged();
+        }
+
+        private async Task ExportTransactions()
+        {
+            if (isSubmitting)
+                return;
+
+            isSubmitting = true;
+            OverlayIsVisible = true;
+            StateHasChanged();
+
+
+            var path = GeneralConfigurationClass.TempFilePath;
+            string filteredfilename = "mintsendsendjobs";
+            string filename = path + filteredfilename + ".zip";
+            string csvfilename = path + filteredfilename + ".csv";
+            Directory.CreateDirectory(path);
+            GlobalFunctions.DeleteFile(filename);
+            GlobalFunctions.DeleteFile(csvfilename);
+
+            GlobalFunctions.DeleteOldFiles(path, 1);
+
+            var mas1 = (from a in mas
+                select new MintAndSendJobsExportClass {Created = a.Created, Transactionid = a.Transactionid, State = a.State, Executed = a.Executed, NftprojectId = a.NftprojectId, 
+                    Receiveraddress = a.Receiveraddress, StakeAddress = Bech32Engine.GetStakeFromAddress(a.Receiveraddress)}).ToArray();
+
+
+            await using (var writer = new StreamWriter(csvfilename))
+            await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                await csv.WriteRecordsAsync(mas1);
+            }
+
+
+            using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+            archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+            archive.Dispose();
+
+            byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+            String AsBase64String = Convert.ToBase64String(AsBytes);
+
+            await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+            GlobalFunctions.DeleteFile(csvfilename);
+
+            OverlayIsVisible = false;
+            isSubmitting = false;
+        }
+
+    }

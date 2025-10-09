@@ -1,0 +1,20 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.Paywindow
+@inject IStringLocalizer _loc
+
+<MudDialog>
+    <DialogContent>
+        <IntegrationPayButton @bind-Value="model" Project="@Project" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" OnClick="Close">@_loc["Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public PaybuttonClass? model { get; set; }
+    [Parameter]
+    public Nftproject Project { get; set; }
+
+    void Close() => MudDialog.Cancel();
+}

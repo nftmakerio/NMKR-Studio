@@ -1,0 +1,100 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Create burning endpoint
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <BlockchainSelector project="@project" isAdmin="false" @bind-Value="@blockchainselector"></BlockchainSelector>
+        <MudSlider @bind-Value="activedays" Min="1" Max="365" Color="Color.Info">How many days should the burning address active (in days): @activedays.ToString()</MudSlider>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Color="Color.Secondary" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="CreateEndpoint" Disabled="isSubmitting">Create burning endpoint</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private string blockchainselector { get; set; } = Blockchain.Cardano.ToString();
+
+    private bool solanaenabled = false;
+    private bool cardanoInProjectDisabled = false;
+    private bool solanaInProjectDisabled = true;
+    private int activedays { get; set; } = 1;
+    private bool isSubmitting;
+    void Cancel() => MudDialog.Cancel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        solanaenabled = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "enablesolana");
+        solanaInProjectDisabled = project.Enabledcoins.Contains(Coin.SOL.ToString())==false;
+        cardanoInProjectDisabled = project.Enabledcoins.Contains(Coin.ADA.ToString()) == false;
+    }
+
+    private async Task CreateEndpoint()
+    {
+        if (isSubmitting)
+            return;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        if (project.Enabledcoins.Contains(Coin.ADA.ToString()) == false && blockchainselector == Blockchain.Cardano.ToString())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Cardano is not enabled in this project", Severity.Error);
+            return;
+        }
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()) == false && blockchainselector == Blockchain.Solana.ToString())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Cardano is not enabled in this project", Severity.Error);
+            return;
+        }
+        isSubmitting = true;
+        StateHasChanged();
+
+        if (blockchainselector == Blockchain.Cardano.ToString() && project.Policyexpire != null && project.Policyexpire < DateTime.Now)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Policy is locked now. Burning is not longer possible", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        var burningEndpoint = await GlobalFunctions.CreateBurningAddressAsync(db, project.Id, DateTime.Now.AddDays(activedays), blockchainselector.ToEnum<Blockchain>());
+
+            if (burningEndpoint == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Error while creating address", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+
+        StateHasChanged();
+
+        var parameters = new DialogParameters { { nameof(ShowBurningEndpointModalWindow.Address), burningEndpoint.Address },
+            { nameof(ShowBurningEndpointModalWindow.ValidUntil), burningEndpoint.Validuntil.ToShortDateString() + " - " + burningEndpoint.Validuntil.ToLongTimeString() },
+            { nameof(ShowBurningEndpointModalWindow.Blockchain), blockchainselector.ToEnum<Blockchain>() },
+        };
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
+        var dialog = await DialogService.ShowAsync<ShowBurningEndpointModalWindow>("Show Burning Endpoint", parameters, maxWidth);
+        var result = await dialog.Result;
+        isSubmitting = false;
+        MudDialog.Close();
+    }
+}

@@ -1,0 +1,25 @@
+﻿Blockchains:
+<br />
+@if (EnabledCoins.Contains(Coin.ADA.ToString()))
+{
+    <ShowCoinNameWithImage Cointype="Coin.ADA"></ShowCoinNameWithImage>
+    <br />
+}
+@if (EnabledCoins.Contains(Coin.SOL.ToString()))
+{
+    <ShowCoinNameWithImage Cointype="Coin.SOL"></ShowCoinNameWithImage>
+    <br />
+}
+@if (EnabledCoins.Contains(Coin.APT.ToString()))
+{
+    <ShowCoinNameWithImage Cointype="Coin.APT"></ShowCoinNameWithImage>
+    <br />
+}
+@if (EnabledCoins.Contains(Coin.BTC.ToString()))
+{
+    <ShowCoinNameWithImage Cointype="Coin.BTC"></ShowCoinNameWithImage>
+    <br />
+}
+@code {
+   [Parameter] public string EnabledCoins { get; set; }
+}

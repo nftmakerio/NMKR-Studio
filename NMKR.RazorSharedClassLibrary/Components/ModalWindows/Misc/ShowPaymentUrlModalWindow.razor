@@ -1,0 +1,29 @@
+﻿@inject IJSRuntime JS
+
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Specific Sale via NMKR Pay
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Variant="Variant.Outlined" ReadOnly="true" T="string" Label="NMKR Pay Link"  Text="@Link" Class="mb-5" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Close</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" StartIcon="@Icons.Material.Filled.Payment" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="Try">Open NMKR Pay</MudButton>
+        <CopyToClipboardButton Name="Link" Content="@Link"></CopyToClipboardButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public string Link{ get; set; }
+    void Cancel() => MudDialog.Cancel();
+    private async Task Try()
+    {
+        await JS.InvokeAsync<string>("openPaymentWindow", Link);
+    }
+
+}

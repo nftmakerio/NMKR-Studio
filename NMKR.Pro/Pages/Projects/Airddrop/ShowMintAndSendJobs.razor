@@ -1,0 +1,38 @@
+﻿@page "/showmintandsendjobs/{customerid:int}/{projectid:int}"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MintAndSendJobsList customerid="@customerid" projectid="@projectid" />
+</MudContainer>
+
+
+@code {
+    [Parameter]
+    public int customerid { get; set; }
+    [Parameter]
+    public int projectid { get; set; }
+
+
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+
+    };
+   
+    protected override async Task OnParametersSetAsync()
+    {
+        if (projectid != 0)
+        {
+            await using EasynftprojectsContext db = new(GlobalFunctions.optionsBuilder.Options);
+            var project = await (from a in db.Nftprojects
+                where a.Id == projectid && a.CustomerId == customerid
+                select a).AsNoTracking().FirstOrDefaultAsync();
+            if (project != null)
+                _items.Add(new("Mint & send jobs (" + project.Projectname + ")", href: "/showmintandsendjobs/" + projectid, disabled: true));
+        }
+          
+    }
+}

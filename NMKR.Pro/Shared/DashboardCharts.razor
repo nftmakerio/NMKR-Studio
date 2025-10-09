@@ -1,0 +1,151 @@
+﻿@inject AppSettings settings
+@inject IConnectionMultiplexer _redis;
+
+@using ApexCharts;
+@using ChartType = ApexCharts.ChartType
+
+<!-- Sales by month -->
+
+<MudItem xs="6">
+    <MudPaper Class="pa-4 border" Elevation="0" MaxHeight="300px" MinHeight="300px" Style="border-color:#E0E0E0">
+        @if (SalesList!=null) { 
+            <ApexChart TItem="Sales" Height="280"
+                   Title="Revenue (ADA)" 
+                   ChartType="ChartType.Bar"
+                   Options=apex_chart_options>
+
+                <ApexSeries TItem="Sales"
+                            Items="SalesList"
+                            Name=Coin.ADA.ToString()
+                            XValue="@(e => e.Month)"
+                            YValue="@(e => e.ProjectAda)"
+                            />
+        </ApexChart>
+        }
+
+    </MudPaper>
+</MudItem>
+
+<MudItem xs="6">
+    <MudPaper Class="pa-4 border" Elevation="0" MaxHeight="300px" MinHeight="300px" Style="border-color:#E0E0E0">
+        @if (SalesList != null)
+        {
+            <ApexChart TItem="Sales" Height="280"
+                       Title="Transaction Count"
+                       ChartType="ChartType.Bar"
+                       Options=apex_chart_options2>
+
+                <ApexSeries TItem="Sales"
+                            Items="SalesList"
+                            Name="Transactions"
+                            XValue="@(e => e.Month)"
+                            YValue="@(e => e.TxCount)" />
+            </ApexChart>
+        }
+
+    </MudPaper>
+</MudItem>
+
+@code {
+    public class NftDistribution
+    {
+        public Distributiontype DistType { get; set; }
+        public int NftCount { get; set; }
+    }
+
+    public class NftSales
+    {
+        public SaleTypes SaleType { get; set; }
+        public decimal SaleAda { get; set; }
+    }
+
+    public enum Distributiontype
+    {
+        Free, Reserved, Sold
+    }
+
+    public enum SaleTypes
+    {
+        Project, Fees, Mintingcosts, MinUtxo
+    }
+
+    public class Sales
+    {
+        public string Month { get; set; }
+        public decimal Fees { get; set; }
+        public long TxCount { get; set; }
+        public decimal ProjectAda { get; set; }
+    }
+
+    private SelectedData<NftDistribution> selectedData;
+    private SelectedData<Sales> selectedData2;
+
+    // for the first one
+    private List<Sales> SalesList = new();
+    private ApexChartOptions<Sales> apex_chart_options;
+    private ApexChartOptions<Sales> apex_chart_options2;
+
+    private double[] array;
+
+    // for the second one
+    private List<Sales> Transactions = new();
+
+    // for the third one
+    private List<NftDistribution> GetNftDistribution = new();
+
+    private void DataPointSelected(SelectedData<NftDistribution> selected)
+    {
+        selectedData = selected;
+    }
+    private void DataPointSelected2(SelectedData<Sales> selected)
+    {
+        selectedData2 = selected;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        string redisKey1 = $"{(GlobalFunctions.IsMainnet() ? "Mainnet" : "Testnet")}_Pro_Dashboard_Salelist_{settings.UserId}";
+        var SalesList1=RedisFunctions.GetData<List<Sales>>(_redis, redisKey1);
+        if (SalesList1 != null)
+        {
+            SalesList = SalesList1;
+            return;
+        }
+
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var stats = await (from a in db.Transactionstatistics
+                           where a.CustomerId == settings.UserId
+                           select a).ToListAsync();
+        // The Bar
+        for (int i = 11; i >= 0; i--)
+        {
+            DateTime date = DateTime.Now.AddMonths(-i);
+
+            var firstDayOfMonth = DateOnly.FromDateTime(new DateTime(date.Year, date.Month, 1));
+            var lastDayOfMonth = firstDayOfMonth.AddMonths(1);
+            decimal a = Math.Round((decimal)(stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Sumtotal)));
+            decimal b = Math.Round((decimal)(stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Summintcosts) +
+                                           (stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Sumfee))));
+            long c = (stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Counttx));
+            SalesList.Add(new() {Month = firstDayOfMonth.ToString("MMM"), Fees = b, ProjectAda = a, TxCount = c});
+        }
+
+        RedisFunctions.SetData<List<Sales>>(_redis, redisKey1, SalesList, 480);
+        Transactions = SalesList;
+
+        StateHasChanged();
+    }
+    protected override void OnInitialized()
+    {
+        apex_chart_options = new ApexChartOptions<Sales>
+            {
+                Colors = new List<string> { "#000000" },
+            };
+        apex_chart_options2 = new ApexChartOptions<Sales>
+            {
+                Colors = new List<string> { "#000000" },
+            };
+
+    }
+}

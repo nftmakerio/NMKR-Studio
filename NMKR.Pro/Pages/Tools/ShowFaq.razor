@@ -1,0 +1,62 @@
+﻿@page "/faq"
+@inject AppSettings settings
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">FAQ</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="12" md="10">
+            <MudPaper Elevation="25" Class="px-4 pb-3 mb-8">
+                <MudTextField Variant="Variant.Outlined" T="string" Placeholder="Search" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"></MudTextField>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="12" md="2"></MudItem>
+        <MudItem xs="12" sm="12" md="10">
+            @foreach (var cat in categories)
+            {
+              
+                <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-8">@cat.Categoryname</MudText>
+                <MudExpansionPanels Elevation="25">
+                    @foreach (var faq in cat.Faqs.Where(x => x.State == "active"))
+                    {
+                        <MudExpansionPanel Text="@faq.Question">
+                            <MudText Typo="Typo.body2">@faq.Answer</MudText>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
+            }
+       
+        </MudItem>
+
+        <MudItem xs="12" sm="12" md="2">
+            <MudText Typo="Typo.h6" GutterBottom="true">Categorys</MudText>
+            @foreach (var cat in categories)
+            {
+                <MudButton DropShadow="false" Variant="Variant.Text" Color="Color.Secondary" Class="d-flex rounded-xl px-6 py-3">@cat.Categoryname</MudButton>
+            }
+        </MudItem>
+    </MudGrid>
+    
+</MudContainer>
+
+
+@code
+{
+    private List<Faqcategory> categories = new();
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("Faq", href: "/faq", disabled: true),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        categories = await (from a in db.Faqcategories
+            .Include(a=>a.Faqs).AsSplitQuery()
+            where a.Language == "en"
+            select a).ToListAsync();
+    }
+}

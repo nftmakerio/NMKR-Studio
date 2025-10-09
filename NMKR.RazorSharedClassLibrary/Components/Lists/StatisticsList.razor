@@ -1,0 +1,144 @@
+﻿  <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Statistics</MudText>
+  <MudGrid>
+      <MudItem xs="12" sm="6" md="3">
+          <MudPaper Class="pa-4">
+              <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4 mt-4">Available NFTs</MudText>
+
+              <MudChart LegendPosition="Position.Bottom" ChartType="ChartType.Pie" InputData="@data1" InputLabels="@labels1" Width="100%" Height="300px" />
+          </MudPaper>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="3">
+          <MudPaper Class="pa-4">
+              <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4 mt-4">Costs and Income</MudText>
+              <MudChart LegendPosition="Position.Bottom" ChartType="ChartType.Pie" InputData="@data2" InputLabels="@labels2" Width="100%" Height="300px" />
+          </MudPaper>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="6">
+          <MudPaper Class="pa-4">
+              <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4 mt-4">Sales in the last 12 month</MudText>
+              <MudChart LegendPosition="Position.Bottom" ChartType="ChartType.Bar" ChartSeries="@Series" XAxisLabels="@XAxisLabels1" ChartOptions="options" Width="100%" Height="300px"></MudChart>
+          </MudPaper>
+      </MudItem>
+  </MudGrid>
+
+@code {
+    [Parameter]
+    public int? CustomerId { get; set; }
+    [Parameter]
+    public int ProjectId { get; set; }
+    [Parameter]
+    public IConnectionMultiplexer Redis { get; set; }
+
+    private Nftproject? project = new();
+    double[] data1 = { };
+    string[] labels1 = { };
+
+    double[] data2 = { };
+    string[] labels2 = { };
+
+    private ChartOptions options = new();
+    public List<ChartSeries> Sales = new();
+    public string[] XAxisLabels = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" };
+
+
+    public List<ChartSeries> Series = new();
+
+
+    public string[] XAxisLabels1 = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep" };
+
+    protected override void OnInitialized()
+    {
+        options.InterpolationOption = InterpolationOption.NaturalSpline;
+        options.MaxNumYAxisTicks = 5;
+        options.YAxisLines = false;
+        options.XAxisLines = false;
+        options.YAxisTicks = 1000;
+    //    options.YAxisFormat = "d0";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var _db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        project = await (from a in _db.Nftprojects
+            where (a.CustomerId == CustomerId || CustomerId == null)
+                  && a.State != "deleted" && a.Id == ProjectId
+            select a).FirstOrDefaultAsync();
+
+        if (project == null)
+            return;
+
+
+        // First Pie - Sold and Free
+        List<double> data = new();
+        List<string> labels = new();
+
+        data.Add(project.Free1);
+        labels.Add("Free");
+        data.Add(project.Reserved1);
+        labels.Add("Res.");
+        data.Add(project.Sold1);
+        labels.Add("Sold");
+
+        data1 = data.ToArray();
+        labels1 = labels.ToArray();
+
+        var stats = await (from a in _db.Transactionstatistics
+                           where a.NftprojectId == ProjectId
+                           select a).ToListAsync();
+
+        // Second Pie- Adaamount totals
+        List<double> data2a = new();
+        List<string> labels2a = new();
+
+        data2a.Add((double)(stats.Sum(x => x.Sumprojectada)));
+        labels2a.Add("Project");
+        data2a.Add((double)(stats.Sum(x => x.Summintcosts)));
+        labels2a.Add("Mints");
+        data2a.Add((double)(stats.Sum(x => x.Sumfee)));
+        labels2a.Add("Fee");
+        data2a.Add((double)(stats.Sum(x => x.Sumada)));
+        labels2a.Add("Minutxo");
+
+        data2 = data2a.ToArray();
+        labels2 = labels2a.ToArray();
+
+
+
+
+        // Bar
+
+        List<double> ada = new();
+        List<double> tx = new();
+        List<double> mint = new();
+        List<string> mn = new();
+        int max = 0;
+        for (int i = 11; i >= 0; i--)
+        {
+            DateTime date = DateTime.Now.AddMonths(-i);
+            var firstDayOfMonth = DateOnly.FromDateTime(new DateTime(date.Year, date.Month, 1));
+            var lastDayOfMonth = firstDayOfMonth.AddMonths(1);
+            double a = Math.Round((double)(stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Sumtotal)));
+            ada.Add(a);
+            double b = Math.Round((double) (stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Summintcosts) +
+                                            (stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Sumfee))));
+            mint.Add(b);
+            double c = stats.Where(x => x.D1 >= firstDayOfMonth && x.D1 < lastDayOfMonth).Sum(x => x.Counttx);
+            tx.Add(c);
+            mn.Add(firstDayOfMonth.ToString("MMM"));
+
+            if (a > max)
+                max = Convert.ToInt32(a);
+            if (b > max)
+                max = Convert.ToInt32(a);
+            if (c > max)
+                max = Convert.ToInt32(c);
+        }
+        Series.Add(new() { Name = Coin.ADA.ToString(), Data = ada.ToArray() });
+        Series.Add(new() { Name = "No.Tx", Data = tx.ToArray() });
+        Series.Add(new() { Name = "Costs", Data = mint.ToArray() });
+        XAxisLabels1 = mn.ToArray();
+        options.YAxisTicks = Convert.ToInt32(max / 10);
+
+        StateHasChanged();
+    }
+}

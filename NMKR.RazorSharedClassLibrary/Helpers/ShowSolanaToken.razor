@@ -1,0 +1,14 @@
+﻿@if (!string.IsNullOrEmpty(Token))
+{
+    <span style="white-space: nowrap;">
+        <MudLink Typo="Typo.body2" Href="@($"https://explorer.solana.com/address/{Token}" + (GlobalFunctions.IsMainnet()?"":"?cluster=devnet"))" Target="_blank" Color="Color.Info">
+            @GlobalFunctions.GetStartAndEnd(Token, 6)
+        </MudLink>
+        <CopyToClipboard content="@Token" name="Token Address"></CopyToClipboard>
+    </span>
+}
+
+@code {
+    [Parameter]
+    public string Token { get; set; }
+}

@@ -1,0 +1,96 @@
+﻿<table Class="pt-4 pb-4 pr-4 pl-4 mb-10" width="100%">
+    <tr>
+        <td width="60%">
+            <MudSwitch UncheckedColor="Color.Dark" T="string" @bind-Value="BooleanStringValue" Color="Color.Primary" Size="Size.Large" Converter="@(new CustomStringToBoolConverter())">
+                @if(!Setting.Mandantory)
+                {
+                    <MudText Typo="Typo.h5">@Setting.Humanreadablesettingsname  <small style="color: #7A7A7A; font-size: 11px; font-weight: 500">(optional)</small></MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.h5">@Setting.Humanreadablesettingsname</MudText>
+                }
+            </MudSwitch> 
+            
+            <MudText Typo="Typo.body1">@Setting.Description</MudText>
+        </td>
+        <td>
+            <div class="ml-10">
+               
+            </div>
+        </td>
+    </tr>
+</table>
+
+@code {
+    [Parameter]
+    public Storesetting Setting { get; set; }
+
+    [Parameter]
+    public string BooleanStringValue
+    {
+        get => _booleanStringValue;
+        set
+        {
+            if (value != _booleanStringValue)
+            {
+                _booleanStringValue = value;
+                BooleanStringValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> BooleanStringValueChanged { get; set; }
+
+    private string _booleanStringValue = "false";
+
+
+    public class CustomStringToBoolConverter : BoolConverter<string>
+    {
+
+        public CustomStringToBoolConverter()
+        {
+            SetFunc = OnSet;
+            GetFunc = OnGet;
+        }
+
+        private string TrueString = "true";
+        private string FalseString = "false";
+        private string NullString = "";
+
+        private string OnGet(bool? value)
+        {
+            try
+            {
+                return (value == true) ? TrueString : FalseString;
+            }
+            catch (Exception e)
+            {
+                UpdateGetError("Conversion error: " + e.Message);
+                return NullString;
+            }
+        }
+
+        private bool? OnSet(string arg)
+        {
+            if (arg == null)
+                return null;
+            try
+            {
+                if (arg == TrueString)
+                    return true;
+                if (arg == FalseString)
+                    return false;
+                else
+                    return null;
+            }
+            catch (FormatException e)
+            {
+                UpdateSetError("Conversion error: " + e.Message);
+                return null;
+            }
+        }
+
+    } 
+}

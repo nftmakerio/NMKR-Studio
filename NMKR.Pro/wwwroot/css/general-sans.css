@@ -1,0 +1,107 @@
+/**
+ * @license
+ *
+ * Font Family: General Sans
+ * Designed by: Frode Helland
+ * URL: https://www.fontshare.com/fonts/general-sans
+ * © 2021 Indian Type Foundry
+ *
+ * Font Styles:
+ * General Sans Variable(Variable font)
+ * General Sans Extralight
+ * General Sans Light
+ * General Sans Regular
+ * General Sans Medium
+ * General Sans Semibold
+ * General Sans Bold
+ *
+*/
+
+
+/**
+* This is a variable font
+* You can controll variable axes as shown below:
+* font-variation-settings: 'wght' 200.0;
+*
+* available axes:
+
+* 'wght' (range from 200.0 to 700.0)
+
+*/
+
+@font-face {
+  font-family: 'GeneralSans-Variable';
+  src: url('/fonts/GeneralSans-Variable.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Variable.woff') format('woff'),
+       url('/fonts/GeneralSans-Variable.ttf') format('truetype');
+       font-weight: 200 700;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Extralight';
+  src: url('/fonts/GeneralSans-Extralight.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Extralight.woff') format('woff'),
+       url('/fonts/GeneralSans-Extralight.ttf') format('truetype');
+       font-weight: 200;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Light';
+  src: url('/fonts/GeneralSans-Light.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Light.woff') format('woff'),
+       url('/fonts/GeneralSans-Light.ttf') format('truetype');
+       font-weight: 300;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Regular';
+  src: url('/fonts/GeneralSans-Regular.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Regular.woff') format('woff'),
+       url('/fonts/GeneralSans-Regular.ttf') format('truetype');
+       font-weight: 400;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Medium';
+  src: url('/fonts/GeneralSans-Medium.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Medium.woff') format('woff'),
+       url('/fonts/GeneralSans-Medium.ttf') format('truetype');
+       font-weight: 500;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Semibold';
+  src: url('/fonts/GeneralSans-Semibold.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Semibold.woff') format('woff'),
+       url('/fonts/GeneralSans-Semibold.ttf') format('truetype');
+       font-weight: 600;
+       font-display: swap;
+       font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'GeneralSans-Bold';
+  src: url('/fonts/GeneralSans-Bold.woff2') format('woff2'),
+       url('/fonts/GeneralSans-Bold.woff') format('woff'),
+       url('/fonts/GeneralSans-Bold.ttf') format('truetype');
+       font-weight: 700;
+       font-display: swap;
+       font-style: normal;
+}
+

@@ -1,0 +1,27 @@
+﻿@before<small>@after</small>
+
+@code {
+    [Parameter]
+    public string Number { get; set; }
+
+    private string before { get; set; }
+    private string after { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        char separator = '.';
+
+        string[] s = Number.Split(separator);
+        if (s.Length == 2)
+        {
+            before = s[0];
+            after = "." + s[1];
+        }
+        else
+        {
+            before = Number;
+            after = "";
+        }
+    }
+
+}

@@ -1,0 +1,19 @@
+﻿@page "/createnewproject"
+@inject AppSettings settings
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mb-4">
+    <CreateProject CustomerId="(int)settings.UserId"/>
+</MudContainer>
+
+
+
+@code {
+    private readonly List<BreadcrumbItem> _items = new()
+    {
+        new("Dashboard", href: "/"),
+        new("NFT Projects", href: "/projects"),
+        new("Create new project", href: "/createnewproject", disabled:true),
+    };
+}

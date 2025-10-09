@@ -1,0 +1,54 @@
+﻿@layout ConfirmationLayout
+@page "/confirm/unlock/{userid:int}/{confirmationcode}"
+@inject IStringLocalizer _loc
+
+
+<MudText Typo="Typo.h4" GutterBottom="true">@_loc["Unblock"]</MudText>
+<MudText Color="@Color.Error" Class="mt-3">
+    @errormessage
+</MudText>
+<MudText Color="@Color.Primary" Class="mt-3">
+    @message
+</MudText>
+
+<MudButton DropShadow="false" Variant="Variant.Filled" Class="mt-3 mr-3 rounded-xl px-6 py-3" Color="Color.Tertiary" Href="/login" Size="Size.Large">@_loc["Login"]</MudButton>
+
+
+@code { 
+
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+    [Parameter]
+    public int UserId { get; set; }
+    [Parameter]
+    public string ConfirmationCode { get; set; }
+
+    private string message { get; set; } = "";
+    private string errormessage { get; set; } = "";
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var pending = (from a in db.Customers
+                           where a.Confirmationcode == ConfirmationCode && a.Id == UserId && a.State == "locked"
+                           select a).FirstOrDefault();
+
+            if (pending == null)
+            {
+               // message = "";
+                errormessage = @_loc["The Code is not correct or the user account already unblocked."];
+                StateHasChanged();
+
+                return;
+            }
+            pending.State = "active";
+            await db.SaveChangesAsync();
+            message = @_loc["Your Account is now activated again and you can login."];
+            StateHasChanged();
+        }
+    }
+
+}

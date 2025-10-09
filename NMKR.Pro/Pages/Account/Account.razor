@@ -1,0 +1,219 @@
+﻿@page "/account"
+@inject ISnackbar Snackbar
+@inject AppSettings settings
+@inject IStringLocalizer _loc
+
+<BreadCrumb Items="_items"></BreadCrumb>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Account</MudText>
+    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+    <MudTabPanel Text="@_loc["General"]">
+            <MudGrid >
+                <MudItem xs="12" sm="12" md="12">
+                    <MudCard Elevation="0" Class="border"  Style="border-color:#E0E0E0; border-top-right-radius: 0px; border-top-left-radius: 0px;">
+                        <MudCardContent>
+                            <MudGrid>
+                                <MudItem xs="12" md="12">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Company" Label="@_loc["Company (Read only)"]" ReadOnly="true"  Immediate="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Firstname" Label="@_loc["First Name (Read only)"]" ReadOnly="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Lastname" Label="@_loc["Last Name (Read only)"]" ReadOnly="true" />
+                                </MudItem>
+                                <MudItem xs="12" md="12">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Street" Label="@_loc["Street"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="2">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Zip" Label="@_loc["Zip"]" />
+                                </MudItem>
+                                <MudItem xs="12" md="10">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.City" Label="City" />
+                                </MudItem>
+                                <MudItem xs="12" md="12">
+                                    <MudSelect Label="Country" @bind-Value="customer.CountryId" >
+                                        @foreach (var w in countries)
+                                        {
+                                            <MudSelectItem Value="@w.Id">@_loc[@w.Nicename]</MudSelectItem>
+
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" md="12">
+                                    <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Email" Label="@_loc["Email (Read only)"]" ReadOnly="true"  HelperText="@_loc["Dont worry, we shall not spam!"]" InputType="InputType.Email"/>
+                                </MudItem>
+                                
+                                @if (!string.IsNullOrEmpty(customer.Company))
+                                {
+                                    <MudItem xs="12" md="12">
+                                        <MudTextField Variant="Variant.Outlined" @bind-Value="customer.Ustid" Label="@_loc["UST-ID (Read only)"]" ReadOnly="true"  HelperText="@_loc["If your company is located within the EU - please submit your UST-ID"]"/>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        </MudCardContent>
+                        <MudCardActions Class="pb-4 pl-4">
+                            <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Class="ml-auto rounded-xl px-6 py-3" @onclick="@SaveChanges1">@_loc["Save Changes"]</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+        @*    <MudTabPanel Text="Notifications" >
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText>Notifications</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" sm="4">
+                            <MudText>
+                                <b>Email</b>
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                What type of system notifications you want to receive to your email.
+                            </MudText>
+                            <div class="d-flex flex-column mt-6">
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonlogon" Label="Mail on Logon" Color="Color.Tertiary"></MudCheckBox>
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonlogonfailure" Label="Mail on Logon Failure" Color="Color.Error"></MudCheckBox>
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonpayout" Label="Payout from internal wallet" Color="Color.Warning"></MudCheckBox>
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonsale" Label="NFT Sale" Color="Color.Success"></MudCheckBox>
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonnews" Label="News about this project" Color="Color.Secondary"></MudCheckBox>
+        <MudCheckBox Color="Color.Primary" UncheckedColor="Color.Default" @bind-Value="@customer.Sendmailonservice" Label="Information about service outages" Color="Color.Dark"></MudCheckBox>
+                            </div>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+                <MudCardActions Class="pb-4 pl-4">
+                    <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Class="ml-auto rounded-xl px-6 py-3" @onclick="@SaveChanges1">Save Changes</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudTabPanel> *@
+        <MudTabPanel Text="@_loc["Password"]">
+            <MudForm>
+                <MudCard Elevation="0" Class="border" Bordered="true" Style="border-color:#E0E0E0; border-top-right-radius: 0px; border-top-left-radius: 0px;">
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudTextField Variant="Variant.Outlined" T="string" Label="@_loc["Current Password"]" @bind-Value="changepassword.OldPassword"  InputType="InputType.Password" />
+                            </MudItem>
+
+                            <MudItem xs="12" md="6">
+                                <MudTextField Variant="Variant.Outlined" T="string" Label="@_loc["New Password"]" @bind-Value="changepassword.Password"  InputType="InputType.Password"  Required="true" RequiredError="Password is required!"/>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField Variant="Variant.Outlined" T="string" Label="@_loc["Password Confirmation"]" @bind-Value="changepassword.Password2"  InputType="InputType.Password" />
+                            </MudItem>
+
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pb-4 pl-4">
+                        <MudButton DropShadow="false" Variant="Variant.Filled" Color="Color.Tertiary" Class="ml-auto rounded-xl px-6 py-3" @onclick="@SaveChanges2">@_loc["Change Password"]</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudForm>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="@_loc["2-Factor"]">
+            <TwoFactor></TwoFactor>
+        </MudTabPanel>
+
+    </MudTabs>
+</MudContainer>
+<TwoFactorCheck Message="@_loc["The Code for the Password change is:"]" @ref="_twoFactorCheck" />
+
+
+@code {
+    private readonly EasynftprojectsContext _db = new(GlobalFunctions.optionsBuilder.Options);
+
+    public string AvatarImageLink { get; set; } = "images/profile_pic.svg";
+    public string AvatarIcon { get; set; }
+    public string AvatarButtonText { get; set; }
+    public Color AvatarButtonColor { get; set; } = Color.Error;
+    public Customer customer = new();
+    private List<Country> countries = new();
+    private readonly ChangePasswordClass changepassword = new();
+    private bool isSubmitting = false;
+    [Inject]
+    private IDialogService DialogService { get; set; }
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+    private readonly List<BreadcrumbItem> _items = new();
+
+    protected override void OnInitialized()
+    {
+        _items.Add(new(@_loc["Dashboard"], href: "/"));
+        _items.Add(new(@_loc["Account"], href: "/account", disabled: true));
+        AvatarButtonText = @_loc["Delete Picture"];
+
+        customer =  (from a in _db.Customers
+                          where a.Id == (int) settings.UserId
+                          select a).FirstOrDefault();
+
+        countries =  (from a in _db.Countries
+                           select a).ToList();
+    }
+
+
+    private async Task SaveChanges1()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await _db.SaveChangesAsync();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add(@_loc["Changes successfully saved"], Severity.Success);
+        isSubmitting = false;
+    }
+    private async Task SaveChanges2()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        CryptographyProcessor cp = new();
+        if (!cp.AreEqual(changepassword.OldPassword, customer.Password, customer.Salt))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Old Password is not correct"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (changepassword.Password != changepassword.Password2)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["Password and Password confirmation are not equal"], Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (await _twoFactorCheck.CheckTwoFactor(settings.UserId ?? 0, TwoFactorCases.None))
+        {
+            await SaveNewPassword();
+        }
+
+        isSubmitting = false;
+    }
+
+    private async Task SaveNewPassword()
+    {
+        CryptographyProcessor cp = new();
+        string hash = cp.GenerateHash(changepassword.Password,customer.Salt);
+
+        customer.Password = hash;
+        await _db.SaveChangesAsync();
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add(@_loc["Password successfully changed"], Severity.Success);
+
+        changepassword.OldPassword = "";
+        changepassword.Password = "";
+        changepassword.Password2 = "";
+        StateHasChanged();
+    }
+}

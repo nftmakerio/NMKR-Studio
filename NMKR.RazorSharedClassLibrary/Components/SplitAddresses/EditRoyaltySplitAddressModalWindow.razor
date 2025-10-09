@@ -1,0 +1,281 @@
+﻿@using NMKR.Shared.Classes.RoyaltySplitAddresses
+@inject ISnackbar Snackbar
+
+<MudOverlay Visible="isSubmitting" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Indeterminate="true" />
+</MudOverlay>
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Add/Edit Split Address
+        </MudText>
+    </TitleContent>
+   
+    <DialogContent>
+      
+        @if (SplitAddress != null)
+        {
+            <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudGrid>
+                    <MudItem xs="12" md="12" Class="mb-0" Style="padding-left: 0">
+                        <BlockchainSelector EnabledBlockchains="Cardano" Value="Cardano"/>
+                    </MudItem>
+                    <MudItem xs="12" md="12" Class="mb-0" Style="padding: 0">
+                        <MudTextField Variant="Variant.Outlined" Label="Comment / Description" @bind-Value="SplitAddress.Comment" Lines="1" Immediate="true" Class="mb-1"/>
+                    </MudItem>
+                    <MudItem xs="12" md="12" Style="padding: 0">
+                        <MudTextField Variant="Variant.Outlined" Label="Main receiver (cardano address or adahandle)" @bind-Value="SplitAddress.MainAddress" Lines="1" Immediate="true" Class="mb-1"/>
+                    </MudItem>
+
+
+                    @for (int i = 0; i < SplitAddress.Splits.Count; i++)
+                    {
+                        var i1 = i;
+                        var b = 12;
+                        if (i == SplitAddress.Splits.Count - 1 && SplitAddress.Splits.Count < 20)
+                            b = 11;
+
+                        <MudItem xs="@b" md="@b" Style="padding: 0">
+                            <MudTextField Variant="Variant.Outlined" Label=@("Split cardano address or adahandle " + (i1 + 1)) @bind-Value="SplitAddress.Splits[i1].Address" Lines="1" Immediate="true"/>
+                        </MudItem>
+                        if (b == 11)
+                        {
+                            <MudItem xs="1" md="1" Style="padding: 5">
+                                <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small" @onclick="AddSplit"></MudIconButton>
+                            </MudItem>
+                        }
+                        <MudItem xs="3" Style="padding: 0px 20px;">
+                            <MudNumericField Immediate="false" Label="PercentageInt" Format="N2" T="double" @bind-Value="SplitAddress.Splits[i1].Percentage" Min="0f" Max="50f"/>
+                        </MudItem>
+                        <MudItem xs="3" Style="padding: 0px 20px;">
+                            <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" AutoClose="true" Label="Valid from (optional)" Color="Color.Tertiary" DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" @bind-Date="SplitAddress.Splits[i1].OptionalValidFromDate">
+                            </MudDatePicker>
+                        </MudItem>
+                        <MudItem xs="3" Style="padding: 0px 20px;">
+                            <MudDatePicker PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" AutoClose="true" Label="Valid to (optional)" Color="Color.Tertiary" DisplayMonths="2" TitleDateFormat="dddd, dd MMMM" @bind-Date="SplitAddress.Splits[i1].OptionalValidToDate">
+                            </MudDatePicker>
+                        </MudItem>
+                        <MudItem xs="3" Style="padding: 20px 20px;">
+                            <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="SplitAddress.Splits[i1].IsActive" Color="Color.Primary">Activated</MudSwitch>
+                        </MudItem>
+
+
+                    }
+
+                    <MudItem xs="5" md="5" Style="padding: 0px;">
+                        <MudNumericField Immediate="false" Label="ThresholdInAda in ADA" T="long" @bind-Value="SplitAddress.ThresholdInAda" Min="25" Max="10000"/>
+                    </MudItem>
+                    <MudItem xs="1" md="1" Style="padding: 10px 0px;">
+                        <TooltipHelper Description="ThresholdInAda in ADA"/>
+                    </MudItem>
+
+                    <MudItem xs="6" md="6" Style="padding: 20px 20px;">
+                        <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="SplitAddress.IsActive" Color="Color.Primary">Address activated</MudSwitch>
+                    </MudItem>
+
+                </MudGrid>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+         <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="Save" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+        [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+        [Parameter]
+    public EditSplitAddressClass SplitAddress { get; set; }
+    [Parameter]
+    public int CustomerId { get; set; }
+    private bool isSubmitting;
+
+    bool success;
+    string[] errors = { };
+    MudForm form;
+
+    void Cancel() => MudDialog.Cancel();
+
+
+    private async Task AddSplit()
+    {
+        if (SplitAddress.Splits.Count < 20)
+        {
+            SplitAddress.Splits.Add(new(){});
+        }
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SplitAddress.Splits.Count == 0)
+            await AddSplit();
+    }
+
+
+    private async Task Save()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(SplitAddress.MainAddress))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You have to enter a main address", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (!ConsoleCommand.CheckIfAddressIsValid(db, SplitAddress.MainAddress, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Main address is not a valid cardano address or not a valid adahandle", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        foreach (var a in SplitAddress.Splits)
+        {
+            if (!string.IsNullOrEmpty(a.Address) && !ConsoleCommand.CheckIfAddressIsValid(db, a.Address, GlobalFunctions.IsMainnet(), out string outaddress1, out Blockchain blockchain1, true))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Split address is not a valid cardano address or a valid adahandle", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            //if (!string.IsNullOrEmpty(a.Address) && a.PercentageInt == 0)
+            //{
+            //    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            //    Snackbar.Add("You have to enter the percentage for the split address", Severity.Error);
+            //    isSubmitting = false;
+            //    return;
+            //}
+
+            if (!string.IsNullOrEmpty(a.Address))
+            {
+                var amount = SplitAddress.ThresholdInAda * 100 * a.PercentageInt;
+                if (amount < 1000000)
+                {
+                    float minthreshold = 100f;
+                    if (amount > 0)
+                    {
+                        float z = 1000000f / amount;
+                        minthreshold = SplitAddress.ThresholdInAda * z;
+                    }
+
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add($"If you set a percentage of {a.PercentageInt / 100f} %, you must increase the threshold due to the minutxo of 1 ADA ({minthreshold} ADA)", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+        }
+
+
+        if (SplitAddress.Id == null)
+        {
+            await CreateNewSplitAddress(db);
+        }
+        else
+        {
+            await SaveSplitAddress(db);
+        }
+
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Split address successfully saved", Severity.Success);
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+    private async Task CreateNewSplitAddress(EasynftprojectsContext db)
+    {
+        var cn = ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+        CryptographyProcessor cp = new();
+        string salt = cp.CreateSalt(30);
+        Splitroyaltyaddress spa = new() {Address = cn.Address, 
+                Comment = SplitAddress.Comment ?? "",
+                Created = DateTime.Now,
+                CustomerId = CustomerId,
+            State = SplitAddress.IsActive ? "active" : "notactive", Salt = salt, 
+            Skey = Encryption.EncryptString(cn.privateskey, salt), 
+            Minthreshold = SplitAddress.ThresholdInAda, Lovelace = 0, 
+            Vkey = Encryption.EncryptString(cn.privatevkey, salt)};
+
+        await db.Splitroyaltyaddresses.AddAsync(spa);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        Splitroyaltyaddressessplit spas = new()
+        {
+            Address = SplitAddress.MainAddress, State = "active", SplitroyaltyaddressesId = spa.Id, Created = DateTime.Now, IsMainReceiver = true, Percentage = 100,
+        };
+        await db.Splitroyaltyaddressessplits.AddAsync(spas);
+        await db.SaveChangesAsync();
+        await SaveSplits(db, spa.Id);
+    }
+
+    private async Task SaveSplitAddress(EasynftprojectsContext db)
+    {
+        var spa = await (from a in db.Splitroyaltyaddresses
+            .Include(a=>a.Splitroyaltyaddressessplits)
+            where a.Id == SplitAddress.Id
+            select a).FirstOrDefaultAsync();
+
+        spa.Comment = SplitAddress.Comment;
+        spa.State = SplitAddress.IsActive ? "active" : "notactive";
+        spa.Minthreshold = SplitAddress.ThresholdInAda;
+        await db.SaveChangesAsync();
+
+
+        var main = spa.Splitroyaltyaddressessplits.FirstOrDefault(x => x.IsMainReceiver == true);
+        if (main != null)
+        {
+            main.Address = SplitAddress.MainAddress;
+            await db.SaveChangesAsync();
+        }
+        await GlobalFunctions.ExecuteSqlWithFallbackAsync(db, $"delete from splitroyaltyaddressessplits where splitroyaltyaddresses_id={SplitAddress.Id} and ismainreceiver=0");
+        await SaveSplits(db, (int)SplitAddress.Id);
+    }
+
+
+    private async Task SaveSplits(EasynftprojectsContext db, int id)
+    { 
+       foreach (var split in SplitAddress.Splits)
+        {
+            if (string.IsNullOrEmpty(split.Address))
+                continue;
+
+            Splitroyaltyaddressessplit spas1 = new()
+            {
+                Address = split.Address, 
+                State = split.IsActive?"active":"notactive", 
+                SplitroyaltyaddressesId = id, 
+                Created = DateTime.Now, IsMainReceiver = false, Percentage = split.PercentageInt, Activefrom = split.OptionalValidFromDate, Activeto = split.OptionalValidToDate
+            };
+            await db.Splitroyaltyaddressessplits.AddAsync(spas1);
+            await db.SaveChangesAsync(); 
+        }
+    }
+}

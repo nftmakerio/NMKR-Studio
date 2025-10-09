@@ -1,0 +1,108 @@
+﻿@using NMKR.Shared.Functions.SaleConditions
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+
+<MudDialog Style="padding: 20px;">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Test Sale Condition
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+       
+
+        <MudTextField Variant="Variant.Outlined" T="string" Label="Enter the Address or the handle" Immediate="true" @bind-Value="Address" Lines="1" Required="true" RequiredError="The Address or the handle is required"/>
+
+        <MudNumericField T="long" @bind-Value="tokencount" For="@(() => tokencount)" Label="How may nfts do you want to send" HelperText="How may nfts do you want to send" Variant="Variant.Text" Min="1"/>
+
+    </DialogContent>
+    <DialogActions>
+        <MudText Typo="Typo.h6" Class="mr-4" Color="Color.Dark">Result:</MudText>
+        <MudText Typo="Typo.h6" Class="mr-4" Color="_resultColor">@_result</MudText>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Disabled="isSubmitting">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" OnClick="TestSaleCondition" Disabled="isSubmitting">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                <MudText Typo="Typo.inherit" Class="ms-2">Processing</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.inherit" Class="ms-2">Test Conditions</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+ 
+    [Parameter]
+    public int Projectid { get; set; }
+
+    private string Address { get; set; }
+    private bool isSubmitting;
+    private long tokencount { get; set; } = 1;
+    private Color _resultColor = Color.Success;
+    private string _result = "";
+
+    void Cancel() => MudDialog.Cancel();
+
+    private async Task TestSaleCondition()
+    {
+
+        if (isSubmitting)
+            return;
+        isSubmitting = true;
+
+
+        if (string.IsNullOrEmpty(Address))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter an address or an adahandle", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var b = ConsoleCommand.CheckIfAddressIsValid(db, Address, GlobalFunctions.IsMainnet(), out string outaddress, out Blockchain blockchain, true);
+        if (!b)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Address is not a valid address or handle", Severity.Error);
+            isSubmitting = false;
+            return; 
+        }
+        if (GlobalFunctions.GetWebsiteSettingsBool(db,"enablesolana")==false && Blockchain.Solana == blockchain)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Solana is not enabled", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        var cond = await CheckSalesConditionClass.CheckForSaleConditionsMet(db,_redis, Projectid,
+            outaddress, tokencount, 0,false, blockchain);
+
+        if (cond.ConditionsMet)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Sale conditions met. NFT can be purchased", Severity.Success);
+            _result= "Sale conditions met. NFT can be purchased";
+            _resultColor= Color.Success;
+            isSubmitting = false;
+            return;
+        }
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Sale conditions NOT met. "+cond.RejectReason + (string.IsNullOrEmpty(cond.RejectParameter) ? "": " ("+cond.RejectParameter+")"), Severity.Error);
+        _result = "Sale conditions NOT met. " + cond.RejectReason + (string.IsNullOrEmpty(cond.RejectParameter) ? "" : " (" + cond.RejectParameter + ")");
+        _resultColor = Color.Error;
+
+        isSubmitting = false;
+    }
+
+}

@@ -1,0 +1,74 @@
+﻿@if (activeblockchains.Any())
+{
+    <MudItem xs="12" sm="12">
+        <MudText Typo="Typo.h6" Color="Color.Dark">Select Blockchain</MudText>
+    </MudItem>
+    <MudItem xs="12" sm="12">
+        <MudButtonGroup Color="Color.Dark" Variant="Variant.Outlined">
+            @foreach (var blockchain in activeblockchains)
+            {
+                @if (blockchain.Enabled || isAdmin)
+                {
+                    @if (_value != null && _value==blockchain.Name)
+                    {
+                        <MudButton Size="Size.Large" 
+                                   Style="width:160px" 
+                                   OnClick="() => ToggleBlockchain(blockchain.Name)"
+                                   StartIcon="@Icons.Material.Filled.Check" 
+                                   IconColor="Color.Primary">@blockchain.Name</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Size="Size.Large" 
+                                   Style="width:160px" 
+                                   OnClick="() => ToggleBlockchain(blockchain.Name)"
+                                   IconColor="Color.Primary">@blockchain.Name</MudButton>
+                    }
+                }
+            }
+        </MudButtonGroup>
+    </MudItem>
+}
+
+@code {
+    [Parameter]
+    public bool isAdmin { get; set; }
+
+    private string _value
+    {
+        get => Value;
+        set
+        {
+            Value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+    [Parameter]
+    public string Value { get; set; }
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+    [Parameter]
+    public string EnabledBlockchains { get; set; }
+   
+
+    private List<Activeblockchain> activeblockchains = new List<Activeblockchain>();
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        activeblockchains = await db.Activeblockchains.Where(x=>x.Enabled).AsNoTracking().ToListAsync();
+
+        if (!string.IsNullOrEmpty(EnabledBlockchains))
+        {
+            var enabledBlockchains = EnabledBlockchains.Split(",");
+            foreach (var bc in activeblockchains.OrEmptyIfNull())
+            {
+                bc.Enabled = enabledBlockchains.Contains(bc.Name);
+            }
+        }
+    }
+    private void ToggleBlockchain(string blockchainName)
+    {
+        _value = blockchainName;
+    }
+
+}

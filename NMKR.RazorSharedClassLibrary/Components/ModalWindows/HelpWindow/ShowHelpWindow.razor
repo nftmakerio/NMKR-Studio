@@ -1,0 +1,20 @@
+﻿@inject IJSRuntime JSRuntime 
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer _redis;
+@inject TimerServices Timer
+
+<MudDialog Style="padding: 20px; ">
+        <TitleContent>
+        <MudText Typo="Typo.h3">
+            Help
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary" >Mint token</MudButton>
+    </DialogActions>
+</MudDialog>

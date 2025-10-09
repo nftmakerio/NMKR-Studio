@@ -1,0 +1,15 @@
+﻿  <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="0" Class="d-flex flex-row pt-6 pb-4 border pl-5 pr-5" Style="height: 100px; border-color:#E0E0E0 ">
+       @*   <img src="@Icon" style="width: 54px; height: 54px;" class="ml-4" />*@
+          <div>
+              <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">@Description</MudText>
+            <MudText Typo="Typo.h5">@Text</MudText>
+          </div>
+      </MudPaper>
+  </MudItem>
+
+@code {
+    [Parameter] public string Description { get; set; }
+    [Parameter] public string Text { get; set; }
+    [Parameter] public string Icon { get; set; }
+}

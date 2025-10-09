@@ -1,0 +1,293 @@
+﻿@layout LoginLayout
+@page "/login"
+@page "/loginfromadmin/{hash}"
+@using InputType = MudBlazor.InputType
+@using CardanoSharp.Wallet.Models.Addresses
+@using CardanoSharp.Wallet.Enums
+@inject NavigationManager NavigationManager
+@inject AppSettings settings
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject IStringLocalizer _loc
+
+
+<HeadContent>
+    <meta charset="utf-8">
+    <title>NMKR Studio – Login</title>
+    <meta content="Login to your NMKR Studio account." name="description">
+    <meta content="NMKR Studio – Login" property="og:title">
+    <meta content="Login to your NMKR Studio account." property="og:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="og:image">
+    <meta content="NMKR Studio – Create and Sell NFTs on Your Own Website" property="twitter:title">
+    <meta content="NMKR Studio allows you to create, mint and sell NFTs on your own website using our custom secondary NFT Marketplace &amp; NFT Minting solutions." property="twitter:description">
+    <meta content="https://assets.website-files.com/627424a55a80c8659c58943a/64089f30eec2e5f4ede988f1_opengraphnmkr-p-1080.png" property="twitter:image">
+    <meta property="og:type" content="website">
+    <meta content="summary_large_image" name="twitter:card">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442936ea6f91301effc0_nmkr-favicon.png" rel="shortcut icon" type="image/x-icon">
+    <link href="https://assets.website-files.com/627424a55a80c8659c58943a/62ab442cff6ad54237cc81e4_nmkr-webclip.png" rel="apple-touch-icon">
+    <meta name="theme-color" content="#11f250">
+</HeadContent>
+
+
+
+<MudText Typo="Typo.h4" GutterBottom="true">@_loc["Sign In"]</MudText>
+
+<MudText>Don't have an account? <MudLink Href="/register">@_loc["Sign Up"]</MudLink></MudText>
+
+<EditForm Model="@login" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+
+    <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="login.Username" Label="@_loc["E-mail"]"  Class="my-6" For="@(() => login.Username)"></MudTextField>
+
+    <MudTextField Variant="Variant.Outlined" @bind-Value="@login.Password" Label="@_loc["Password"]"  For="@(() => login.Password)" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="TogglePasswordVisibility" />
+
+    <div Class="d-flex justify-space-between align-center mt-2">
+        <MudLink Href="/forgotpassword">@_loc["Forgot password?"]</MudLink>
+    </div>
+
+    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 my-6 mr-5" Variant="Variant.Filled" Color="Color.Tertiary" ButtonType="ButtonType.Submit" Size="Size.Large" Disabled="isSubmitting">@_loc["Sign in"]</MudButton>
+    @*
+    @if (_showWalletConnector)
+    {
+        <WalletConnect @ref="WalletConnect" OnWalletConnect="OnWalletConnect" ConnectText="@_loc["Login"]">
+            <WalletConnectorButtonContentNotConnected>
+                <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 my-6" Variant="Variant.Filled" Color="Color.Tertiary" @onclick="@WalletConnect.ConnectWallet" Size="Size.Large" Disabled="isSubmitting">@_loc["Sign in with Wallet"]</MudButton>
+            </WalletConnectorButtonContentNotConnected>
+            <WalletConnectorButtonContentConnected>
+                <MudButton DropShadow="false" Class="rounded-xl px-6 py-3 my-6" Variant="Variant.Filled" Color="Color.Tertiary" @onclick="@WalletConnect.ConnectWallet" Size="Size.Large" Disabled="isSubmitting">@_loc["Sign in with Wallet"]</MudButton>
+            </WalletConnectorButtonContentConnected>
+        </WalletConnect>
+    }
+    *@
+    <MudText Color="@Color.Error" Class="mt-3">
+       @errormessage
+    </MudText>
+</EditForm>
+<TwoFactorCheck Message="@_loc["The Code for the Login is:"]" @ref="_twoFactorCheck" />
+
+
+@code {
+    [CascadingParameter]
+    public ConnectionInfo? ConnectionInfo { get; set; }
+
+    [Parameter]
+    public string hash { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+
+    private bool _showWalletConnector { get; set; }
+    private LoginClass login { get; set; }
+    private string errormessage { get; set; } = "";
+    private ReCAPTCHA reCAPTCHAComponent;
+    private bool ValidReCAPTCHA = false;
+    private bool rememberme = false;
+    private TwoFactorCheck _twoFactorCheck { get; set; }
+
+
+    private bool isSubmitting;
+
+    private bool ServerVerificatiing = false;
+
+
+    bool PasswordVisibility;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+
+    void TogglePasswordVisibility()
+    {
+        @if (PasswordVisibility)
+        {
+            PasswordVisibility = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            PasswordVisibility = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+
+    private void OnChange(object sender, EventArgs args)
+    {
+        errormessage = "";
+        StateHasChanged();
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        login = new();
+        login.Change += OnChange;
+        _showWalletConnector = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "showwalletconnector");
+    }
+
+    // This is for Login from admin
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (!string.IsNullOrEmpty(hash))
+            {
+                await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+                var hash2 = await (from a in db.Loggedinhashes
+                                   where a.Hash == hash && a.Validuntil > DateTime.Now
+                                   select a).FirstOrDefaultAsync();
+
+                if (hash2 != null)
+                {
+                    await localStorage.SetItemAsync("hash", hash);
+                    settings.hash = hash;
+                    NavigationManager.NavigateTo("/", true);
+                }
+            }
+        }
+    }
+
+
+    private async Task CheckLogin(EasynftprojectsContext db, Customer? customer, bool checkpassword)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        try
+        {
+            var ip = await (from a in db.Blockedipaddresses
+                            where a.Ipaddress == ConnectionInfo.RemoteIpAddress.ToString()
+                            select a).FirstOrDefaultAsync();
+
+            if (ip is {Blockcounter: > 5 })
+            {
+                errormessage = @_loc["Access denied. Please try again later"];
+                isSubmitting = false;
+                return;
+            }
+            if (customer == null)
+            {
+                errormessage = @_loc["Email or Password wrong"];
+                isSubmitting = false;
+                await AddIpBlock(db, ip);
+                return;
+            }
+
+            if (customer.State == "locked" && customer.Lockeduntil >= DateTime.Now)
+            {
+                errormessage = @_loc["Account was blocked due to too many login attempts. Please try later again or contact our support."];
+                isSubmitting = false;
+                await AddIpBlock(db, ip);
+                return;
+            }
+            if (customer.State == "locked" && customer.Lockeduntil < DateTime.Now)
+            {
+                customer.State = "active";
+                await db.SaveChangesAsync();
+            }
+
+            if (checkpassword)
+            {
+                CryptographyProcessor cp = new();
+                if (!cp.AreEqual(login.Password, customer.Password, customer.Salt))
+                {
+                    errormessage = @_loc["Email or Password wrong"];
+                    isSubmitting = false;
+                    await AddIpBlock(db, ip);
+
+                    customer.Failedlogon++;
+                    if (customer.Failedlogon >= 4)
+                    {
+                        customer.State = "locked";
+                        customer.Lockeduntil = DateTime.Now.AddMinutes(customer.Failedlogon * 5);
+                        errormessage = @_loc["Account was blocked due to too many login attempts. Please try later again."];
+                    }
+                    await db.SaveChangesAsync();
+                    return;
+                }
+            }
+
+            if (customer.State == "blocked")
+            {
+                errormessage = @_loc["Your Account was blocked. Please contact the support"];
+                isSubmitting = false;
+                return;
+            }
+            if (customer.State == "notactive")
+            {
+                errormessage = @_loc["Your account is not activated. Please click the activation link in your email."];
+                isSubmitting = false;
+                return;
+            }
+            if (customer.State == "active")
+            {
+                customer.Failedlogon = 0;
+                await db.SaveChangesAsync();
+
+                if (await _twoFactorCheck.CheckTwoFactor(customer.Id, TwoFactorCases.Login))
+                {
+                    await LoginUser(db, customer.Id);
+                    NavigationManager.NavigateTo("/", true);
+                }
+                else isSubmitting = false;
+            }
+        }
+        catch
+        {
+            isSubmitting = false;    
+        }
+       
+
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var customer = await (from a in db.Customers
+                              where a.Email == login.Username && a.State != "deleted"
+                              select a).FirstOrDefaultAsync();
+        await CheckLogin(db, customer, true);
+    }
+
+    private async Task AddIpBlock(EasynftprojectsContext db,Blockedipaddress ip)
+    {
+        if (ip == null)
+        {
+            await db.Blockedipaddresses.AddAsync(new() {Blockcounter = 1, Blockeduntil = DateTime.Now.AddMinutes(10), Ipaddress = ConnectionInfo?.RemoteIpAddress});
+        }
+        else
+        {
+            ip.Blockcounter++;
+            ip.Blockeduntil=DateTime.Now.AddMinutes(ip.Blockcounter*10);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task<string> LoginUser(EasynftprojectsContext db, int userid)
+    {
+        settings.UserId = userid;
+        settings.PendingUserId = null;
+
+        await GlobalFunctions.ExecuteSqlWithFallbackAsync(db, $"delete from loggedinhashes where customer_id={userid}");
+        Loggedinhash lih = new() { Hash = Guid.NewGuid().ToString(), Ipaddress = ConnectionInfo?.RemoteIpAddress, CustomerId = userid, Validuntil = DateTime.Now.AddMinutes(rememberme ? 7200 : 90) };
+        db.Loggedinhashes.Add(lih);
+        await db.SaveChangesAsync();
+
+        Customerlogin cl = new() {Created = DateTime.Now, CustomerId = userid, Ipaddress = ConnectionInfo?.RemoteIpAddress};
+        await db.Customerlogins.AddAsync(cl);
+        await db.SaveChangesAsync();
+
+        await localStorage.SetItemAsync("hash", lih.Hash);
+        settings.hash = lih.Hash;
+
+
+        return lih.Hash;
+    }
+
+
+}

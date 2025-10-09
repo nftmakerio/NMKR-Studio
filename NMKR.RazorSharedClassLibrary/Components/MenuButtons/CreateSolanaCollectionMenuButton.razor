@@ -1,0 +1,42 @@
+﻿@using NMKR.RazorSharedClassLibrary.Components.ModalWindows.CollectionToken
+@inject IConnectionMultiplexer _redis;
+@inject ISnackbar Snackbar
+@if (Project.Enabledcoins.Contains(Coin.SOL.ToString()) )
+{
+<MudNavLink @onclick="(() => CreateCollectionTokens())">Create Solana verified collection</MudNavLink>
+}
+@code {
+    [Parameter] public Nftproject Project  { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    
+    private bool isSubmitting = false;
+    [Inject] private IDialogService DialogService { get; set; }
+    private async Task CreateCollectionTokens()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        if (Project.Solanacollectiontransaction == "<PENDING>")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Collection will be created. Please wait.", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+        if (Project.Solanacollectioncreated!=null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Collection already created", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+       DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+        var parameters = new DialogParameters { { nameof(CreateSolanaVerifiedCollectionModalWindow.Project), Project } };
+        var dialog = await DialogService.ShowAsync<CreateSolanaVerifiedCollectionModalWindow>("Create Solana verified collection", parameters, maxWidth);
+        await dialog.Result;
+        isSubmitting = false;
+    }
+}

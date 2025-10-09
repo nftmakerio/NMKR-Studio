@@ -1,0 +1,337 @@
+﻿@using BlazorDownloadFile
+@inject ISnackbar Snackbar
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+
+    <MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Indeterminate="true" />
+    </MudOverlay>
+
+    <MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4 mt-4">Whitelist usage</MudText>
+
+    <MudTable Items="@whitelists" Class="mb-5" Hover="true" Bordered="false" Striped="false" Elevation="0" HorizontalScrollbar="true" T="Countedwhitelist" OnRowClick="@(args => OnRowClicked(args))" Filter="new Func<Countedwhitelist,bool>(FilterFunc1)"  Loading="isloading">
+        
+        <ToolBarContent>
+            <MudSpacer />
+            <MudTextField Variant="Variant.Outlined" @bind-Value="searchString1" Placeholder="Search" Adornment="Adornment.Start" Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Clearable="true" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+
+        <HeaderContent>
+            <MudTh>Address</MudTh>
+            <MudTh>Created</MudTh>
+            <MudTh>Stake address</MudTh>
+            <MudTh>Max. NFT</MudTh>
+            <MudTh>Purchased NFT</MudTh>
+            <MudTh Style="Width: 150px;">Actions</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+            <ShowAddress Address="@context.Address" Blockchain="Blockchain.Cardano"></ShowAddress>
+            </MudTd>
+            <MudTd>
+              @context.Created
+            </MudTd>
+            <MudTd>
+                <ShowStakeKey Address="@context.Stakeaddress"></ShowStakeKey>
+            </MudTd>
+            <MudTd>
+                @(GlobalFunctions.FormatMultiplier(@context.Maxcount,project.Multiplier))
+            </MudTd>
+            <MudTd>
+                @GlobalFunctions.FormatMultiplier(context.Countedwhitelistusedaddresses.Sum(x=>x.Countnft),project.Multiplier)
+            </MudTd>
+            <MudTd>
+                <MudTooltip Color="Color.Dark" Text="Edit address" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Edit" Size="Size.Small" @onclick="(() => Edit(context.Id))"></MudIconButton>
+                </MudTooltip>
+                <MudTooltip Color="Color.Dark" Text="Delete address" Placement="Placement.Start">
+                    <MudIconButton  Color="Color.Dark" Icon="@Icons.Material.Filled.Delete" Size="Size.Small" @onclick="(() => Delete(context.Id))"></MudIconButton>
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+
+        <ChildRowContent>
+            @if (context.Id == DetailsId)
+            {
+                <MudTr>
+                    <td colspan="9">
+                        <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090" />
+                        <MudCard Elevation="0">
+                            <MudCardContent Class="pa-0">
+                                <MudTable Items="@context.Countedwhitelistusedaddresses" Context="soldcontext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>Date/Time</MudTh>
+                                        <MudTh>Used address</MudTh>
+                                        <MudTh>Count NFT</MudTh>
+                                        <MudTh>Transaction Id</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@soldcontext.Created</MudTd>
+                                    <MudTd> <ShowAddress Address="@soldcontext.Usedaddress" Blockchain="Blockchain.Cardano"></ShowAddress>  </MudTd>
+                                        <MudTd> @soldcontext.Countnft </MudTd>
+                                        <MudTd>
+                                            <ShowTransactionHash TxId="@soldcontext.Transactionid" Blockchain="@(Blockchain.Cardano)"></ShowTransactionHash>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+
+                            </MudCardContent>
+                        </MudCard>
+                        <hr style="height: 1px; border-width: 0; color: #708090; background-color: #708090" />
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
+
+        <PagerContent>
+            <MudTablePager HideRowsPerPage="true" />
+        </PagerContent>
+    </MudTable>
+
+    <MudButton DropShadow="false" HtmlTag="label"
+               Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               @onclick="Add">
+        Add whitelist address
+    </MudButton>
+    <MudButton DropShadow="false" HtmlTag="label"
+               Class="mt-5 mb-5 rounded-pill px-6 py-3"
+               Variant="Variant.Filled"
+               Color="Color.Tertiary"
+               @onclick="ExportUsage">
+        Export whitelist usage
+    </MudButton>
+
+
+
+@code {
+    [Parameter]
+    public int projectid { get; set; }
+    [Parameter]
+    public int saleconditionid { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; }
+
+    private bool isloading { get; set; } = false;
+    private int? DetailsId { get; set; }
+    private bool isSubmitting { get; set; }
+    private bool OverlayIsVisible { get; set; }
+
+    private string searchString1 = "";
+    private IEnumerable<Countedwhitelist> whitelists = new List<Countedwhitelist>();
+  
+
+    private Nftproject? project = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        isloading = true;
+        project = await (from a in db.Nftprojects
+                         where a.State != "deleted" && a.Id == projectid
+                         select a).FirstOrDefaultAsync();
+
+        if (project == null)
+            return;
+
+        await LoadAddresses(db);
+
+        isloading = false;
+        StateHasChanged();
+    }
+
+      private async Task ExportUsage()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+
+        var whitelists2 = await (from a in db.Countedwhitelists
+            .Include(a=>a.Countedwhitelistusedaddresses)
+            where a.SaleconditionsId == saleconditionid
+            select new
+            {
+                a.Created, a.Address, a.Stakeaddress, a.Maxcount,Used= a.Countedwhitelistusedaddresses.Sum(x=>x.Countnft)}
+            ).AsNoTracking().ToListAsync();
+
+        var path = GeneralConfigurationClass.TempFilePath;
+        string filteredfilename = GlobalFunctions.FilterTokenname(project?.Projectname)+"_whitelistusage";
+        string filename = path + filteredfilename + ".zip";
+        string csvfilename = path + filteredfilename + ".csv";
+        Directory.CreateDirectory(path);
+        GlobalFunctions.DeleteFile(filename);
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        GlobalFunctions.DeleteOldFiles(path, 1);
+
+          await using (var writer = new StreamWriter(csvfilename))
+          await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            await csv.WriteRecordsAsync(whitelists2);
+        }
+
+
+        using var archive = ZipFile.Open(filename, ZipArchiveMode.Create);
+        archive.CreateEntryFromFile(csvfilename, Path.GetFileName(filteredfilename + ".csv"), CompressionLevel.Optimal);
+        archive.Dispose();
+
+        byte[] AsBytes = await File.ReadAllBytesAsync(filename);
+        String AsBase64String = Convert.ToBase64String(AsBytes);
+
+        await BlazorDownloadFileService.DownloadFile(filteredfilename + ".zip", AsBase64String, "application/octet-stream");
+        GlobalFunctions.DeleteFile(csvfilename);
+
+        OverlayIsVisible = false;
+        isSubmitting = false;
+    }
+
+
+    private async Task LoadAddresses(EasynftprojectsContext db)
+    {
+        whitelists = await (from a in db.Countedwhitelists
+            .Include(a=>a.Countedwhitelistusedaddresses)
+            where a.SaleconditionsId == saleconditionid
+            select a).AsNoTracking().ToListAsync();
+    }
+
+    private void OnRowClicked(TableRowClickEventArgs<Countedwhitelist>
+    trans)
+    {
+        if (trans == null || trans.Item == null)
+            return;
+
+        if (DetailsId == trans.Item.Id)
+        {
+            DetailsId = null;
+        }
+        else
+        {
+            DetailsId = trans.Item.Id;
+        }
+        StateHasChanged();
+    }
+
+    private async Task Add()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        var address = new Countedwhitelist()
+        {
+            Created = DateTime.Now,
+            Maxcount = 1,
+            SaleconditionsId = saleconditionid,
+        };
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false};
+        var parameters = new DialogParameters { { nameof(EditWhitelistAddressesModalWindow.address),address } };
+        var dialog = await DialogService.ShowAsync<EditWhitelistAddressesModalWindow>("Edit whitelist addresses", parameters, maxWidth);
+        var result = await dialog.Result;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (!result.Canceled)
+        {
+            await LoadAddresses(db);
+        }
+        isSubmitting = false;
+    }
+
+    private async Task Edit(int id)
+    {
+     if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var address = (from a in db.Countedwhitelists
+            where a.Id == id
+            select a).FirstOrDefault();
+
+        if (address == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal Error - please contact support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        DialogOptions maxWidth = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false};
+        var parameters = new DialogParameters { { nameof(EditWhitelistAddressesModalWindow.address),address } };
+        var dialog = await DialogService.ShowAsync<EditWhitelistAddressesModalWindow>("Edit whitelist addresses", parameters, maxWidth);
+        var result = await dialog.Result;
+
+
+        if (!result.Canceled)
+        {
+            await LoadAddresses(db);
+        }
+        isSubmitting = false;
+    }
+
+    private async Task Delete(int id)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "Are you sure?",
+            yesText: "Delete!", cancelText: "Cancel");
+        if (result != null)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+            var address = (from a in db.Countedwhitelists
+                where a.Id == id
+                select a).FirstOrDefault();
+
+            if (address == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error - please contact support", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            db.Countedwhitelists.Remove(address); // Remove from Database
+            await db.SaveChangesAsync();
+
+            isloading = true;
+            await LoadAddresses(db);
+            isloading = false;
+        }
+        isSubmitting = false;
+    }
+
+
+    private bool FilterFunc1(Countedwhitelist element) => FilterFunc(element, searchString1);
+
+    private bool FilterFunc(Countedwhitelist element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Address==searchString)
+            return true;
+        if (element.Stakeaddress==searchString)
+            return true;
+        if (element.Countedwhitelistusedaddresses != null && element.Countedwhitelistusedaddresses.Any() && element.Countedwhitelistusedaddresses.FirstOrDefault(x => x.Usedaddress == searchString) != null)
+            return true;
+        return false;
+    }
+
+}

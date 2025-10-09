@@ -1,0 +1,494 @@
+﻿@using NMKR.Shared.Functions.Extensions
+@inject ISnackbar Snackbar
+@inject IConnectionMultiplexer redis
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Price
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudGrid>
+                <MudItem xs="4" md="4" Class="pb-3">
+                    <MudNumericField Label="Count Nft / Tokens" @bind-Value="pricelist.CountNft" For="(() => pricelist.CountNft)" Min="1" Max="long.MaxValue" T="long" />
+                </MudItem>
+                <MudItem xs="4" md="4">
+                    <MudNumericField T="double" @bind-Value="pricelist.Price"  Immediate="true" Label="Price"  Min="@(IsAdminTool?-1:0.01)" Max="1000000" />
+                </MudItem>
+                <MudItem xs="4" md="4">
+                    <MudSelect Label="@GetRates()" @bind-Value="pricelist.Currency">
+                        @if (project.Enabledcoins.Contains(Coin.ADA.ToString()))
+                        {
+                            <MudSelectItem Value="@(Coin.ADA.ToString())">ADA (Cardano)</MudSelectItem>
+                        }
+                        @if (project.Enabledcoins.Contains(Coin.SOL.ToString()))
+                        {
+                            <MudSelectItem Value="@(Coin.SOL.ToString())">SOL (Solana)</MudSelectItem>
+                        }
+                        @if (project.Enabledcoins.Contains(Coin.APT.ToString()))
+                        {
+                            <MudSelectItem Value="@(Coin.APT.ToString())">APT (Aptos)</MudSelectItem>
+                        }
+                        @if (project.Enabledcoins.Contains(Coin.BTC.ToString()))
+                        {
+                            <MudSelectItem Value="@(Coin.BTC.ToString())">Satoshis (Bitcoin)</MudSelectItem>
+                        }
+                        <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                        <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                        <MudSelectItem Value="@("JPY")">JPY</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+               @* TODO *@
+                @if (!project.Enabledcoins.Contains(Coin.SOL.ToString()) && !project.Enabledcoins.Contains(Coin.APT.ToString()) && !project.Enabledcoins.Contains(Coin.BTC.ToString()))
+                {
+                    @if (!additionalToken)
+                    {
+                        <MudItem xs="1" md="1">
+                            <MudTooltip Color="Color.Dark" Text="Add Token" Placement="Placement.Start">
+                                <MudIconButton Color="Color.Dark" Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small" @onclick="AddPriceInToken"></MudIconButton>
+                            </MudTooltip>
+                        </MudItem>
+                        <MudItem xs="11">
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="3">
+                            <MudNumericField Label="Count add. Tokens" @bind-Value="pricelist.AdditionalTokenCount" For="(() => pricelist.AdditionalTokenCount)" Min="0" Max="long.MaxValue" T="long?"/>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField Variant="Variant.Outlined" Label="Add. Token Policyid" @bind-Value="pricelist.AdditionalTokenPolicyId" Lines="1" Immediate="true" Class="mb-1"/>
+                        </MudItem>
+                        <MudItem xs="3">
+                            <MudAutocomplete T="string" Label="Add. Token Assetname" @bind-Value="pricelist.AdditionalTokenAssetName" SearchFunc="@Search1" Variant="Variant.Outlined" Clearable="true" ResetValueOnEmptyText="true" Immediate="true" CoerceValue="true"/>
+                        </MudItem>
+                    }
+                }
+
+                <MudItem xs="6" md="6">
+                    <MudDatePicker ShowToolbar="false"  PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" @ref="_picker" Label="Price valid from (or leave blank) UTC" @bind-Date="pricelist.ValidFrom" AutoClose="false">
+                        <PickerActions>
+                            <MudButton DropShadow="false" Class="mr-auto align-self-start rounded-pill px-6 py-3" OnClick="@(() => _picker.ClearAsync())">Clear</MudButton>
+                            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" OnClick="@(() => _picker.CloseAsync(false))">Cancel</MudButton>
+                            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" OnClick="@(() => _picker.CloseAsync())">Ok</MudButton>
+                        </PickerActions>
+                    </MudDatePicker>
+                </MudItem>
+
+                <MudItem xs="6" md="6">
+                    <MudDatePicker ShowToolbar="false" PickerVariant="PickerVariant.Dialog" Culture="@(new CultureInfo("en-US"))" @ref="_picker2" Label="Price valid till (or leave blank) UTC" @bind-Date="pricelist.ValidTo" AutoClose="false">
+                        <PickerActions>
+                            <MudButton DropShadow="false" Class="mr-auto align-self-start rounded-pill px-6 py-3" OnClick="@(() => _picker2.ClearAsync())">Clear</MudButton>
+                            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" OnClick="@(() => _picker2.CloseAsync(false))">Cancel</MudButton>
+                            <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" OnClick="@(() => _picker2.CloseAsync())">Ok</MudButton>
+                        </PickerActions>
+                    </MudDatePicker>
+                </MudItem>
+                <MudItem xs="6" md="6">
+                    <MudSwitch UncheckedColor="Color.Dark" T="bool" @bind-Value="pricelist.Activated" Color="Color.Primary">Price activated</MudSwitch>
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Secondary" Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton DropShadow="false" Class="rounded-pill px-6 py-3" Color="Color.Tertiary" Variant="Variant.Filled" OnClick="SavePrice" Disabled="isSubmitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public AddPriceClass pricelist { get; set; }
+    [Parameter]
+    public Nftproject project { get; set; }
+
+    [Parameter]
+    public bool IsAdminTool { get; set; }
+    private bool isSubmitting;
+    private bool additionalToken { get; set; }
+    bool success;
+    string[] errors = { };
+    MudForm form;
+    MudDatePicker _picker;
+    MudDatePicker _picker2;
+
+    void Cancel() => MudDialog.Cancel();
+
+    private string GetRates()
+    {
+        string rates = "Currency";
+
+        if (pricelist.Currency != "USD" && pricelist.Currency != "EUR" && pricelist.Currency != "JPY")
+        {
+            return rates;
+        }
+
+        rates = "";
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()))
+        {
+            rates = $"1 ADA={GlobalFunctions.GetActualNewRates(redis, pricelist.Currency, Coin.ADA):N2} {pricelist.Currency}";
+        }
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()))
+        {
+            if (rates != "")
+            {
+                rates += " | ";
+            }
+            rates+= $"1 SOL={GlobalFunctions.GetActualNewRates(redis, pricelist.Currency, Coin.SOL):N2} {pricelist.Currency}";
+        }
+        if (project.Enabledcoins.Contains(Coin.APT.ToString()))
+        {
+            if (rates != "")
+            {
+                rates += " | ";
+            }
+            rates+= $"1 APT={GlobalFunctions.GetActualNewRates(redis, pricelist.Currency, Coin.APT):N2} {pricelist.Currency}";
+        }
+        if (project.Enabledcoins.Contains(Coin.BTC.ToString()))
+        {
+            if (rates != "")
+            {
+                rates += " | ";
+            }
+            rates+= $"1 BTC={GlobalFunctions.GetActualNewRates(redis, pricelist.Currency, Coin.BTC):N2} {pricelist.Currency}";
+        }
+        return rates;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (pricelist.AdditionalTokenCount != null && pricelist.AdditionalTokenCount > 0 && !string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId))
+            additionalToken = true;
+
+        // TODO: Change
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()) || project.Enabledcoins.Contains(Coin.APT.ToString()) || project.Enabledcoins.Contains(Coin.BTC.ToString()))
+            additionalToken = false;
+    }
+
+   
+    private async Task AddPriceInToken()
+    {
+        additionalToken = !additionalToken;
+    }
+
+    private async Task SavePrice()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+
+        if (pricelist.CountNft < 1)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Set the count of NFT/Token to min. 1", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        long amount = 0;
+
+        if (project.Enabledcoins.Contains(Coin.ADA.ToString()) && (pricelist.Currency == Coin.ADA.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            var priceInLovelace = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.ADA.ToString());
+            amount = priceInLovelace;
+            if (priceInLovelace > 1000000000000)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too high. Max. 1000000 ADA", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            if (!IsAdminTool && priceInLovelace < (2000000+project.Settings.Mintingcosts) && project.Enabledecentralpayments)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too low because of minutxo / mintingcosts.", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            if (!IsAdminTool && priceInLovelace < (3500000 + project.Settings.Mintingcosts)  && project.Enabledecentralpayments == false)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price propably is too low because of minutxo / mintingcosts. You can enter less, when you enable Multisig Payments", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()) && (pricelist.Currency == Coin.SOL.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            var priceInLamport = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.SOL.ToString());
+            amount = priceInLamport;
+            if (priceInLamport > 10000000000000)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too high. Max. 10000 SOL", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        if (project.Enabledcoins.Contains(Coin.SOL.ToString()) && (pricelist.Currency == Coin.SOL.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            var priceInLamport = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.SOL.ToString());
+            amount = priceInLamport;
+            if (priceInLamport < 10000000)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too low. Min. 0.01 SOL", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        if (project.Enabledcoins.Contains(Coin.APT.ToString()) && (pricelist.Currency == Coin.APT.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            var priceInOcta = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.APT.ToString());
+            amount = priceInOcta;
+            if (priceInOcta > 10000000000000)
+                              
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too high. Max. 100000 APT", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        if (project.Enabledcoins.Contains(Coin.APT.ToString()) && (pricelist.Currency == Coin.APT.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            if (!IsAdminTool)
+            {
+                var priceInOcta = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.APT.ToString());
+                amount = priceInOcta;
+                if (priceInOcta < 1000000)
+
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("The price is too low Min. 0.01 APT", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+        }
+        if (project.Enabledcoins.Contains(Coin.BTC.ToString()) && (pricelist.Currency == Coin.BTC.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            var priceInSat = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.BTC.ToString());
+            amount = priceInSat;
+            if (priceInSat > 100000000)
+                              
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The price is too high. Max. 1 BTC (100000000 sat)", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        if (project.Enabledcoins.Contains(Coin.BTC.ToString()) && (pricelist.Currency == Coin.BTC.ToString() || pricelist.Currency == Coin.USD.ToString() || pricelist.Currency == Coin.EUR.ToString() || pricelist.Currency == Coin.JPY.ToString()))
+        {
+            if (!IsAdminTool)
+            {
+                var priceInSat = GlobalFunctions.GetPriceInEntities(redis, pricelist, Coin.APT.ToString());
+                amount = priceInSat;
+                if (priceInSat < 10000)
+
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("The price is too low Min. 10000 Satoshi (0.0001 BTC)", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+        }
+        // TODO: Catch the blocked policyids from the database
+        if (!string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId) && pricelist.AdditionalTokenPolicyId.Trim() == "5dac8536653edc12f6f5e1045d8164b9f59998d3bdc300fc92843489")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("This policyid is not allowed", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+   
+        if (!string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId) && (pricelist.AdditionalTokenCount == null || pricelist.AdditionalTokenCount == 0))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Enter the count of the tokens", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (pricelist.Id == null)
+        {
+            var pricelist1 = await (from a in db.Pricelists
+                where a.NftprojectId == pricelist.NftProjectId && a.Priceinlovelace == amount && a.Currency == pricelist.Currency
+                select a).AsNoTracking().ToListAsync();
+
+
+
+            if (pricelist1.Any())
+            {
+                bool check = true;
+                if (!string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId))
+                {
+                    check = pricelist1.FirstOrDefault(x => x.Priceintoken == pricelist.AdditionalTokenCount && x.Tokenpolicyid == pricelist.AdditionalTokenPolicyId && x.Tokenassetid == pricelist.AdditionalTokenAssetName) != null;
+                }
+
+                if (check)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("You already have a price with this ADA Amount. Please enter an different amount", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+        }
+
+  
+        if (project.Maxsupply == 1)
+        {
+            if (pricelist.CountNft > 25)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The maximum of single nft in one transaction is 25", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+        }
+        long pr = pricelist.Currency.ToEnum<Coin>() switch
+        {
+            Coin.ADA => (long)Math.Round(pricelist.Price  * 1000000),
+            Coin.SOL => (long) Math.Round(pricelist.Price * 1000000000),
+            Coin.APT => (long)Math.Round(pricelist.Price  * 100000000),
+            Coin.BTC => (long)Math.Round(pricelist.Price ),
+
+            _ => (long) Math.Round(pricelist.Price * 100)
+            };
+
+        if (pricelist.Id == null)
+        {
+            Pricelist pl = new()
+            {
+                NftprojectId = pricelist.NftProjectId,
+                Countnftortoken = pricelist.CountNft,
+                Priceinlovelace = pricelist.Price == -1 ? -1 : pr,
+                State = pricelist.Activated ? "active" : "notactive",
+                Currency = pricelist.Currency,
+                Validfrom = pricelist.ValidFrom,
+                Validto = pricelist.ValidTo
+            };
+
+
+            if (additionalToken && pricelist.AdditionalTokenCount!=0 && !string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId) && !string.IsNullOrEmpty(pricelist.AdditionalTokenAssetName))
+            {
+                var tokens = pricelist.Tokenlist;
+                var token = (tokens.FirstOrDefault(x => x.AssetName == pricelist.AdditionalTokenAssetName.ToHex()) ??
+                             tokens.FirstOrDefault(x => x.AssetName == "000de140" + pricelist.AdditionalTokenAssetName.ToHex())) ??
+                            tokens.FirstOrDefault(x => x.AssetName == "0014df10" + pricelist.AdditionalTokenAssetName.ToHex());
+
+                if (token != null)
+                {
+                    var multiplier = await GlobalFunctions.GetFtTokensMultiplierAsync(pricelist.AdditionalTokenPolicyId, token.AssetName);
+
+                    pl.Priceintoken = pricelist.AdditionalTokenCount * multiplier.Multiplier;
+                    pl.Tokenpolicyid = pricelist.AdditionalTokenPolicyId;
+                    pl.Tokenassetid = pricelist.AdditionalTokenAssetName;
+                    pl.Tokenmultiplier = multiplier.Multiplier;
+                    pl.Assetnamehex=token.AssetName;
+                }
+            }
+            else
+            {
+                pl.Priceintoken = null;
+                pl.Tokenpolicyid = null;
+                pl.Tokenassetid = null;
+                pl.Tokenmultiplier = 1;
+            }
+
+            await db.Pricelists.AddAsync(pl);
+            await db.SaveChangesAsync();
+            await AddToken(db,pl);
+        }
+        else
+        {
+            var p = await (from a in db.Pricelists
+                           where a.Id == pricelist.Id && a.NftprojectId == pricelist.NftProjectId
+                           select a).FirstOrDefaultAsync();
+            if (p != null)
+            {
+                p.Countnftortoken = pricelist.CountNft;
+                p.Priceinlovelace = pricelist.Price == -1 ? -1 : pr;
+
+                p.State = pricelist.Activated ? "active" : "notactive";
+                p.Validfrom = pricelist.ValidFrom;
+                p.Validto = pricelist.ValidTo;
+                p.Currency = pricelist.Currency;
+         
+                await db.SaveChangesAsync();
+                await AddToken(db,p);
+            }
+        }
+       
+
+
+        isSubmitting = false;
+        MudDialog.Close(DialogResult.Ok(""));
+    }
+
+    private async Task AddToken(EasynftprojectsContext db, Pricelist pl)
+    {
+        if (additionalToken && pricelist.AdditionalTokenCount!=0 && !string.IsNullOrEmpty(pricelist.AdditionalTokenPolicyId))
+        {
+            var tokens = pricelist.Tokenlist;
+            var token = (tokens.FirstOrDefault(x => x.AssetName == pricelist.AdditionalTokenAssetName.ToHex()) ??
+                         tokens.FirstOrDefault(x => x.AssetName == "000de140" + pricelist.AdditionalTokenAssetName.ToHex())) ??
+                        tokens.FirstOrDefault(x => x.AssetName == "0014df10" + pricelist.AdditionalTokenAssetName.ToHex());
+
+            if (token != null)
+            {
+                var multiplier = await GlobalFunctions.GetFtTokensMultiplierAsync(pricelist.AdditionalTokenPolicyId, token.AssetName);
+
+                pl.Priceintoken = pricelist.AdditionalTokenCount * multiplier.Multiplier;
+                pl.Tokenpolicyid = pricelist.AdditionalTokenPolicyId;
+                pl.Tokenassetid = pricelist.AdditionalTokenAssetName;
+                pl.Tokenmultiplier = multiplier.Multiplier;
+                pl.Assetnamehex=token.AssetName;
+            }
+            else
+            {
+                pl.Priceintoken = pricelist.AdditionalTokenCount;
+                pl.Tokenpolicyid = pricelist.AdditionalTokenPolicyId;
+                pl.Tokenassetid = pricelist.AdditionalTokenAssetName;
+                pl.Tokenmultiplier = 1;
+                pl.Assetnamehex=pricelist.AdditionalTokenAssetName.ToHex();
+            }
+        }
+        else
+        {
+            pl.Priceintoken = null;
+            pl.Tokenpolicyid = null;
+            pl.Tokenassetid = null;
+            pl.Tokenmultiplier = 1;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task<IEnumerable<string>> Search1(string value, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(pricelist.AdditionalTokenAssetName))
+            return new List<string>();
+            return pricelist.Tokenlist.Where(x => x.AssetNameAscii.StartsWith(value, StringComparison.InvariantCultureIgnoreCase)).OrderBy(x => x).Select(x=>x.AssetNameAscii).ToArray();
+    }
+
+}

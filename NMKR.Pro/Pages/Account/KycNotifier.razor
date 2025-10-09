@@ -1,0 +1,79 @@
+﻿@inject AppSettings settings
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject IStringLocalizer _loc
+
+@if (showkyc && (customer.Kycstatus != "GREEN" ) && !string.IsNullOrEmpty(provider))
+{
+    @if (provider == "yoti")
+    {
+        <MudAlert Severity="Severity.Error">@_loc["Your account is not verified yet. Click"] <a href="/kycyoti">@_loc["HERE"]</a> @_loc["to verify your account now."]</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">@_loc["Your account is not verified yet. Click" ]<MudLink @onclick="OnClickIamxLink">@_loc["HERE"]</MudLink> @_loc["to verify your account now."]</MudAlert>
+    }
+}
+
+@code {
+    private string provider { get; set; }
+    private bool showkyc { get; set; }
+    private Customer customer = new Customer();
+    protected override async Task OnInitializedAsync()
+    {
+        settings.OnChange += StateHasChanged;
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        provider = await GlobalFunctions.GetWebsiteSettingsStringAsync(db, "kycprovider");
+        showkyc=await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "showkyc");
+        customer = await (from a in db.Customers
+            where a.Id == settings.UserId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (customer.Showkycstate==false || customer.Kycstatus=="GREEN")
+        {
+            settings.ShowKycAlert = false;
+        }
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        settings.OnChange -= StateHasChanged;
+    }
+
+
+    private async Task OnClickIamxLink()
+    {
+    // Check, if Kyc is enabled
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        var customerx = await (from a in db.Customers
+            where a.Id == settings.UserId
+            select a).FirstOrDefaultAsync();
+
+        if (customerx == null)
+        {
+            NavigationManager.NavigateTo("/login", true);
+            return;
+        }
+
+        if (customerx.Kycstatus == "GREEN")
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add(@_loc["You are already successfully verified"], Severity.Success);
+            return;
+        }
+
+        var uid = string.IsNullOrEmpty(customer.Kycaccesstoken) ? GlobalFunctions.GetGuid() : customer.Kycaccesstoken;
+
+        customerx.Kycaccesstoken = uid;
+        customerx.Kycstatus = "PENDING";
+        customerx.Kycprovider = "iamx";
+        await db.SaveChangesAsync();
+       
+        string url = $"https://kyc.iamx.id/onboarding/nmkr?userId={uid}";
+       // await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        NavigationManager.NavigateTo(url, true);
+    }
+}

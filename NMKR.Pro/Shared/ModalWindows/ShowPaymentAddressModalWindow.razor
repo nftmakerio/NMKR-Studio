@@ -1,0 +1,169 @@
+﻿@using NMKR.Shared.Functions.Extensions
+<MudDialog Style="padding: 20px; ">
+    <TitleContent>
+        <MudText Typo="Typo.h3">
+            Mint Coupons
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+
+        <BlockchainToggleSingle @bind-Value="Blockchainselection"  />
+
+        <br/>
+        @switch (Blockchainselection.ToEnum<Blockchain>())
+        {
+            case Blockchain.Cardano:
+                <MudText Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Mint Coupons can be used to create Collection Tokens (for e.g. on-chain royalties) and for the Mint & Send and Update functionality.
+                </MudText>
+                break;
+            case Blockchain.Solana:
+                <MudText Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Mint Coupons can be used to create Collections and for the Mint & Send and Update functionality.
+                </MudText>
+                break;
+            case Blockchain.Aptos:
+                <MudText Class="mb-4 align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Mint Coupons can be used to create Collections and for the Mint & Send and Update functionality.
+                </MudText>
+                break;
+        }
+
+        <MudSlider Class="mb-4" @bind-Value="@countmints" Min="1" Max="1000" Step="1" Immediate="true">@countmints @(countmints==1?"Mint Coupon":"Mint Coupons")</MudSlider>
+
+        @switch (Blockchainselection.ToEnum<Blockchain>())
+        {
+            case Blockchain.Cardano:
+                <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">
+                    Price = @(countmints * PriceCoupon / 1000000f) ADA
+                </MudText>
+                break;
+            case Blockchain.Solana:
+                <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">
+                    Price = @(countmints * PriceCouponSolana / 1000000000f) SOL
+                </MudText>
+                break;
+            case Blockchain.Aptos:
+                <MudText Class="mb-4 align-left d-flex mud-width-full" Typo="Typo.subtitle1">
+                    Price = @(countmints * PriceCouponAptos / 100000000f) APT
+                </MudText>
+                break;
+        }
+
+
+        @switch (Blockchainselection.ToEnum<Blockchain>())
+        {
+            case Blockchain.Cardano:
+                <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Cost breakdown (per Token) - Cardano:<br/>
+                    <ul style="list-style-type: circle;" Class="ml-10">
+                        <li>
+                            Deposit sent with Token: ≈ 1,10 - 2,00 ADA
+                        </li>
+                        <li>
+                            NMKR Fees: @((PriceCoupon / 1000000f)-2.5f) ADA
+                        </li>
+                        <li>
+                            Transaction Fees: ≈ 0,35 - 0,55 ADA
+                        </li>
+                    </ul>
+                </MudText>
+                break;
+            case Blockchain.Solana:
+                <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Cost breakdown (per Token) - Solana:<br/>
+                    <ul style="list-style-type: circle;" Class="ml-10">
+
+                        <li>
+                            NMKR Fees: @(PriceCouponSolana / 1000000000f) SOL
+                        </li>
+                        <li>
+                            Transaction Fees: ≈ 0,001 - 0,005 SOL
+                        </li>
+                    </ul>
+                </MudText>
+                break;
+            case Blockchain.Aptos:
+                <MudText Class="align-left d-flex mud-width-full mud-text-secondary" Typo="Typo.subtitle1">
+                    Cost breakdown (per Token) - Aptos:<br/>
+                    <ul style="list-style-type: circle;" Class="ml-10">
+
+                        <li>
+                            NMKR Fees:  @(PriceCouponAptos / 100000000f) APT
+                        </li>
+                        <li>
+                            Transaction Fees: ≈ 0,001 - 0,005 APT
+                        </li>
+                    </ul>
+                </MudText>
+                break;
+        }
+    </DialogContent>
+    <DialogActions >
+        <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Outlined" OnClick="Cancel" Color="Color.Secondary">Close</MudButton>
+        @switch (Blockchainselection.ToEnum<Blockchain>())
+        {
+            case Blockchain.Cardano:
+                <button onclick="javascript: openPaymentWindow('@PaywindowLink');">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary">Purchase</MudButton>
+                </button>
+                break;
+            case Blockchain.Solana:
+                <button onclick="javascript: openPaymentWindow('@PaywindowLinkSolana');">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary">Purchase</MudButton>
+                </button>
+                break;
+            case Blockchain.Aptos:
+                <button onclick="javascript: openPaymentWindow('@PaywindowLinkAptos');">
+                    <MudButton DropShadow="false" Class="rounded-xl px-6 py-3" Variant="Variant.Filled" Color="Color.Tertiary">Purchase</MudButton>
+                </button>
+                break;
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Customer customer { get; set; }
+
+    private long _countmints  = 1;
+
+    private long countmints
+    {
+        get { return _countmints;}
+        set
+        {
+            _countmints= value;
+            SetNewLink();
+        } } 
+    private long PriceCoupon { get; set; }
+    private long PriceCouponSolana { get; set; }
+    private long PriceCouponAptos { get; set; }
+    private string PaywindowLink { get; set; }
+    private string PaywindowLinkSolana { get; set; }
+    private string PaywindowLinkAptos { get; set; }
+    private string ButtonLink => "https://studio.nmkr.io/images/buttons/paybutton_1_1.svg";
+    private string Blockchainselection = Blockchain.Cardano.ToString();
+
+    void Cancel() => MudDialog.Cancel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        PriceCoupon = customer.Defaultsettings.Pricemintcoupons;
+        PriceCouponSolana = customer.Defaultsettings.Pricemintcouponssolana;
+        PriceCouponAptos = customer.Defaultsettings.Pricemintcouponsaptos;
+       SetNewLink();
+    }
+
+    private void SetNewLink()
+    {
+        PaywindowLink = $"https://pay.nmkr.io/?receiverAddress={customer.Adaaddress}&amount={countmints * PriceCoupon}&note={countmints}%20NMKR%20Mint%20Coupons";
+        PaywindowLinkSolana = $"https://pay.nmkr.io/?receiverAddress={customer.Solanapublickey}&amount={countmints * PriceCouponSolana}&note={countmints}%20NMKR%20Mint%20Coupons&chain=solana";
+        PaywindowLinkAptos = $"https://pay.nmkr.io/?receiverAddress={customer.Aptosaddress}&amount={countmints * PriceCouponAptos}&note={countmints}%20NMKR%20Mint%20Coupons&chain=aptos";
+    }
+}

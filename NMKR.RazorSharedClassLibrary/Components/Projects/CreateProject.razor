@@ -1,0 +1,857 @@
+﻿@using System.Timers
+@using NMKR.Shared.Blockchains
+@using NMKR.Shared.Blockchains.APTOS
+@using NMKR.Shared.Blockchains.BITCOIN
+@using NMKR.Shared.Blockchains.Solana
+@using NMKR.Shared.Functions.Api
+@using NMKR.Shared.Functions.Metadata
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IConnectionMultiplexer redis
+
+
+<MudOverlay Visible="OverlayIsVisible" DarkBackground="true" Absolute="true">
+    <MudProgressCircular Indeterminate="true" />
+</MudOverlay>
+<MudText Typo="Typo.h3" Color="Color.Dark" Class="mb-4">Create new NFT Minting project</MudText>
+
+<MudCard Class="border" Elevation="0" Style="height: 100%;border-color:#E0E0E0">
+@if (activeblockchains.Find(x => x.Coinname == Coin.ADA.ToString()) != null )
+{
+    <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="Tab" TabPanelHeaderPosition="TabHeaderPosition.Before">
+        <MudTabPanel Text="Information">
+            <InformationTab @bind-Value="model" IsAdmin="IsAdmin" CustomerId="CustomerId" activeblockchains="@activeblockchains" iagonenabled="@iagonenabled"
+                            OnValidSubmit="@OnValidSubmitInformationTab" isSubmitting="@isSubmitting"/>
+        </MudTabPanel>
+            @if (activeblockchains.Find(x => x.Coinname == Coin.ADA.ToString()) != null && model.cardano)
+        {
+            <MudTabPanel Text="Cardano" Disabled="true">
+                <CardanoTab @bind-Value="model2" IsAdmin="IsAdmin" CustomerId="CustomerId" activeblockchains="@activeblockchains"
+                            iagonenabled="@iagonenabled" OnValidSubmit="@OnValidSubmitCardanoTab" isSubmitting="@isSubmitting" OnPreviousClick="Previous" model="@model"/>
+            </MudTabPanel>
+        }
+            @if (activeblockchains.Find(x => x.Coinname == Coin.SOL.ToString()) != null && model.solana)
+        {
+            <MudTabPanel Text="Solana" Disabled="true">
+                <SolanaTab @bind-Value="model2" IsAdmin="IsAdmin" CustomerId="CustomerId" activeblockchains="@activeblockchains"
+                           iagonenabled="@iagonenabled" OnValidSubmit="@OnValidSubmitSolanaTab" isSubmitting="@isSubmitting" OnPreviousClick="Previous" model="@model"/>
+            </MudTabPanel>
+        }
+        @if (activeblockchains.Find(x => x.Coinname == "APT") != null && model.aptos)
+        {
+            <MudTabPanel Text="Aptos" Disabled="true">
+                <AptosTab @bind-Value="model2" IsAdmin="IsAdmin" CustomerId="CustomerId" activeblockchains="@activeblockchains"
+                          iagonenabled="@iagonenabled" OnValidSubmit="@OnValidSubmitAptosTab" isSubmitting="@isSubmitting" OnPreviousClick="Previous" model="@model"/>
+            </MudTabPanel>
+        }
+        @if (activeblockchains.Find(x => x.Coinname == "BTC") != null && model.bitcoin)
+        {
+            <MudTabPanel Text="Bitcoin" Disabled="true">
+                <BitcoinTab @bind-Value="model2" IsAdmin="IsAdmin" CustomerId="CustomerId" activeblockchains="@activeblockchains"
+                          iagonenabled="@iagonenabled" OnValidSubmit="@OnValidSubmitBitcoinTab" isSubmitting="@isSubmitting" OnPreviousClick="Previous" model="@model"/>
+            </MudTabPanel>
+        }
+        @if (!shc) {
+            <MudTabPanel Text="Metadata" Disabled="true">
+                <EditForm Model="@model3" OnValidSubmit="OnValidSubmitMetadataTab">
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+                    <EditMetadataTemplate @bind-Value="model3" Model1="@model" BlockchainClass="model2"></EditMetadataTemplate>
+                    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="Previous" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Next</MudButton>
+                    </MudContainer>
+                </EditForm>
+            </MudTabPanel>
+            <MudTabPanel Text="Summary" Disabled="true">
+                <MudGrid Class="mb-3 mt-3 mr-3 ml-3 mt-5">
+                    <CreateNewProjectSummary model="model" model2="model2" model3="model3"/>
+                    <MudContainer Class="d-flex justify-space-between py-2 px-1 mt-6">
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="Previous" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ArrowBack">Previous</MudButton>
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" Href="/projects">Cancel</MudButton>
+                        <MudButton Disabled="@isSubmitting" DropShadow="false" Class="rounded-xl px-6 py-3" Size="Size.Small" Variant="Variant.Filled" OnClick="SaveProject" Color="Color.Tertiary" EndIcon="@Icons.Material.Filled.ArrowForward">Save Project</MudButton>
+                    </MudContainer>
+                </MudGrid>
+            </MudTabPanel>
+        }
+    </MudTabs>
+}
+</MudCard>
+
+
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+    [Parameter]
+    public bool IsAdmin { get; set; }
+    private CreateNewProjectClass model = new() { MaxNftSupply = 1 };
+
+    private CreateNewProjectBlockchainsClass model2 = new() {PolicyExpiration = DateTime.Now.AddMonths(6), PolicyExpires = false , NewPolicy = 0};
+    private CreateNewProject3Class model3 = new();
+    private bool isSubmitting;
+    private MudTabs Tab { get; set; }
+    private bool OverlayIsVisible { get; set; }
+    private bool iagonenabled = false;
+    private List<Activeblockchain> activeblockchains = new List<Activeblockchain>();
+    private List<int> _panelHistory = new List<int>();
+    private bool shc = false;
+    System.Timers.Timer timer1 = new System.Timers.Timer();
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        model.wallets = await (from a in db.Customerwallets
+                               where a.CustomerId == CustomerId && a.State == "active"
+                               select a).ToListAsync();
+
+        // internal wallets
+        if (model.wallets == null ||!model.wallets.Any())
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must setup a wallet first", Severity.Error);
+            SetupWallet();
+        }
+        else
+        {
+            model2.CardanoWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.ADA.ToString())?.Id) ?? 0;
+            model2.SolanaWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.SOL.ToString())?.Id) ?? 0;
+            model2.AptosWalletId = (model.wallets.FirstOrDefault(x => x.Cointype == Coin.APT.ToString())?.Id) ?? 0;
+            model2.BitcoinWalletId= (model.wallets.FirstOrDefault(x => x.Cointype == Coin.BTC.ToString())?.Id) ?? 0;
+        }
+
+        activeblockchains = await db.Activeblockchains.Where(x=>x.Enabled).AsNoTracking().ToListAsync();
+
+        model.Blockchainselection = new List<Blockchain>() { Blockchain.Cardano };
+
+        iagonenabled = await GlobalFunctions.GetWebsiteSettingsBoolAsync(db, "enableiagon");
+        StateHasChanged();
+        _panelHistory.Add(0);
+        model.BlockchainChanged += CallStateHasChanged;
+        timer1.Elapsed += new ElapsedEventHandler(OnTimedEvent1);
+        timer1.Interval = 100;
+        timer1.Enabled = false;
+    }
+
+    // This thing is needed to have the tabs in the correct order / bug of MudBlazor
+    private void OnTimedEvent1(object? sender, ElapsedEventArgs e)
+    {
+        shc = false;
+        InvokeAsync(StateHasChanged);
+        timer1.Enabled = false;
+    }
+
+    // This thing is needed to have the tabs in the correct order / bug of MudBlazor
+    private void CallStateHasChanged(object? sender, EventArgs e)
+    {
+        StateHasChanged();
+        shc = true;
+        timer1.Enabled = true;
+    }
+
+    private void Previous()
+    {
+        DisableAllPanels();
+
+        if (!_panelHistory.Any())
+        {
+            Tab.Panels[0].Disabled = false;
+            Tab.ActivatePanel(0);
+            _panelHistory.Add(0);
+            return;
+        }
+
+        var last = _panelHistory.Last();
+        _panelHistory.Remove(last);
+        var newactive = _panelHistory.Last();
+        Tab.Panels[newactive].Disabled = false;
+        Tab.ActivatePanel(newactive);
+    }
+
+
+    private async Task OnValidSubmitInformationTab(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+
+        if (!string.IsNullOrEmpty(model.Twitterhandle) && !model.Twitterhandle.StartsWith("@"))
+            model.Twitterhandle = "@" + model.Twitterhandle;
+
+
+        // Set Metadata Template
+        string description =  $"721_{model.StorageProvider.ToUpper()}";
+        var metatemplate = await (from a in db.Defaulttemplates
+                                  where a.Description == description
+                                  select a).FirstOrDefaultAsync();
+
+        if (metatemplate!=null)
+        {
+            var jsonString = metatemplate.Template;
+            model3.MetaData = JsonFormatter.FormatJson(jsonString);
+        }
+
+
+        if (model is {cardano: false,solana: false, aptos: false, bitcoin:false})
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select at least one blockchain", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GoToNextPanel();
+
+        await db.Database.CloseConnectionAsync();
+        isSubmitting = false;
+    }
+
+    private void GoToNextPanel()
+    {
+        DisableAllPanels();
+
+        var last = _panelHistory.Last();
+        int next = last + 1;
+
+        if (Tab.Panels[next].Text == "Cardano" && !model.cardano)
+            next++;
+        if (activeblockchains.Find(x => x.Coinname == Coin.SOL.ToString()) != null)
+        {
+            if (Tab.Panels[next].Text == "Solana" && !model.solana)
+                next++;
+        }
+
+        if (activeblockchains.Find(x => x.Coinname == Coin.APT.ToString()) != null)
+        {
+            if (Tab.Panels[next].Text == "Aptos" && !model.aptos)
+                next++;
+        }
+        if (activeblockchains.Find(x => x.Coinname == Coin.BTC.ToString()) != null)
+        {
+            if (Tab.Panels[next].Text == "Bitcoin" && !model.bitcoin)
+                next++;
+        }
+        Tab.Panels[next].Disabled = false;
+        Tab.ActivatePanel(next);
+        _panelHistory.Add(next);
+
+        StateHasChanged();
+    }
+
+    private void DisableAllPanels()
+    {
+
+        foreach (var mudTabPanel in Tab.Panels)
+        {
+            mudTabPanel.Disabled = true;
+        }
+    }
+
+
+    private void OnValidSubmitMetadataTab(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (string.IsNullOrEmpty(model3.MetaData))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Metadata must not be empty", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(model.TokennamePrefix) && !GlobalFunctions.isAlphaNumeric(model.TokennamePrefix))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Tokennameprefix contains invalid characters", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (model.cardano)
+        {
+            var chk1 = new CheckMetadataForCip25Fields();
+            var checkmetadata = chk1.CheckMetadata(model3.MetaData, "", "", true, false);
+            if (!checkmetadata.IsValid)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add(checkmetadata.ErrorMessage, Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            model3.MetaData = checkmetadata.FormatedMetadata;
+        }
+      
+        GoToNextPanel();
+
+        isSubmitting = false;
+    }
+
+    private async Task SaveProject()
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        OverlayIsVisible = true;
+        StateHasChanged();
+
+
+
+        string policyid = model2.PolicyId;
+        string policscript = model2.PolicyScript;
+        string skey = model2.PrivateSigningkey;
+        string vkey = model2.PrivateVerifykey;
+        string address = "";
+        long? slot = null;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        if (model2.NewPolicy1)
+        {
+
+            var cn = ConsoleCommand.CreateNewPaymentAddress(GlobalFunctions.IsMainnet());
+
+            if (cn.ErrorCode != 0)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error while creating Policy Address", Severity.Error);
+                isSubmitting = false;
+                OverlayIsVisible = false;
+                StateHasChanged();
+                return;
+            }
+
+
+            var keyhash = ConsoleCommand.GetKeyhash(cn.privatevkey);
+            if (string.IsNullOrEmpty(keyhash))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error while creating Policy Keyhash", Severity.Error);
+                isSubmitting = false;
+                OverlayIsVisible = false;
+                StateHasChanged();
+                return;
+            }
+
+
+            PolicyScript ps = new() {Type = "all"};
+            List<PolicyScriptScript> ls = new();
+            ls.Add(new() {KeyHash = keyhash, Type = "sig"});
+
+            if (model2.PolicyExpires && model2.PolicyExpiration != null)
+            {
+                var qt = await ConsoleCommand.GetSlotAsync();
+                if (qt is null or 0)
+                {
+                    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                    Snackbar.Add("Internal error while quering slot", Severity.Error);
+                    isSubmitting = false;
+                    OverlayIsVisible = false;
+                    StateHasChanged();
+                    return;
+                }
+                var diffInSeconds = (((DateTime) (model2.PolicyExpiration)).Date.AddMinutes(1) - DateTime.Now).TotalSeconds;
+                slot = (long) qt + (long) diffInSeconds;
+                ls.Add(new() {Type = "before", Slot = slot});
+            }
+            ps.Scripts = ls;
+            policscript =JsonConvert.SerializeObject(ps);
+
+            policyid = ConsoleCommand.GetPolicyId(policscript);
+            if (string.IsNullOrEmpty(policyid))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error while creating Policy ID", Severity.Error);
+                isSubmitting = false;
+                OverlayIsVisible = false;
+                StateHasChanged();
+                return;
+            }
+
+            address = cn.Address;
+            vkey = cn.privatevkey;
+            skey = cn.privateskey;
+
+        }
+        else
+        {
+            model2.PolicyExpires = false;
+            PolicyScript ps = JsonConvert.DeserializeObject<PolicyScript>(policscript);
+            if (ps != null && ps.Scripts != null && ps.Scripts.Any())
+            {
+                var t = ps.Scripts.Find(x => x.Type == "before");
+                if (t != null)
+                {
+                    var qt = await ConsoleCommand.GetSlotAsync();
+                    if (qt is null or 0)
+                    {
+                        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                        Snackbar.Add("Internal error while quering slot", Severity.Error);
+                        isSubmitting = false;
+                        OverlayIsVisible = false;
+                        StateHasChanged();
+                        return;
+                    }
+
+                    slot = t.Slot;
+                    var s1 = slot - qt;
+                    model2.PolicyExpiration = DateTime.Now.AddSeconds((long)s1);
+                    model2.PolicyExpires = true;
+                }
+            }
+
+
+            if (string.IsNullOrEmpty(address))
+            {
+                address = ConsoleCommand.CreatePaymentAddressFromKeyfile(vkey, GlobalFunctions.IsMainnet());
+            }
+        }
+
+        var customer = await (from a in db.Customers
+                              where a.Id == CustomerId
+                              select a).FirstOrDefaultAsync();
+
+        // Custodial Wallet
+        if (model2.Cip68ReferenceAddressType == -1 && model3.CipStandard==1)
+        {
+            var wallet = await ApiFunctions.CreateCustodialWalletAsync(CustomerId, model.Password, false, "CIP68 Reference Tokens " + model.Projectname);
+            if (wallet == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal Error while creating a new managed wallet", Severity.Error);
+                isSubmitting = false;
+                OverlayIsVisible = false;
+                StateHasChanged();
+                return;
+            }
+            model2.Cip68ReferenceAddress=wallet.Address;
+        }
+
+        IBlockchainFunctions solanablockchain = new SolanaBlockchainFunctions();
+        var solanaaddress = solanablockchain.CreateNewWallet();
+        string solanaCollectionAddress = null;
+
+        if (model.solana && model2.CreateSolanaVerifiedCollection)
+            solanaCollectionAddress = "<PENDING>";
+
+
+        IBlockchainFunctions aptosblockchain = new AptosBlockchainFunctions();
+        var aptosaddress = aptosblockchain.CreateNewWallet();
+        string aptosCollectionAddress = null;
+        if (model.aptos)
+            aptosCollectionAddress = "<PENDING>";
+
+
+        IBlockchainFunctions bitcoinblockchain = new BitcoinBlockchainFunctions();
+        var bitcoinaddress = bitcoinblockchain.CreateNewWallet();
+
+
+
+        Nftproject pro = new()
+        {
+            CustomerId = CustomerId,
+            Password = model.Password,
+            Description = model.Description,
+            Minutxo = nameof(MinUtxoTypes.twoadaeverynft),
+            State = "active",
+            Projectname = model.Projectname,
+            Projecturl = model.Projecturl,
+            Policyexpire = model2.PolicyExpires ? model2.PolicyExpiration : null,
+            Policyaddress = address,
+            Policyskey = Encryption.EncryptString(skey, model.Password),
+            Policyvkey = Encryption.EncryptString(vkey, model.Password),
+            Policyscript = policscript,
+            Policyid = policyid,
+            Maxsupply = model.MaxNftSupply,
+            Version = "1.0",
+            CustomerwalletId = model2.CardanoWalletId == 0 ? null : model2.CardanoWalletId,
+            Tokennameprefix = model.TokennamePrefix ??= "",
+            Metadata = JsonFormatter.FormatJson(model3.MetaData),
+            Expiretime = model.ExpireTime,
+            Created = DateTime.Now,
+            Enablefiat = false,
+            Enablecrosssaleonpaywindow = false,
+            SettingsId = customer.DefaultsettingsId, // Default Settings
+            Uid = model.Uid,
+            Projectlogo = model.ProjectLogo?.ImageHash,
+            Lockslot = slot,
+            Twitterhandle = model.Twitterhandle,
+            Cip68 = (model2.CipStandard == 1),
+            Cip68referenceaddress = model2.Cip68ReferenceAddress,
+            Storage = model.StorageProvider,
+            Solanapublickey = solanaaddress.Address,
+            Solanaseedphrase = Encryption.EncryptString(solanaaddress.SeedPhrase, model.Password),
+            Solanasymbol = model2.SolanaSymbol,
+
+            Enablecardano = model.cardano,
+            Enablesolana = model.solana,
+                Enabledcoins = (model.cardano ? Coin.ADA + " " : "") + (model.solana ? Coin.SOL + " " : "") + (model.aptos ? Coin.APT + " " : "") + (model.bitcoin ? Coin.BTC + " " : ""),
+            SellerFeeBasisPoints = model2.SellerFeeBasisPoints,
+            Solanacollectioncreated = null,
+            Solanacollectiontransaction = solanaCollectionAddress,
+            Solanacollectionimage = model2.SolanaCollectionImage?.UriWithGateway,
+            Solanacollectionimagemimetype = model2.SolanaCollectionImage?.MimeType,
+            IntegratecardanopolicyIdinmetadata = model2.IntegrateCardanoPolicyIdInMetadata,
+            Integratesolanacollectionaddressinmetadata = model2.IntegrateSolanaCollectionAddressInMetadata,
+            Solanacollectionfamily = model2.Solanacollectionfamily,
+            SolanacustomerwalletId = model2.SolanaWalletId == 0 ? null : model2.SolanaWalletId,
+
+            Aptosaddress = aptosaddress.Address,
+            Aptosseedphrase = Encryption.EncryptString(aptosaddress.SeedPhrase, model.Password),
+            Aptospublickey = aptosaddress.privatevkey,
+            Aptoscollectiontransaction = aptosCollectionAddress,
+            Aptoscollectioncreated = null,
+            Aptoscollectionimage = model2.AptosCollectionImage?.UriWithGateway,
+            Aptoscollectionimagemimetype = model2.AptosCollectionImage?.MimeType,
+            AptoscustomerwalletId = model2.AptosWalletId == 0 ? null : model2.AptosWalletId,
+            Aptoscollectionname = model2.AptosCollectionName,
+
+
+            BitcoincustomerwalletId = model2.BitcoinWalletId == 0 ? null : model2.BitcoinWalletId,
+            Bitcoinaddress = bitcoinaddress.Address,
+            Bitcoinseedphrase = Encryption.EncryptString(bitcoinaddress.SeedPhrase, model.Password),
+            Bitcoinpublickey = bitcoinaddress.privatevkey,
+            Bitcoinprivatekey = bitcoinaddress.privateskey,
+        };
+
+        pro.Cip68extrafield = model2.Cip68ExtrafieldType switch
+        {
+            0 => null,
+            1 => model2.Cip68Extrafield,
+            2 => model2.Cip68Extrafield,
+            3 => "<pkh_policy_address>",
+            4 => "<pkh_user_token>",
+            _ => pro.Cip68extrafield
+            };
+
+
+        await db.Nftprojects.AddAsync(pro);
+            await db.SaveChangesAsync();
+
+         //   ConsoleCommand.RegisterPolicyAtPoolpm(pro.Policyid, pro.Policyscript);
+
+
+        if (model.cardano)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Project successfully created." + Environment.NewLine + "Please keep in mind that, in case you want royalties for your project, the first token minted on the policy must be the royalty token. (Cardano only)", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Project successfully created.", Severity.Success);
+        }
+
+        await db.Database.CloseConnectionAsync();
+
+        DisableAllPanels();
+        //Panel4.Disabled = false;
+
+        isSubmitting = false;
+        OverlayIsVisible = false;
+        StateHasChanged();
+        NavigationManager.NavigateTo("/projects");
+    }
+
+    private void SetupWallet()
+    {
+        if (IsAdmin)
+            NavigationManager.NavigateTo("/wallets/"+CustomerId);
+        else
+            NavigationManager.NavigateTo("/wallets");
+    }
+
+    private async Task OnValidSubmitCardanoTab(EditContext context)
+    {
+
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        if (model2.NewPolicy != 0)
+        {
+            if (!GlobalFunctions.IsValidJson(model2.PolicyScript, out var formatedmetadata))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Policy Script is not a valid JSON Document", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+            model2.PolicyScript = formatedmetadata;
+
+            if (string.IsNullOrEmpty(model2.PrivateSigningkey))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Signing Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            Skeycheck skey = new();
+            try
+            {
+                skey = JsonConvert.DeserializeObject<Skeycheck>(model2.PrivateSigningkey);
+            }
+            catch
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Signing Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (skey.Description != "Payment Signing Key")
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Signing Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(skey.CborHex))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Signing Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            Skeycheck vkey = new();
+            try
+            {
+                vkey = JsonConvert.DeserializeObject<Skeycheck>(model2.PrivateVerifykey);
+            }
+            catch
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Verification Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (vkey.Description != "Payment Verification Key")
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Verification Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(vkey.CborHex))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Verification Key is not correct", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+
+            var keyhash = ConsoleCommand.GetKeyhash(model2.PrivateVerifykey);
+            if (keyhash == "")
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Verification Key ist not valid", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (!model2.PolicyScript.Contains(keyhash))
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Policy Script does not match with Verification Key", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            var policyid = ConsoleCommand.GetPolicyId(model2.PolicyScript);
+            if (policyid != model2.PolicyId)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Policy ID does not match with Policy Script", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+        else
+        {
+            if (model2.PolicyExpiration < DateTime.Now)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("The expiration of the policy must be in the future", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+        }
+
+
+        if (model2.CardanoWalletId==0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select a Cardano Wallet", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GoToNextPanel();
+
+        isSubmitting = false;
+    }
+
+    private async Task OnValidSubmitSolanaTab(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+        if (model.solana && model2.CreateSolanaVerifiedCollection)
+        {
+            await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+            var user = await (from a in db.Customers
+                where a.Id == CustomerId
+                select a).AsNoTracking().FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("Internal error - please contact the support", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (user.Newpurchasedmints < 1)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("You need at least one Mint Coupon to create a verified collection", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+            if (model2.SolanaCollectionImage == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add("You must upload a Solana collection image", Severity.Error);
+                isSubmitting = false;
+                return;
+            }
+
+        }
+
+        if (model2.SolanaWalletId==0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select a Solana Wallet", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        GoToNextPanel();
+        
+        StateHasChanged();
+
+        isSubmitting = false;
+    }
+
+    private async Task OnValidSubmitAptosTab(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var user = await (from a in db.Customers
+            where a.Id == CustomerId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact the support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (user.Newpurchasedmints < 1)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You need at least one Mint Coupon to create a verified collection", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(model2.AptosCollectionName))
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must enter an Aptos collection name", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        if (model2.AptosCollectionImage == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("You must upload an Aptos collection image", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+
+        if (model2.AptosWalletId == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select a Aptos Wallet", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GoToNextPanel();
+
+        isSubmitting = false;
+    }
+
+    private async Task OnValidSubmitBitcoinTab(EditContext context)
+    {
+        if (isSubmitting)
+            return;
+
+        isSubmitting = true;
+
+        await using var db = new EasynftprojectsContext(GlobalFunctions.optionsBuilder.Options);
+        var user = await (from a in db.Customers
+            where a.Id == CustomerId
+            select a).AsNoTracking().FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Internal error - please contact the support", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        if (model2.BitcoinWalletId == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("Select a Bitcoin Wallet", Severity.Error);
+            isSubmitting = false;
+            return;
+        }
+
+        GoToNextPanel();
+
+        isSubmitting = false;
+    }
+
+
+}
