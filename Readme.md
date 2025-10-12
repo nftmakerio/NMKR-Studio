@@ -2,7 +2,7 @@
 
 NMKR Studio is a comprehensive platform for Cardano NFT management, built with C# and .NET 8.0. The project provides a complete solution for minting, burning, and managing NFTs on the Cardano blockchain.
 
-## 🏗️ Project Structure
+## Project Structure
 
 The NMKR Studio project consists of the following components:
 
@@ -28,7 +28,7 @@ The NMKR Studio project consists of the following components:
 - **NMKR.RazorSharedClassLibrary**  
   A shared library specifically for Blazor components, currently used by NMKR.Pro.
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before running NMKR Studio, ensure you have the following services and accounts set up:
 
@@ -48,7 +48,7 @@ Before running NMKR Studio, ensure you have the following services and accounts 
 - MySQL client
 - Access to the required external services listed above
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Database Setup
 
@@ -106,7 +106,7 @@ cd NMKR.CardanoCliApi
 dotnet run
 ```
 
-## 🔧 Technology Stack
+## Technology Stack
 
 - **Framework:** .NET 8.0
 - **Language:** C#
@@ -116,7 +116,7 @@ dotnet run
 - **Cache:** Redis
 - **Blockchain:** Cardano
 
-## 📚 Project Dependencies
+## Project Dependencies
 
 Each component has specific dependencies on shared libraries:
 
@@ -125,25 +125,30 @@ Each component has specific dependencies on shared libraries:
 - NMKR.BackgroundService → NMKR.Shared
 - NMKR.CardanoCliApi → NMKR.Shared
 
-## 🔐 Security Notes
+## Security Notes
 
 - Never commit `settings.yaml` or `settings.preprod.yaml` files with actual credentials to version control
 - Keep all API keys and secrets secure
 - Ensure database credentials are stored securely
 - Use environment-specific configuration files for different deployment environments
 
-## 📖 Additional Information
+## Additional Information
 
 For more information about NMKR Studio features and usage, please refer to the official documentation or contact the development team.
 
-## 📄 License
+## License
 
-[Add your license information here]
+Licensed under the MIT License. See `LICENSE` for details.
 
-## 🤝 Contributing
+## Contributing
 
-[Add contribution guidelines here]
+We welcome contributions. The common approach is:
 
-## 📧 Support
+1. Fork the repository and create a feature branch
+2. Make focused changes following the existing code style
+3. Ensure builds succeed and add tests where applicable
+4. Open a pull request with a clear description of the changes
 
-[Add support contact information here]
+## Support
+
+For contact and support, visit [NMKR Support](https://nmkr.io/support).
