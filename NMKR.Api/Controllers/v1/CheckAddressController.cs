@@ -31,9 +31,6 @@ namespace NMKR.Api.Controllers
             _redis = redis;
         }
 
-
-        // https://localhost:44351/api/checkaddress/c070c6e165d4450f8c8945af76948990/14/addr1v8u00zlgc8dzr0jfkrngfrz8uhu6d8cvylsyfstm7wzn40scqher8
-
         /// <summary>
         /// Checks an address for state changes (project id)
         /// </summary>
